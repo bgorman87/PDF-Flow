@@ -18,7 +18,7 @@ import regex as re
 # At end of analysis ensure potential issues are noted such as missing set no. or break dates
 
 # Have yet to even begin attempting naming schemes
-
+debug = False
 
 def analyze_image(img_path):
     pytesseract.pytesseract.tesseract_cmd = r'C:\Users\bgorm\AppData\Local\Tesseract-OCR\tesseract.exe'
@@ -94,7 +94,8 @@ def pre_process_image(path, args, age_detect=None):
     # filename = "{}.png".format(os.getpid())
     # cv2.imwrite(filename, gray)
     # cv2.imshow("Image", image)
-    cv2.imshow("Output", gray)
+    if debug:
+        cv2.imshow("Output", gray)
     # cv2.waitKey(0)
     cv2.imwrite(path, gray)
     return gray
@@ -338,6 +339,16 @@ class UiMainwindow(object):
 
         for f in self.fileNames:
 
+            # initialize variables in case some do not get detected
+            project_number = "N/A"
+            project_number_short = "N/A"
+            set_number = "N/A"
+            sheet_type = "N/A"
+            date_cast = "N/A"
+            break_ages = "N/A"
+            sheet_type_file = "N/A"
+            date_placed = "N/A"
+
             # Get path variable to save pdf files as same name but as .jpg
             f_jpg = f.replace(".pdf", ".jpg")
             # Get path variable to save entire sheet separately
@@ -352,7 +363,7 @@ class UiMainwindow(object):
                 # Top right corner is first to analyze as the large englobe logo messes up tesseract
                 w, h = image.size
                 # save top right corner image as jpg
-                image.crop((w / 2, 0, w, h / 8)).save(f_jpg, 'JPEG')
+                image.crop((1300, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
                 # save full image as .jpg
                 image.save(full_jpg, 'JPEG')
             pre_process_image(f_jpg, args)
@@ -363,36 +374,41 @@ class UiMainwindow(object):
             # once analyzed, top right corner image is not required anymore, so delete
             os.remove(f_jpg)
             # debug, print resultant analysis text to screen
-            print(text)
+            if debug:
+                print(text)
 
             # if top right image analysis yields "test" it is a concrete break sheet
-            if text.lower().find("test") > 0:
-                sheet_type = "Concrete break sheet"
+            if text.lower().find("test") > 0 & text.lower().find("placement") <= 0:
+                sheet_type = "break"
                 sheet_type_file = "dConcStrength_S"
                 # debug, print sheet type to screen
-                print(sheet_type)
+                if debug:
+                    print(sheet_type)
                 # Preprocess full image saved previously and analyze specific sections for remaining data
                 pre_process_image(full_jpg, args)
                 image = cv2.imread(full_jpg)
                 # crop image to project number location
                 cv2.imwrite(f_jpg, image[320:360, 1100:1550])
                 # debug, show what project number image looks like to be analyzed
-                cv2.imshow("ProjectNumber", image[320:360, 1100:1550])
-                cv2.waitKey(0)
+                if debug:
+                    cv2.imshow("ProjectNumber", image[320:360, 1100:1550])
+                    cv2.waitKey(0)
                 # analyze project number image for project number
                 project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
                 # debug, print the project number
-                print(project_number)
-                print(project_number_short)
+                if debug:
+                    print(project_number)
+                    print(project_number_short)
 
                 # crop image to set number location
                 cv2.imwrite(f_jpg, image[675:750, 100:300])
                 # debug, show what set number image looks like to be analyzed
-                cv2.imshow("Set Number", image[675:750, 100:300])
-                cv2.waitKey(0)
+                if debug:
+                    cv2.imshow("Set Number", image[675:750, 100:300])
+                    cv2.waitKey(0)
                 # analyze set number image for set number
                 set_number_text = analyze_image(f_jpg)
-                if re.search(r"Set No: (\d+)", set_number_text, re.M + re.I).groups() is not None:
+                if re.search(r"Set No: (\d+)", set_number_text, re.M + re.I) is not None:
                     set_number = re.search(r"Set No: (\d+)", set_number_text, re.M + re.I).groups()
                     set_number = set_number[-1]
                 else:
@@ -401,13 +417,15 @@ class UiMainwindow(object):
                 if len(set_number) < 2:
                     set_number = "0" + str(set_number)
                 # debug, print the set number
-                print(set_number)
+                if debug:
+                    print(set_number)
 
                 # crop image to date cast location
                 cv2.imwrite(f_jpg, image[710:750, 1260:1475])
                 # debug, show what date cast image looks like to be analyzed
-                cv2.imshow("Date Cast:", image[710:750, 1260:1475])
-                cv2.waitKey(0)
+                if debug:
+                    cv2.imshow("Date Cast:", image[710:750, 1260:1475])
+                    cv2.waitKey(0)
                 # analyze date cast image for date cast
                 date_cast_text = analyze_image(f_jpg)
                 if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M | re.I) is not None:
@@ -416,58 +434,105 @@ class UiMainwindow(object):
                 else:
                     date_cast = "N/A"
                 # debug, print the date cast
-                print(date_cast)
+                if debug:
+                    print(date_cast)
 
                 # crop image to break strengths location
                 cv2.imwrite(f_jpg, image[830:1100, 1150:1350])
                 # debug, show what break strengths looks like to be analyzed
-                cv2.imshow("Break Strengths", image[830:1100, 1150:1350])
-                cv2.waitKey(0)
+                if debug:
+                    cv2.imshow("Break Strengths", image[830:1100, 1150:1350])
+                    cv2.waitKey(0)
                 # analyze break strengths for break strengths
                 break_strengths_text = analyze_image(f_jpg)
                 break_strengths = break_strengths_text.split("\n")
                 # debug, print the break strengths
-                print(break_strengths)
+                if debug:
+                    print(break_strengths)
 
                 # crop image to latest break age location
                 cv2.imwrite(f_jpg, image[830:1100, 450:620])
                 # debug, show what latest break age looks like to be analyzed
-                cv2.imshow("Break Strengths", image[830:1100, 450:620])
-                cv2.waitKey(0)
+                if debug:
+                    cv2.imshow("Break Strengths", image[830:1100, 450:620])
+                    cv2.waitKey(0)
                 # analyze latest break age for age
                 break_age_text = analyze_image(f_jpg)
                 break_ages = break_age_text.split("\n")
                 # debug, print the latest break age
-                print(break_ages)
+                if debug:
+                    print(break_ages)
                 if len(break_strengths) > 0:
                     break_ages = break_ages[len(break_strengths) - 1]
                 else:
                     break_ages = break_ages[0]
-                print(break_ages)
+                if debug:
+                    print(break_ages)
 
+            elif text.lower().find("placement") > 0:
+                sheet_type = "placement"
+                sheet_type_file = "_ConcretePlacement("
+                # debug, print sheet type to screen
+                if debug:
+                    print(sheet_type)
+                # Preprocess full image saved previously and analyze specific sections for remaining data
+                pre_process_image(full_jpg, args)
+                image = cv2.imread(full_jpg)
+                # crop image to project number location
+                cv2.imwrite(f_jpg, image[310:350, 1050:1550])
+                # debug, show what project number image looks like to be analyzed
+                if debug:
+                    cv2.imshow("ProjectNumber", image[310:350, 1050:1550])
+                    cv2.waitKey(0)
+                # analyze project number image for project number
+                project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                # debug, print the project number
+                if debug:
+                    print(project_number)
+                    print(project_number_short)
 
-            else:
-                project_number = "N/A"
-                project_number_short = "N/A"
-                set_number = "N/A"
-                sheet_type = "N/A"
-                date_cast = "N/A"
-                break_ages = "N/A"
-                sheet_type_file = "N/A"
+                # crop image to date placed location
+                cv2.imwrite(f_jpg, image[700:740, 1250:1450])
+                # debug, show what date placed image looks like to be analyzed
+                if debug:
+                    cv2.imshow("Date Cast:", image[700:740, 1250:1450])
+                    cv2.waitKey(0)
+                # analyze date placed image for date cast
+                date_placed_text = analyze_image(f_jpg)
+                if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M | re.I) is not None:
+                    date_placed = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M + re.I).groups()
+                    date_placed = date_placed[-1].replace("\n", "")
+                else:
+                    date_placed = "N/A"
+                # debug, print the date cast
+                if debug:
+                    print(date_placed)
+
 
             package_number = "04"
 
-            file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + sheet_type_file \
-                         + set_number + "(" + date_cast.replace(" ", "-") + ").pdf"
             split_name = f.split("/").pop()
-            print_string = "\nDetected " + split_name + " as a " + sheet_type + " - Project Number: " + project_number \
-                           + " - set number: " + set_number + " - date cast: " + date_cast
+            if sheet_type == "placement":
+                file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + sheet_type_file + \
+                             date_placed + ").pdf"
+                print_string = "\nDetected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                               + " - date placed: " + date_placed
+            elif sheet_type == "break":
+                file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + \
+                             sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ").pdf"
+                print_string = "\nDetected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                               + " - set number: " + set_number + " - date cast: " + date_cast
+            else:
+                file_title = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
+                print_string = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
+
             self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, f)
             self.listWidget.addItem(self.listWidgetItem)
 
             os.remove(full_jpg)
+            os.remove(f_jpg)
 
 
 if __name__ == "__main__":
