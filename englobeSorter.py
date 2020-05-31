@@ -20,6 +20,9 @@ import regex as re
 # Have yet to even begin attempting naming schemes
 debug = False
 
+def output(self):
+    self.outputBox.appendPlainText("Analyzing...\n")
+
 def analyze_image(img_path):
     pytesseract.pytesseract.tesseract_cmd = r'C:\Users\bgorm\AppData\Local\Tesseract-OCR\tesseract.exe'
     # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
@@ -102,6 +105,9 @@ def pre_process_image(path, args, age_detect=None):
 
 
 class UiMainwindow(object):
+
+    def __init__(self):
+        self.fileNames = None
 
     def setup_ui(self, main_window):
         main_window.setObjectName("MainWindow")
@@ -235,6 +241,7 @@ class UiMainwindow(object):
         self.openQueueFolder.setText(_translate("MainWindow", "Open Queue"))
         self.label_2.setText(_translate("MainWindow", "Queue Folder:"))
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
+        self.analyzeButton.clicked.connect(self.analyze_output)
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
         self.label_3.setText(_translate("MainWindow", "File Output Viewer:"))
@@ -244,6 +251,10 @@ class UiMainwindow(object):
 
     def select_files_handler(self):
         self.open_file_dialog()
+
+    def analyze_output(self):
+        self.analyzeButton.setEnabled(False)
+        self.outputBox.appendPlainText("Analyzing...\n")
 
     def open_file_dialog(self):
         self.dialog = QtWidgets.QFileDialog()
@@ -263,12 +274,12 @@ class UiMainwindow(object):
         self.folderName = self.dialog.selectedFiles()[0]
         if self.dialog.exec_() == QtWidgets.QDialog.Accepted:
             self.update()
-        file_folder_string = "Queue Folder save location set to: \n" + self.folderName
+        file_folder_string = "Queue Folder save location set to: " + self.folderName + "\n"
         self.outputBox.appendPlainText(file_folder_string)
 
     def open_queue_folder_handler(self):
         os.startfile(self.folderName)
-        open_queue_folder_string = "\nOpening queue folder in separate window"
+        open_queue_folder_string = "Opening queue folder in separate window\n"
         self.outputBox.appendPlainText(open_queue_folder_string)
 
     def select_queue_folder_handler(self):
@@ -278,11 +289,15 @@ class UiMainwindow(object):
         self.queueLocation.setText(self.folderName)
 
     def analyze_button_handler(self):
-        self.outputBox.appendPlainText("\nAnalyzing...")
-        self.data_processing()
+        if self.fileNames is not None:
+
+            self.data_processing()
+        else:
+            self.outputBox.appendPlainText("Please select at least 1 file to analyze...\n")
+        self.analyzeButton.setEnabled(True)
 
     def analyze_queue_button_handler(self):
-        self.outputBox.appendPlainText("Analyzing Queue Folder...")
+        self.outputBox.appendPlainText("Analyzing Queue Folder...\n")
 
     def list_widget_handler(self):
         image_pdf = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole))
@@ -300,7 +315,6 @@ class UiMainwindow(object):
         os.remove(name_jpeg)
 
     def data_processing(self):
-
         # construct the argument parse and parse the arguments
         ap = argparse.ArgumentParser()
         ap.add_argument("-p", "--preprocess", type=str, default="default",
@@ -508,23 +522,23 @@ class UiMainwindow(object):
                 if debug:
                     print(date_placed)
 
-
+            # Need a way to determine package number
             package_number = "04"
 
             split_name = f.split("/").pop()
             if sheet_type == "placement":
                 file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + sheet_type_file + \
                              date_placed + ").pdf"
-                print_string = "\nDetected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
-                               + " - date placed: " + date_placed
+                print_string = "Detected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                               + " - date placed: " + date_placed + "\n"
             elif sheet_type == "break":
                 file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + \
                              sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ").pdf"
-                print_string = "\nDetected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
-                               + " - set number: " + set_number + " - date cast: " + date_cast
+                print_string = "Detected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                               + " - set number: " + set_number + " - date cast: " + date_cast + "\n"
             else:
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
-                print_string = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
+                print_string = "Sheet_Type_Not_Found_(" + split_name + ").pdf\n"
 
             self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
