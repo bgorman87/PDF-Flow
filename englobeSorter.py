@@ -41,13 +41,15 @@ db = sqlite3.connect(':memory:')
 cur = db.cursor()
 cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
 
+tesseract_path = str(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, "Tesseract"))) + \
+                 r"\tesseract.exe"
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
 def analyze_image(img_path):
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Users\bgorm\AppData\Local\Tesseract-OCR\tesseract.exe'
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
     # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
     text = pytesseract.image_to_string(img_path, config="--psm 6")
     return text
