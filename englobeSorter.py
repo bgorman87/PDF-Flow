@@ -6,22 +6,45 @@ import argparse
 import cv2
 import os
 import regex as re
+import time
+import sqlite3
 
-
-# Find all break sheets in selection and sort them by job number If multiple break sheets for single job number sort
-# by set number If set number = N/A then sort it by date cast // May lead to a set being out of order but only by 1
-# most likely Append ordered sets of each job number with placement sheets sorted by date placed or record number
-# This is when the queue folder can be re-analyzed to see if any placement sheets can be sent out
-# Sometimes there are sieves and other forms that are submitted at the end and these can be sorted by
-# date or record number
-# Output all backend stuff to textbox to keep user informed
-# At end of analysis ensure potential issues are noted such as missing set no. or break dates
-
-# Have yet to even begin attempting naming schemes
 debug = False
+
+#############
+# Changing scope of this project
+# Assume scanned document has all required documents for single project number - Easy to do by hand
+# No need for a queue folder
+#############
+
+# Biggest issues to solve currently
+# 1 - Dealing with files containing undetected data
+    # Project number is most important as it will have save directory, project description short form, and required //
+        # emails. Therefore If first sheet does not return a properly structured project number, search next sheet
+        # and repeat until properly formatted number found. This can be done by scanning each document and iterating
+        # through detected project numbers for one that is properly formatted.
+    # Add each unidentified sheet to the list widget and upon double clicking, popup box appears
+    # where user can input the 5 max data points a sheet would need, or any missing or incorrect data points
+    # Once data is corrected, if any of the 5 data points were changed, redo the analysis
+# 2 - Renaming bundles if need be (Wrong info or name too long)
+    # Find out FileNameTooLong Error and use Try Except statement
+# 3 - Make program more robust by adding in more Try Except statements
+# 4 - Have program create Outlook .msg file for each individual package
+# 5 - Project Number Exceptions
+    # Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
+    # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
+    # and handle when one is not found
+
+# try sorting using sqlite3 in memory mode
+
+db = sqlite3.connect(':memory:')
+cur = db.cursor()
+cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
+
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
+
 
 def analyze_image(img_path):
     pytesseract.pytesseract.tesseract_cmd = r'C:\Users\bgorm\AppData\Local\Tesseract-OCR\tesseract.exe'
@@ -109,6 +132,8 @@ class UiMainwindow(object):
     def __init__(self):
         self.fileNames = None
 
+    progress_update = QtCore.pyqtSignal(int)
+
     def setup_ui(self, main_window):
         main_window.setObjectName("MainWindow")
         main_window.resize(361, 630)
@@ -141,8 +166,8 @@ class UiMainwindow(object):
         self.queueLocation = QtWidgets.QLineEdit(self.tab)
         self.queueLocation.setObjectName("queueLocation")
         self.gridLayout.addWidget(self.queueLocation, 1, 0, 1, 3)
-        self.selectQueueFolder = QtWidgets.QPushButton(self.tab)
 
+        self.selectQueueFolder = QtWidgets.QPushButton(self.tab)
         self.selectQueueFolder.setObjectName("selectQueueFolder")
         self.gridLayout.addWidget(self.selectQueueFolder, 1, 3, 1, 2)
 
@@ -195,6 +220,14 @@ class UiMainwindow(object):
         self.listWidget.setObjectName("listWidget")
         self.gridLayout_2.addWidget(self.listWidget, 1, 0, 5, 5)
 
+        self.fileRename = QtWidgets.QLineEdit(self.tab_2)
+        self.fileRename.setObjectName("filerenamer")
+        self.gridLayout_2.addWidget(self.fileRename, 6, 0, 1, 3)
+
+        self.fileRenameButton = QtWidgets.QPushButton(self.tab)
+        self.fileRenameButton.setObjectName("fileRenameButton")
+        self.gridLayout.addWidget(self.fileRenameButton, 6, 3, 1, 2)
+
         self.label_3 = QtWidgets.QLabel(self.tab_2)
         self.label_3.setGeometry(QtCore.QRect(10, 140, 100, 16))
         self.label_3.setObjectName("pdfOutputLabel")
@@ -233,28 +266,26 @@ class UiMainwindow(object):
         self.label.setText(_translate("MainWindow", "Created By: Brandon Gorman"))
         self.SelectFiles.setText(_translate("MainWindow", "Select Files"))
         self.SelectFiles.clicked.connect(self.select_files_handler)
-        self.selectQueueFolder.setWhatsThis(_translate("MainWindow", "Chnage the queue folder location"))
+        self.selectQueueFolder.setWhatsThis(_translate("MainWindow", "Change the queue folder location"))
         self.selectQueueFolder.setText(_translate("MainWindow", "Change"))
         self.selectQueueFolder.clicked.connect(self.select_queue_folder_handler)
+        self.fileRenameButton.setWhatsThis(_translate("MainWindow", "Rename the currently selected file"))
+        self.fileRenameButton.setText(_translate("MainWindow", "Rename"))
         self.analyzeQueueButton.setText(_translate("MainWindow", "Analyze Queue"))
         self.analyzeQueueButton.clicked.connect(self.analyze_queue_button_handler)
         self.openQueueFolder.setText(_translate("MainWindow", "Open Queue"))
         self.label_2.setText(_translate("MainWindow", "Queue Folder:"))
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
-        self.analyzeButton.clicked.connect(self.analyze_output)
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
         self.label_3.setText(_translate("MainWindow", "File Output Viewer:"))
         self.label_4.setText(_translate("MainWindow", "Combined Files:"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Output"))
         self.listWidget.itemClicked.connect(self.list_widget_handler)
+        self.listWidget.itemDoubleClicked.connect(self.rename_file_handler)
 
     def select_files_handler(self):
         self.open_file_dialog()
-
-    def analyze_output(self):
-        self.analyzeButton.setEnabled(False)
-        self.outputBox.appendPlainText("Analyzing...\n")
 
     def open_file_dialog(self):
         self.dialog = QtWidgets.QFileDialog()
@@ -285,12 +316,22 @@ class UiMainwindow(object):
     def select_queue_folder_handler(self):
         self.open_folder_dialog()
 
+    def rename_file_handler(self):
+        if self.listWidget.isPersistentEditorOpen(self.listWidget.currentItem()):
+            self.listWidget.closePersistentEditor(self.listWidget.currentItem())
+            self.listWidget.editItem(self.listWidget.currentItem())
+        else:
+            self.listWidget.editItem(self.listWidget.currentItem())
+
     def update(self):
         self.queueLocation.setText(self.folderName)
 
     def analyze_button_handler(self):
+        self.analyzeButton.setEnabled(False)
+        time.sleep(1)
         if self.fileNames is not None:
-
+            self.outputBox.appendPlainText("Analyzing...\n")
+            time.sleep(1)
             self.data_processing()
         else:
             self.outputBox.appendPlainText("Please select at least 1 file to analyze...\n")
@@ -313,6 +354,7 @@ class UiMainwindow(object):
         self.graphicsView.setScene(scene)
         self.outputBox.appendPlainText(str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)))
         os.remove(name_jpeg)
+        self.fileRename.setText(image_pdf)
 
     def data_processing(self):
         # construct the argument parse and parse the arguments
@@ -320,6 +362,10 @@ class UiMainwindow(object):
         ap.add_argument("-p", "--preprocess", type=str, default="default",
                         help="type of pre-processing to be done")
         args = vars(ap.parse_args())
+
+        # initialize database into memory
+        cur.execute("SELECT * From files")
+        print(cur.fetchall())
 
         # iterate through all input files
         # for each file scan top right of sheet ((w/2, 0, w, h/8))
@@ -422,8 +468,8 @@ class UiMainwindow(object):
                     cv2.waitKey(0)
                 # analyze set number image for set number
                 set_number_text = analyze_image(f_jpg)
-                if re.search(r"Set No: (\d+)", set_number_text, re.M + re.I) is not None:
-                    set_number = re.search(r"Set No: (\d+)", set_number_text, re.M + re.I).groups()
+                if re.search(r"Set No: (\d+)\s", set_number_text, re.M + re.I) is not None:
+                    set_number = re.search(r"Set No: (\d+)\s", set_number_text, re.M + re.I).groups()
                     set_number = set_number[-1]
                 else:
                     set_number = "N/A"
@@ -540,6 +586,20 @@ class UiMainwindow(object):
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
                 print_string = "Sheet_Type_Not_Found_(" + split_name + ").pdf\n"
 
+            if sheet_type == "break":
+                params = [project_number_short, date_cast, sheet_type, set_number, break_ages]
+            else:
+                params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
+            # Turn "N/A" results into None results to help with sorting in sqlite3
+            count = 1
+            for item in params:
+                if item == "N/A":
+                    # tuples cannot be indexed and assigned values like this
+                    params[count] = None
+                count += 1
+            cur.execute("INSERT INTO files VALUES(?,?,?,?,?)", params)
+            db.commit()
+
             self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, f)
@@ -547,6 +607,11 @@ class UiMainwindow(object):
 
             os.remove(full_jpg)
             os.remove(f_jpg)
+
+        cur.execute("SELECT * From files")
+        print(cur.fetchall())
+        cur.execute("SELECT * From files ORDER BY Project, Type, Date, Set_No, Age")
+        print(cur.fetchall())
 
 
 if __name__ == "__main__":
