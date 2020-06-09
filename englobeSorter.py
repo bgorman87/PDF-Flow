@@ -5,8 +5,8 @@ import pytesseract
 import argparse
 import cv2
 import os
-import regex as re
 import time
+import regex as re
 import sqlite3
 
 debug = False
