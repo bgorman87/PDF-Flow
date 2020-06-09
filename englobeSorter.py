@@ -41,15 +41,18 @@ db = sqlite3.connect(':memory:')
 cur = db.cursor()
 cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
 
-tesseract_path = str(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, "Tesseract"))) + \
-                 r"\tesseract.exe"
+tesseract_path = str(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), r"Tesseract\tesseract.exe")))
+
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
 def analyze_image(img_path):
-    pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    try:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    except Exception:
+        print("Something went wrong")
     # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
     text = pytesseract.image_to_string(img_path, config="--psm 6")
     return text
@@ -163,48 +166,28 @@ class UiMainwindow(object):
 
         self.SelectFiles = QtWidgets.QPushButton(self.tab)
         self.SelectFiles.setObjectName("SelectFiles")
-        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 1)
-
-        self.queueLocation = QtWidgets.QLineEdit(self.tab)
-        self.queueLocation.setObjectName("queueLocation")
-        self.gridLayout.addWidget(self.queueLocation, 1, 0, 1, 3)
-
-        self.selectQueueFolder = QtWidgets.QPushButton(self.tab)
-        self.selectQueueFolder.setObjectName("selectQueueFolder")
-        self.gridLayout.addWidget(self.selectQueueFolder, 1, 3, 1, 2)
+        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 2)
 
         self.outputBox = QtWidgets.QPlainTextEdit(self.tab)
         self.outputBox.setObjectName("outputBox")
         self.outputBox.setReadOnly(True)
-        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 5)
-
-        self.analyzeQueueButton = QtWidgets.QPushButton(self.tab)
-        self.analyzeQueueButton.setObjectName("analyzeQueueButton")
-        self.gridLayout.addWidget(self.analyzeQueueButton, 3, 4, 1, 1)
-
-        self.openQueueFolder = QtWidgets.QPushButton(self.tab)
-        self.openQueueFolder.setObjectName("openQueueFolder")
-        self.gridLayout.addWidget(self.openQueueFolder, 3, 2, 1, 2)
+        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 4)
 
         self.line = QtWidgets.QFrame(self.tab)
         self.line.setFrameShape(QtWidgets.QFrame.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line.setObjectName("line")
-        self.gridLayout.addWidget(self.line, 4, 0, 1, 5)
-
-        self.label_2 = QtWidgets.QLabel(self.tab)
-        self.label_2.setObjectName("queueFolderLabel")
-        self.gridLayout.addWidget(self.label_2, 0, 0, 1, 2)
+        self.gridLayout.addWidget(self.line, 2, 0, 1, 4)
 
         self.line_2 = QtWidgets.QFrame(self.tab)
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
-        self.gridLayout.addWidget(self.line_2, 2, 0, 1, 5)
+        self.gridLayout.addWidget(self.line_2, 4, 0, 1, 4)
 
         self.analyzeButton = QtWidgets.QPushButton(self.tab)
         self.analyzeButton.setObjectName("analyzeButton")
-        self.gridLayout.addWidget(self.analyzeButton, 3, 1, 1, 1)
+        self.gridLayout.addWidget(self.analyzeButton, 3, 2, 1, 2)
 
         self.tab_2 = QtWidgets.QWidget()
         self.tabWidget.addTab(self.tab, "")
@@ -224,11 +207,11 @@ class UiMainwindow(object):
 
         self.fileRename = QtWidgets.QLineEdit(self.tab_2)
         self.fileRename.setObjectName("filerenamer")
-        self.gridLayout_2.addWidget(self.fileRename, 6, 0, 1, 3)
+        self.gridLayout_2.addWidget(self.fileRename, 6, 0, 1, 4)
 
-        self.fileRenameButton = QtWidgets.QPushButton(self.tab)
+        self.fileRenameButton = QtWidgets.QPushButton(self.tab_2)
         self.fileRenameButton.setObjectName("fileRenameButton")
-        self.gridLayout.addWidget(self.fileRenameButton, 6, 3, 1, 2)
+        self.gridLayout_2.addWidget(self.fileRenameButton, 6, 4, 1, 1)
 
         self.label_3 = QtWidgets.QLabel(self.tab_2)
         self.label_3.setGeometry(QtCore.QRect(10, 140, 100, 16))
@@ -254,11 +237,8 @@ class UiMainwindow(object):
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
-        main_window.setTabOrder(self.queueLocation, self.selectQueueFolder)
-        main_window.setTabOrder(self.selectQueueFolder, self.SelectFiles)
         main_window.setTabOrder(self.SelectFiles, self.analyzeButton)
-        main_window.setTabOrder(self.analyzeButton, self.openQueueFolder)
-        main_window.setTabOrder(self.openQueueFolder, self.outputBox)
+        main_window.setTabOrder(self.analyzeButton, self.outputBox)
         main_window.setTabOrder(self.outputBox, self.tab)
         main_window.setTabOrder(self.tab, self.tab_2)
 
@@ -268,15 +248,8 @@ class UiMainwindow(object):
         self.label.setText(_translate("MainWindow", "Created By: Brandon Gorman"))
         self.SelectFiles.setText(_translate("MainWindow", "Select Files"))
         self.SelectFiles.clicked.connect(self.select_files_handler)
-        self.selectQueueFolder.setWhatsThis(_translate("MainWindow", "Change the queue folder location"))
-        self.selectQueueFolder.setText(_translate("MainWindow", "Change"))
-        self.selectQueueFolder.clicked.connect(self.select_queue_folder_handler)
         self.fileRenameButton.setWhatsThis(_translate("MainWindow", "Rename the currently selected file"))
         self.fileRenameButton.setText(_translate("MainWindow", "Rename"))
-        self.analyzeQueueButton.setText(_translate("MainWindow", "Analyze Queue"))
-        self.analyzeQueueButton.clicked.connect(self.analyze_queue_button_handler)
-        self.openQueueFolder.setText(_translate("MainWindow", "Open Queue"))
-        self.label_2.setText(_translate("MainWindow", "Queue Folder:"))
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
@@ -302,31 +275,12 @@ class UiMainwindow(object):
             file_names_string = file_names_string + item + "\n"
         self.outputBox.appendPlainText(file_names_string)
 
-    def open_folder_dialog(self):
-        self.dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
-        self.folderName = self.dialog.selectedFiles()[0]
-        if self.dialog.exec_() == QtWidgets.QDialog.Accepted:
-            self.update()
-        file_folder_string = "Queue Folder save location set to: " + self.folderName + "\n"
-        self.outputBox.appendPlainText(file_folder_string)
-
-    def open_queue_folder_handler(self):
-        os.startfile(self.folderName)
-        open_queue_folder_string = "Opening queue folder in separate window\n"
-        self.outputBox.appendPlainText(open_queue_folder_string)
-
-    def select_queue_folder_handler(self):
-        self.open_folder_dialog()
-
     def rename_file_handler(self):
         if self.listWidget.isPersistentEditorOpen(self.listWidget.currentItem()):
             self.listWidget.closePersistentEditor(self.listWidget.currentItem())
             self.listWidget.editItem(self.listWidget.currentItem())
         else:
             self.listWidget.editItem(self.listWidget.currentItem())
-
-    def update(self):
-        self.queueLocation.setText(self.folderName)
 
     def analyze_button_handler(self):
         self.analyzeButton.setEnabled(False)
