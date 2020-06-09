@@ -9,7 +9,7 @@ import time
 import regex as re
 import sqlite3
 
-debug = False
+debug = True
 
 #############
 # Changing scope of this project
@@ -41,7 +41,8 @@ db = sqlite3.connect(':memory:')
 cur = db.cursor()
 cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
 
-tesseract_path = str(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), r"Tesseract\tesseract.exe")))
+tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
+popplerpath = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
 
 def output(self):
@@ -49,10 +50,7 @@ def output(self):
 
 
 def analyze_image(img_path):
-    try:
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    except Exception:
-        print("Something went wrong")
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
     # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
     text = pytesseract.image_to_string(img_path, config="--psm 6")
     return text
@@ -263,7 +261,7 @@ class UiMainwindow(object):
         self.open_file_dialog()
 
     def open_file_dialog(self):
-        self.dialog = QtWidgets.QFileDialog()
+        self.dialog = QtWidgets.QFileDialog(directory=str(os.path.abspath(os.path.join(os.getcwd(), r"..\.."))))
         self.fileNames, self.filters = QtWidgets.QFileDialog.getOpenFileNames()
 
         tuple(self.fileNames)
@@ -370,7 +368,7 @@ class UiMainwindow(object):
             # Get path variable to save entire sheet separately
             full_jpg = f.replace(".pdf", "-full.jpg")
             # Import images from file path "f" using pdf2image to open
-            images_jpeg = convert_from_path(f)
+            images_jpeg = convert_from_path(f, poppler_path=popplerpath)
 
             # convert PDF files into images for analyzing
             # Tesseract doesnt directly read from PDF files
