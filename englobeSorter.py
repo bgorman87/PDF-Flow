@@ -9,7 +9,7 @@ import time
 import regex as re
 import sqlite3
 
-debug = True
+debug = False
 
 #############
 # Changing scope of this project
@@ -19,21 +19,21 @@ debug = True
 
 # Biggest issues to solve currently
 # 1 - Dealing with files containing undetected data
-    # Project number is most important as it will have save directory, project description short form, and required //
-        # emails. Therefore If first sheet does not return a properly structured project number, search next sheet
-        # and repeat until properly formatted number found. This can be done by scanning each document and iterating
-        # through detected project numbers for one that is properly formatted.
-    # Add each unidentified sheet to the list widget and upon double clicking, popup box appears
-    # where user can input the 5 max data points a sheet would need, or any missing or incorrect data points
-    # Once data is corrected, if any of the 5 data points were changed, redo the analysis
+# Project number is most important as it will have save directory, project description short form, and required //
+# emails. Therefore If first sheet does not return a properly structured project number, search next sheet
+# and repeat until properly formatted number found. This can be done by scanning each document and iterating
+# through detected project numbers for one that is properly formatted.
+# Add each unidentified sheet to the list widget and upon double clicking, popup box appears
+# where user can input the 5 max data points a sheet would need, or any missing or incorrect data points
+# Once data is corrected, if any of the 5 data points were changed, redo the analysis
 # 2 - Renaming bundles if need be (Wrong info or name too long)
-    # Find out FileNameTooLong Error and use Try Except statement
+# Find out FileNameTooLong Error and use Try Except statement
 # 3 - Make program more robust by adding in more Try Except statements
 # 4 - Have program create Outlook .msg file for each individual package
 # 5 - Project Number Exceptions
-    # Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
-    # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
-    # and handle when one is not found
+# Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
+# Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
+# and handle when one is not found
 
 # try sorting using sqlite3 in memory mode
 
@@ -248,6 +248,7 @@ class UiMainwindow(object):
         self.SelectFiles.clicked.connect(self.select_files_handler)
         self.fileRenameButton.setWhatsThis(_translate("MainWindow", "Rename the currently selected file"))
         self.fileRenameButton.setText(_translate("MainWindow", "Rename"))
+        self.fileRenameButton.clicked.connect(self.file_rename_button_handler)
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
@@ -280,6 +281,12 @@ class UiMainwindow(object):
         else:
             self.listWidget.editItem(self.listWidget.currentItem())
 
+    def file_rename_button_handler(self):
+        try:
+            os.rename(self.listWidget.currentItem().data(QtCore.Qt.UserRole), self.fileRename.text())
+        except Exception as e:
+            print(e)
+
     def analyze_button_handler(self):
         self.analyzeButton.setEnabled(False)
         time.sleep(1)
@@ -297,18 +304,25 @@ class UiMainwindow(object):
     def list_widget_handler(self):
         image_pdf = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole))
         image_jpeg = convert_from_path(image_pdf, fmt="jpeg")
-        name_jpeg = image_pdf.replace(".pdf", ".jpg")
-        # for temp in image_jpeg:
-        #     temp.save(name_jpeg, 'JPEG')
-        pix = QtGui.QPixmap(name_jpeg)
-        pix = pix.scaledToWidth(self.graphicsView.width())
-        item = QtWidgets.QGraphicsPixmapItem(pix)
-        scene = QtWidgets.QGraphicsScene()
-        scene.addItem(item)
-        self.graphicsView.setScene(scene)
-        self.outputBox.appendPlainText(str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)))
-        os.remove(name_jpeg)
-        self.fileRename.setText(image_pdf)
+        if image_jpeg:
+            result = Image.new("RGB", (1700, len(image_jpeg) * 2200))
+            scene = QtWidgets.QGraphicsScene()
+            for count, temp in enumerate(image_jpeg, 1):
+                x = 0
+                y = (count - 1) * 2200
+                result.paste(temp, (x, y))
+            name_jpeg = image_pdf.replace(".pdf", ".jpg")
+            result.save(name_jpeg, 'JPEG')
+            pix = QtGui.QPixmap(name_jpeg)
+            pix = pix.scaledToWidth(self.graphicsView.width())
+            item = QtWidgets.QGraphicsPixmapItem(pix)
+            scene.addItem(item)
+            self.graphicsView.setScene(scene)
+            self.outputBox.appendPlainText(str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)))
+            os.remove(name_jpeg)
+            self.fileRename.setText(image_pdf)
+        else:
+            print("image_jpeg list is empty")
 
     def data_processing(self):
         # construct the argument parse and parse the arguments
@@ -316,10 +330,6 @@ class UiMainwindow(object):
         ap.add_argument("-p", "--preprocess", type=str, default="default",
                         help="type of pre-processing to be done")
         args = vars(ap.parse_args())
-
-        # initialize database into memory
-        cur.execute("SELECT * From files")
-        print(cur.fetchall())
 
         # iterate through all input files
         # for each file scan top right of sheet ((w/2, 0, w, h/8))
@@ -350,12 +360,14 @@ class UiMainwindow(object):
         # Standard break sheet - date cast location - (1260, 710, 1475, 750)
         # Standard break sheet - project number location - (1100, 320, 1550, 360)
         ################################################################################################################
-
+        # Import images from file path "f" using pdf2image to open
         for f in self.fileNames:
-            # Import images from file path "f" using pdf2image to open
+            # Each pdf page is stored as image info in an array called images_jpg
             images_jpeg = convert_from_path(f, poppler_path=popplerpath)
-            count = 0
+            # need to iterate through the image info array to analyze each individual image.
             for image in images_jpeg:
+                # Set / reset count to 0 for appending file names
+                count = 0
                 # initialize variables in case some do not get detected
                 project_number = "N/A"
                 project_number_short = "N/A"
@@ -486,7 +498,7 @@ class UiMainwindow(object):
                         print(break_ages)
 
                 elif text.lower().find("placement") > 0:
-                    sheet_type = 1  # 1 = "placement"
+                    sheet_type = "1"  # 1 = "placement"
                     sheet_type_file = "_ConcretePlacement("
                     # debug, print sheet type to screen
                     if debug:
@@ -531,12 +543,12 @@ class UiMainwindow(object):
                 if sheet_type == "1":  # 1 = placement
                     file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + sheet_type_file + \
                                  date_placed + ").pdf"
-                    print_string = "Detected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                    print_string = "Detected " + split_name + " as a Placement sheet - Project Number: " + project_number \
                                    + " - date placed: " + date_placed + "\n"
                 elif sheet_type == "3":  # 3 = break
                     file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + \
                                  sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ").pdf"
-                    print_string = "Detected " + split_name + " as a " + sheet_type + " sheet - Project Number: " + project_number \
+                    print_string = "Detected " + split_name + " as a Break sheet - Project Number: " + project_number \
                                    + " - set number: " + set_number + " - date cast: " + date_cast + "\n"
                 else:
                     file_title = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
@@ -564,7 +576,7 @@ class UiMainwindow(object):
 
         cur.execute("SELECT * From files")
         print(cur.fetchall())
-        cur.execute("SELECT * From files ORDER BY Project, p, Date, Set_No, Age")
+        cur.execute("SELECT * From files ORDER BY Project, Type, Date, Set_No, Age")
         print(cur.fetchall())
 
 
