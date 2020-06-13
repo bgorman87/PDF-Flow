@@ -9,7 +9,7 @@ import time
 import regex as re
 import sqlite3
 
-debug = False
+debug = True
 
 #############
 # Changing scope of this project
@@ -395,7 +395,7 @@ class UiMainwindow(object):
 
                 # if top right image analysis yields "test" it is a concrete break sheet
                 if text.lower().find("test") > 0 & text.lower().find("placement") <= 0:
-                    sheet_type = "break"
+                    sheet_type = "3"  # 3 = break
                     sheet_type_file = "dConcStrength_S"
                     # debug, print sheet type to screen
                     if debug:
@@ -404,10 +404,10 @@ class UiMainwindow(object):
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
                     # crop image to project number location
-                    cv2.imwrite(f_jpg, image[320:360, 1100:1550])
+                    cv2.imwrite(f_jpg, image[300:360, 1100:1550])
                     # debug, show what project number image looks like to be analyzed
                     if debug:
-                        cv2.imshow("ProjectNumber", image[320:360, 1100:1550])
+                        cv2.imshow("ProjectNumber", image[300:360, 1100:1550])
                         cv2.waitKey(0)
                     # analyze project number image for project number
                     project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
@@ -486,7 +486,7 @@ class UiMainwindow(object):
                         print(break_ages)
 
                 elif text.lower().find("placement") > 0:
-                    sheet_type = "placement"
+                    sheet_type = 1  # 1 = "placement"
                     sheet_type_file = "_ConcretePlacement("
                     # debug, print sheet type to screen
                     if debug:
@@ -495,10 +495,10 @@ class UiMainwindow(object):
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
                     # crop image to project number location
-                    cv2.imwrite(f_jpg, image[310:350, 1050:1550])
+                    cv2.imwrite(f_jpg, image[290:350, 1050:1550])
                     # debug, show what project number image looks like to be analyzed
                     if debug:
-                        cv2.imshow("ProjectNumber", image[310:350, 1050:1550])
+                        cv2.imshow("ProjectNumber", image[290:350, 1050:1550])
                         cv2.waitKey(0)
                     # analyze project number image for project number
                     project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
@@ -527,7 +527,7 @@ class UiMainwindow(object):
                 # Need a way to determine package number
                 package_number = "04"
 
-                split_name = f.split("/").pop()
+                split_name = full_jpg.split("/").pop()
                 if sheet_type == "1":  # 1 = placement
                     file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + sheet_type_file + \
                                  date_placed + ").pdf"
@@ -552,20 +552,19 @@ class UiMainwindow(object):
                     if item == "N/A":
                         params[count] = None
                     count += 1
+                os.remove(full_jpg)
+                os.remove(f_jpg)
                 cur.execute("INSERT INTO files VALUES(?,?,?,?,?)", params)
                 db.commit()
                 count += 1
-            self.outputBox.appendPlainText(print_string)
+                self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, f)
             self.listWidget.addItem(self.listWidgetItem)
 
-            os.remove(full_jpg)
-            os.remove(f_jpg)
-
         cur.execute("SELECT * From files")
         print(cur.fetchall())
-        cur.execute("SELECT * From files ORDER BY Project, Type, Date, Set_No, Age")
+        cur.execute("SELECT * From files ORDER BY Project, p, Date, Set_No, Age")
         print(cur.fetchall())
 
 
