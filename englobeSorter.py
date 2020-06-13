@@ -9,7 +9,7 @@ import time
 import regex as re
 import sqlite3
 
-debug = False
+debug = True
 
 #############
 # Changing scope of this project
@@ -52,6 +52,7 @@ def output(self):
 def analyze_image(img_path):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
     # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
+    # text = pytesseract.image_to_string(img_path, config="--psm 6")
     text = pytesseract.image_to_string(img_path, config="--psm 6")
     return text
 
@@ -84,8 +85,8 @@ def detect_projectnumber(text):
         project_number_short = re.search(r"([0-2]\d+[.-\s]+\d+)", text, re.M).groups()
         project_number_short = project_number_short[-1]
     else:
-        project_number = "N/A"
-        project_number_short = "N/A"
+        project_number = "NA"
+        project_number_short = "NA"
     project_number = project_number.replace(" ", "")
     project_number_short = project_number_short.replace(" ", "")
     return project_number, project_number_short
@@ -114,6 +115,8 @@ def pre_process_image(path, args, age_detect=None):
         gray = cv2.threshold(gray, 0, 255,
                              cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
         gray = cv2.medianBlur(gray, 3)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+        gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel, iterations=1)
     # perform canny edge detection
     elif args["preprocess"] == "canny":
         gray = cv2.Canny(gray, 100, 200)
@@ -139,7 +142,7 @@ class UiMainwindow(object):
 
     def setup_ui(self, main_window):
         main_window.setObjectName("MainWindow")
-        main_window.resize(361, 630)
+        main_window.resize(600, 900)
 
         self.centralwidget = QtWidgets.QWidget(main_window)
         self.centralwidget.setObjectName("centralwidget")
@@ -282,10 +285,14 @@ class UiMainwindow(object):
             self.listWidget.editItem(self.listWidget.currentItem())
 
     def file_rename_button_handler(self):
-        try:
-            os.rename(self.listWidget.currentItem().data(QtCore.Qt.UserRole), self.fileRename.text())
-        except Exception as e:
-            print(e)
+        # try:
+        file_path = self.listWidget.currentItem().data(QtCore.Qt.UserRole)
+        os.chdir(file_path.replace(file_path.split("/").pop(), ""))
+        rename_path = os.path.abspath(os.path.join(os.getcwd(), str(self.fileRename.text()) + ".pdf"))
+        os.rename(self.listWidget.currentItem().data(QtCore.Qt.UserRole), rename_path)
+        self.listWidget.currentItem().setData(QtCore.Qt.UserRole, rename_path)
+        # except Exception as e:
+        #     print(e)
 
     def analyze_button_handler(self):
         self.analyzeButton.setEnabled(False)
@@ -320,7 +327,8 @@ class UiMainwindow(object):
             self.graphicsView.setScene(scene)
             self.outputBox.appendPlainText(str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)))
             os.remove(name_jpeg)
-            self.fileRename.setText(image_pdf)
+            set_text = self.listWidget.currentItem().text().split("/").pop().replace(".pdf", "")
+            self.fileRename.setText(set_text)
         else:
             print("image_jpeg list is empty")
 
@@ -369,14 +377,14 @@ class UiMainwindow(object):
                 # Set / reset count to 0 for appending file names
                 count = 0
                 # initialize variables in case some do not get detected
-                project_number = "N/A"
-                project_number_short = "N/A"
-                set_number = "N/A"
-                sheet_type = "N/A"
-                date_cast = "N/A"
-                break_ages = "N/A"
-                sheet_type_file = "N/A"
-                date_placed = "N/A"
+                project_number = "NA"
+                project_number_short = "NA"
+                set_number = "NA"
+                sheet_type = "NA"
+                date_cast = "NA"
+                break_ages = "NA"
+                sheet_type_file = "NA"
+                date_placed = "NA"
 
                 jpg_replace_string = str(count) + ".jpg"
                 # Get path variable to save pdf files as same name but as .jpg
@@ -440,7 +448,7 @@ class UiMainwindow(object):
                         set_number = re.search(r"Set No: (\d+)\s", set_number_text, re.M + re.I).groups()
                         set_number = set_number[-1]
                     else:
-                        set_number = "N/A"
+                        set_number = "NA"
                     # for consistency, add 0 in front of single digit set numbers
                     if len(set_number) < 2:
                         set_number = "0" + str(set_number)
@@ -460,7 +468,7 @@ class UiMainwindow(object):
                         date_cast = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M + re.I).groups()
                         date_cast = date_cast[-1].replace("\n", "")
                     else:
-                        date_cast = "N/A"
+                        date_cast = "NA"
                     # debug, print the date cast
                     if debug:
                         print(date_cast)
@@ -531,7 +539,7 @@ class UiMainwindow(object):
                         date_placed = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M + re.I).groups()
                         date_placed = date_placed[-1].replace("\n", "")
                     else:
-                        date_placed = "N/A"
+                        date_placed = "NA"
                     # debug, print the date cast
                     if debug:
                         print(date_placed)
@@ -542,36 +550,44 @@ class UiMainwindow(object):
                 split_name = full_jpg.split("/").pop()
                 if sheet_type == "1":  # 1 = placement
                     file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + sheet_type_file + \
-                                 date_placed + ").pdf"
+                                 date_placed + ")"
                     print_string = "Detected " + split_name + " as a Placement sheet - Project Number: " + project_number \
                                    + " - date placed: " + date_placed + "\n"
                 elif sheet_type == "3":  # 3 = break
                     file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + \
-                                 sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ").pdf"
+                                 sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ")"
                     print_string = "Detected " + split_name + " as a Break sheet - Project Number: " + project_number \
                                    + " - set number: " + set_number + " - date cast: " + date_cast + "\n"
                 else:
-                    file_title = "Sheet_Type_Not_Found_(" + split_name + ").pdf"
-                    print_string = "Sheet_Type_Not_Found_(" + split_name + ").pdf\n"
+                    file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
+                    print_string = "Sheet_Type_Not_Found_(" + split_name + ")\n"
 
                 if sheet_type == "3":  # 3 = break
                     params = [project_number_short, date_cast, sheet_type, set_number, break_ages]
                 else:
                     params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
-                # Turn "N/A" results into None results to help with sorting in sqlite3
+                # Turn "NA" results into None results to help with sorting in sqlite3
                 count = 0
                 for item in params:
-                    if item == "N/A":
+                    if item == "NA":
                         params[count] = None
                     count += 1
-                os.remove(full_jpg)
-                os.remove(f_jpg)
+                if os.path.isfile(full_jpg):
+                    os.remove(full_jpg)
+                if os.path.isfile(f_jpg):
+                    os.remove(f_jpg)
                 cur.execute("INSERT INTO files VALUES(?,?,?,?,?)", params)
                 db.commit()
                 count += 1
                 self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
-            self.listWidgetItem.setData(QtCore.Qt.UserRole, f)
+
+            os.chdir(f.replace(f.split("/").pop(), ""))
+            rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
+            if os.path.isfile(rename_path):
+                rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + "2.pdf"))
+            os.rename(f, rename_path)
+            self.listWidgetItem.setData(QtCore.Qt.UserRole, rename_path)
             self.listWidget.addItem(self.listWidgetItem)
 
         cur.execute("SELECT * From files")
