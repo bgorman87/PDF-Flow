@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PIL import Image
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path
 import pytesseract
 import argparse
 import cv2
@@ -43,6 +43,7 @@ cur = db.cursor()
 cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
 
 tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
+print(os.getcwd())
 popplerpath = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
 
@@ -67,20 +68,25 @@ def date_formatter(date_array):
         date_month = []
         date_year = []
         for temp_date in date_array:
-            if re.search(r"(\d+)[\s-]+", temp_date, re.M | re.I) is not None:
-                date_day_search = re.search(r"(\d+)[\s-]+", temp_date, re.M + re.I).groups()
-                date_day.append(date_day_search[-1])
+            if temp_date is not None:
+                if re.search(r"(\d+)[\s-]+", temp_date, re.I) is not None:
+                    date_day_search = re.search(r"(\d+)[\s-]+", temp_date, re.I).groups()
+                    date_day.append(date_day_search[-1])
+                else:
+                    date_day.append("NA")
+                if re.search(r"\d+[\s-]+(\w+)[\s-]+", temp_date, re.I) is not None:
+                    date_month_search = re.search(r"\d+[\s-]+(\w+)[\s-]+", temp_date, re.I).groups()
+                    date_month.append(date_month_search[-1])
+                else:
+                    date_month.append("NA")
+                if re.search(r"\d+[\s-]+\w+[\s-]+(\d+)", temp_date, re.I) is not None:
+                    date_year_search = re.search(r"\d+[\s-]+\w+[\s-]+(\d+)", temp_date, re.I).groups()
+                    date_year.append(date_year_search[-1])
+                else:
+                    date_year.append("NA")
             else:
                 date_day.append("NA")
-            if re.search(r"\d+[\s-]+(\d+)[\s-]+", temp_date, re.M | re.I) is not None:
-                date_month_search = re.search(r"\d+[\s-]+(\d+)[\s-]+", temp_date, re.M | re.I).groups()
-                date_month.append(date_month_search[-1])
-            else:
                 date_month.append("NA")
-            if re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", temp_date, re.M | re.I) is not None:
-                date_year_search = re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", temp_date, re.M | re.I).groups()
-                date_year.append(date_year_search[-1])
-            else:
                 date_year.append("NA")
 
         year_unique = []
@@ -379,7 +385,10 @@ class UiMainwindow(object):
 
     def list_widget_handler(self):
         image_pdf = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole))
-        image_jpeg = convert_from_path(image_pdf, fmt="jpeg")
+        try:
+            image_jpeg = convert_from_path(image_pdf, fmt="jpeg", poppler_path=popplerpath)
+        except Exception as e:
+            print(e)
         if image_jpeg:
             result = Image.new("RGB", (1700, len(image_jpeg) * 2200))
             scene = QtWidgets.QGraphicsScene()
@@ -394,7 +403,6 @@ class UiMainwindow(object):
             item = QtWidgets.QGraphicsPixmapItem(pix)
             scene.addItem(item)
             self.graphicsView.setScene(scene)
-            self.outputBox.appendPlainText(str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)))
             os.remove(name_jpeg)
             set_text = self.listWidget.currentItem().text().split("/").pop().replace(".pdf", "")
             self.fileRename.setText(set_text)
@@ -513,22 +521,26 @@ class UiMainwindow(object):
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
                                                                                       project_number_short))
 
-                    # crop image to set number location
-                    cv2.imwrite(f_jpg, image[675:750, 100:300])
-                    # debug, show what set number image looks like to be analyzed
-                    if debug:
-                        cv2.imshow("Set Number", image[675:750, 100:300])
-                        cv2.waitKey(0)
-                    # analyze set number image for set number
-                    set_number_text = analyze_image(f_jpg)
-                    if re.search(r"Set No: (\d+)\s", set_number_text, re.M + re.I) is not None:
-                        set_number = re.search(r"Set No: (\d+)\s", set_number_text, re.M + re.I).groups()
-                        set_number = set_number[-1]
-                    elif re.search(r"SetNo: (\d+)\s", set_number_text, re.M + re.I) is not None:
-                        set_number = re.search(r"SetNo: (\d+)\s", set_number_text, re.M + re.I).groups()
-                        set_number = set_number[-1]
-                    else:
-                        set_number = "NA"
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        cv2.imwrite(f_jpg,
+                                    image[int(675 / scale):int(750 * scale), int(100 / scale):int(300 * scale)])
+                        # debug, show what set number image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Set Number", image[int(675 / scale):int(750 * scale),
+                                                     int(100 / scale):int(300 * scale)])
+                            cv2.waitKey(0)
+                        # analyze set number image for set number
+                        set_number_text = analyze_image(f_jpg)
+                        if re.search(r"Set No[:\s]+(\d+)", set_number_text, re.M + re.I) is not None:
+                            set_number = re.search(r"Set No[:\s]+(\d+)", set_number_text, re.M + re.I).groups()
+                            set_number = set_number[-1]
+                            break
+                        elif re.search(r"SetNo[:\s]+(\d+)", set_number_text, re.M + re.I) is not None:
+                            set_number = re.search(r"SetNo[:\s]+(\d+)", set_number_text, re.M + re.I).groups()
+                            set_number = set_number[-1]
+                            break
+                        else:
+                            set_number = "NA"
                     # for consistency, add 0 in front of single digit set numbers
                     if len(set_number) < 2:
                         set_number = "0" + str(set_number)
@@ -536,19 +548,24 @@ class UiMainwindow(object):
                     if debug:
                         print('Set Number: {0}'.format(set_number))
 
-                    # crop image to date cast location
-                    cv2.imwrite(f_jpg, image[710:750, 1260:1475])
-                    # debug, show what date cast image looks like to be analyzed
-                    if debug:
-                        cv2.imshow("Date Cast:", image[710:750, 1260:1475])
-                        cv2.waitKey(0)
-                    # analyze date cast image for date cast
-                    date_cast_text = analyze_image(f_jpg)
-                    if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M | re.I) is not None:
-                        date_cast = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M + re.I).groups()
-                        date_cast = date_cast[-1].replace("\n", "")
-                    else:
-                        date_cast = "NA"
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        # crop image to date cast location
+                        cv2.imwrite(f_jpg,
+                                    image[int(710 / scale):int(750 * scale), int(1260 / scale):int(1475 * scale)])
+                        # debug, show what date cast image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Date Cast:", image[int(710 / scale):int(750 * scale), int(1260 / scale):
+                                                                                              int(1475 * scale)])
+                            cv2.waitKey(0)
+                        # analyze date cast image for date cast
+                        date_cast_text = analyze_image(f_jpg)
+                        if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M | re.I) is not None:
+                            date_cast = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M + re.I).groups()
+                            date_cast = date_cast[-1].replace("\n", "")
+                            break
+                        else:
+                            date_cast = "NA"
+
                     # debug, print the date cast
                     if debug:
                         print('Date Cast: {0}'.format(date_cast))
@@ -594,32 +611,40 @@ class UiMainwindow(object):
                     # Preprocess full image saved previously and analyze specific sections for remaining data
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
-                    # crop image to project number location
-                    cv2.imwrite(f_jpg, image[290:350, 1050:1550])
-                    # debug, show what project number image looks like to be analyzed
-                    if debug:
-                        cv2.imshow("ProjectNumber", image[290:350, 1050:1550])
-                        cv2.waitKey(0)
-                    # analyze project number image for project number
-                    project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        # crop image to project number location
+                        cv2.imwrite(f_jpg,
+                                    image[int(290 / scale):int(350 * scale), int(1050 / scale):int(1550 * scale)])
+                        # debug, show what project number image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("ProjectNumber", image[int(290 / scale):int(350 * scale),
+                                                        int(1050 / scale):int(1550 * scale)])
+                            cv2.waitKey(0)
+                        # analyze project number image for project number
+                        project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                        if project_number != "NA":
+                            break
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
                                                                                       project_number_short))
-
-                    # crop image to date placed location
-                    cv2.imwrite(f_jpg, image[700:740, 1250:1450])
-                    # debug, show what date placed image looks like to be analyzed
-                    if debug:
-                        cv2.imshow("Date Cast:", image[700:740, 1250:1450])
-                        cv2.waitKey(0)
-                    # analyze date placed image for date cast
-                    date_placed_text = analyze_image(f_jpg)
-                    if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M | re.I) is not None:
-                        date_placed = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M + re.I).groups()
-                        date_placed = date_placed[-1].replace("\n", "")
-                    else:
-                        date_placed = "NA"
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        # crop image to date placed location
+                        cv2.imwrite(f_jpg, image[int(700 / scale):int(740 * scale),
+                                           int(1250 / scale):int(1450 * scale)])
+                        # debug, show what date placed image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Date Cast:", image[int(700 / scale):int(740 * scale),
+                                                     int(1250 / scale):int(1450 * scale)])
+                            cv2.waitKey(0)
+                        # analyze date placed image for date cast
+                        date_placed_text = analyze_image(f_jpg)
+                        if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M | re.I) is not None:
+                            date_placed = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M + re.I).groups()
+                            date_placed = date_placed[-1].replace("\n", "")
+                            break
+                        else:
+                            date_placed = "NA"
                     # debug, print the date cast
                     if debug:
                         print('Date Placed: {0}'.format(date_placed))
@@ -643,12 +668,14 @@ class UiMainwindow(object):
                 count += 1
 
             cur.execute("SELECT * From files")
-            print(cur.fetchall())
+            if debug:
+                print(cur.fetchall())
             cur.execute("SELECT * From files ORDER BY Project, Type, Date, Set_No, Age")
             records = cur.fetchall()
-            print(records)
+            if debug:
+                print(records)
 
-            # TODO Iterate through DB and compile data into proper file name
+            # TODO Finish file naming for sieve, density, and undetected sheet types
 
             placement_string = ""
             break_string = ""
@@ -659,7 +686,7 @@ class UiMainwindow(object):
             # project number from a successful detection
             for i in range(0, len(records)):
                 if records[i][0] is not None:
-                    project_number = records[i][0]
+                    project_number_short = records[i][0]
 
             # initialize/reset date_array for each new input file
             placement_date_array = []
@@ -695,8 +722,8 @@ class UiMainwindow(object):
                             break_set_string = break_set_string + "," + str(temp_set)
                 if break_date_array:
                     break_date = date_formatter(break_date_array)
-                    break_string = break_string + '_{0}dConcStrength_S{1}({2})'.format(age, break_set_string,
-                                                                                       break_date)
+                    break_string = break_string + '_{0}dConcStrength_S{1}({2})' \
+                        .format(age, break_set_string.replace("None", "NA"), break_date)
 
             # Need a way to determine package number
             package_number = "04"
@@ -705,9 +732,9 @@ class UiMainwindow(object):
 
             split_name = f.split("/").pop()
             if placement_string != "":
-                file_title = file_title + "_" + placement_string
+                file_title = file_title + placement_string
             if break_string != "":
-                file_title = file_title + "_" + break_string
+                file_title = file_title + break_string
             if placement_string == "" and break_string == "":
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
 
