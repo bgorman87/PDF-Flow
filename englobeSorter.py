@@ -10,7 +10,7 @@ import regex as re
 import sqlite3
 import random
 
-debug = True
+debug = False
 
 #############
 # Changing scope of this project
@@ -60,58 +60,57 @@ def analyze_image(img_path):
         print(text)
     return text
 
-def date_formatter(date_array, db_records):
-    # initialize strings as empty
-    placement_string = ''
-    strength_string = ''
-    density_string = ''
-    other_string = ''
-    sieve_string = ''
 
+def date_formatter(date_array):
     if date_array:
         date_day = []
         date_month = []
         date_year = []
-        for i in range(0, len(self.placement_date_array)):
-            if re.search(r"(\d+)[\s-]+", records[i][1], re.M | re.I) is not None:
-                date_day_search = re.search(r"(\d+)[\s-]+", records[i][1], re.M + re.I).groups()
+        for temp_date in date_array:
+            if re.search(r"(\d+)[\s-]+", temp_date, re.M | re.I) is not None:
+                date_day_search = re.search(r"(\d+)[\s-]+", temp_date, re.M + re.I).groups()
                 date_day.append(date_day_search[-1])
             else:
                 date_day.append("NA")
-            if re.search(r"\d+[\s-]+(\d+)[\s-]+", records[i][1], re.M | re.I) is not None:
-                date_month_search = re.search(r"\d+[\s-]+(\d+)[\s-]+", records[i][1], re.M | re.I).groups()
+            if re.search(r"\d+[\s-]+(\d+)[\s-]+", temp_date, re.M | re.I) is not None:
+                date_month_search = re.search(r"\d+[\s-]+(\d+)[\s-]+", temp_date, re.M | re.I).groups()
                 date_month.append(date_month_search[-1])
             else:
                 date_month.append("NA")
-            if re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", records[i][1], re.M | re.I) is not None:
-                date_year_search = re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", records[i][1], re.M | re.I).groups()
+            if re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", temp_date, re.M | re.I) is not None:
+                date_year_search = re.search(r"\d+[\s-]+\d+[\s-]+(\d+)", temp_date, re.M | re.I).groups()
                 date_year.append(date_year_search[-1])
             else:
                 date_year.append("NA")
 
-        # TODO Put this into its own function because it will be used for each sheet_type
+        year_unique = []
+        for year in date_year:
+            if year not in year_unique:
+                year_unique.append(year)
+        month_unique = []
+        for month in date_month:
+            if month not in month_unique:
+                month_unique.append(month)
 
-        date_month_curr = date_month[0]
-        date_day_curr = date_day[0]
-        date_day_string = str(date_day_curr)
-        date_month_2 = ""
-        date_day_string_2 = ""
+        date_string = ""
 
-        for i in range(0, len(date_month)):
-            if date_month[i] == date_month_curr:
-                date_day_string = date_day_string + "," + date_day[i]
-            if i == len(date_month) - 1:
-                date_string1 = date_day_string + "-" + str(date_month_curr)
-            if date_month[i] != date_month_curr:
-                date_month_2 = date_month[i]
-                date_day_string_2 = date_day[i]
+        for i, year in enumerate(year_unique):
+            for k, month in enumerate(month_unique):
+                date_day_string = ""
+                for j in range(0, len(date_month)):
+                    if date_year[j] == year and date_month[j] == month:
+                        if date_day_string == "":
+                            date_day_string = date_day[j]
+                        else:
+                            date_day_string = date_day_string + "," + date_day[j]
+                if k == 0:
+                    date_string = date_day_string + "-" + month + "-" + year
+                else:
+                    date_string = date_string + "&" + date_day_string + "-" + month + "-" + year
+        return date_string
+    else:
+        return "NO_DATES"
 
-        for i in range(0, len(date_month)):
-            if date_month[i] == date_month_2:
-                date_day_string_2 = date_day_string_2 + "," + date_day[i]
-            if i == len(date_month) - 1:
-                date_string2 = date_day_string_2 + "-" + date_month_2
-    return placement_string, strength_string, density_string, other_string, sieve_string
 
 def detect_projectnumber(text):
     # Regex expressions for job numbers
@@ -669,7 +668,7 @@ class UiMainwindow(object):
                 if records[i][2] == "1":  # 1 = placement
                     placement_date_array.append(records[i][1])
             if placement_date_array:
-                placement_date = date_formatter(placement_date_array, records)
+                placement_date = date_formatter(placement_date_array)
                 placement_string = '_ConcretePlacement({0})'.format(placement_date)
 
             # initialize/reset date_array for each new input file
@@ -679,7 +678,7 @@ class UiMainwindow(object):
             # iterate through the local database records and if sheet type is break sheet, store date cast into an array
             # need to format dates for each possible age from 0 - 99
             for i in range(0, len(records)):
-                if records[i][2] == "3":  # 3 = break
+                if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
                     break_age_array.append(records[i][4])
             for age in break_age_array:
                 break_set_no = []
@@ -689,12 +688,15 @@ class UiMainwindow(object):
                         break_date_array.append(records[i][1])
                         break_set_no.append(records[i][3])
                 if break_set_no:
-                    for temp_set in break_set_no:
-                        break_set_string = break_set_string + "," + str(temp_set)
+                    for k, temp_set in enumerate(break_set_no):
+                        if k == 0:
+                            break_set_string = str(temp_set)
+                        else:
+                            break_set_string = break_set_string + "," + str(temp_set)
                 if break_date_array:
-                    break_date = date_formatter(placement_date_array, records)
-                    break_string = break_string + '_S{0}ConcStrength({1})'.format(age, break_date)
-
+                    break_date = date_formatter(break_date_array)
+                    break_string = break_string + '_{0}dConcStrength_S{1}({2})'.format(age, break_set_string,
+                                                                                       break_date)
 
             # Need a way to determine package number
             package_number = "04"
@@ -706,14 +708,10 @@ class UiMainwindow(object):
                 file_title = file_title + "_" + placement_string
             if break_string != "":
                 file_title = file_title + "_" + break_string
-                file_title = package_number + "-" + project_number_short + "_SomeProjDesc_" + break_ages + \
-                             sheet_type_file + set_number + "(" + date_cast.replace(" ", "-") + ")"
-                print_string = "Detected " + split_name + " as a Break sheet - Project Number: " + project_number \
-                               + " - set number: " + set_number + " - date cast: " + date_cast + "\n"
-            else:
+            if placement_string == "" and break_string == "":
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
-                print_string = "Sheet_Type_Not_Found_(" + split_name + ")\n"
 
+            print_string = split_name + " renamed to " + file_title + "\n"
             self.outputBox.appendPlainText(print_string)
             # Wont happen much in full use but may encounter same file names during testing
             # Just add a random integer at end of file for now
@@ -727,11 +725,8 @@ class UiMainwindow(object):
             self.listWidgetItem.setData(QtCore.Qt.UserRole, rename_path)
             self.listWidget.addItem(self.listWidgetItem)
 
-# TODO Update this previous eection and store the strings in a list. That way at the end i can iterate through the list and add them together
-#  or i can just check to see if the strings are empty and add them that way, choose.
-
-            placement_string = '_ConcretePlacement({0})'.format(placement_date_string)
             cur.execute("DELETE From files")
+
 
 if __name__ == "__main__":
     import sys
