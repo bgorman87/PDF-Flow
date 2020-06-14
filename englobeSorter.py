@@ -103,12 +103,16 @@ def date_formatter(date_array):
         for i, year in enumerate(year_unique):
             for k, month in enumerate(month_unique):
                 date_day_string = ""
+                day_unique = []
                 for j in range(0, len(date_month)):
                     if date_year[j] == year and date_month[j] == month:
-                        if date_day_string == "":
-                            date_day_string = date_day[j]
-                        else:
-                            date_day_string = date_day_string + "," + date_day[j]
+                        if date_day[j] not in day_unique:
+                            day_unique.append(date_day[j])
+                for j in range(0, len(day_unique)):
+                    if j == 0:
+                        date_day_string = day_unique[j]
+                    else:
+                        date_day_string = date_day_string + "," + day_unique[j]
                 if k == 0:
                     date_string = date_day_string + "-" + month + "-" + year
                 else:
