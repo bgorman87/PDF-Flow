@@ -12,12 +12,6 @@ import random
 # todo Figure out why some forms are causing a crash without any info being output
 debug = True
 
-#############
-# Changing scope of this project
-# Assume scanned document has all required documents for single project number - Easy to do by hand
-# No need for a queue folder
-#############
-
 # Biggest issues to solve currently
 # 1 - Dealing with files containing undetected data
 # Project number is most important as it will have save directory, project description short form, and required //
@@ -35,8 +29,6 @@ debug = True
 # Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
-
-# try sorting using sqlite3 in memory mode
 
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
@@ -162,9 +154,6 @@ def detect_projectnumber(text):
         project_number_short = "NA"
     project_number_short = project_number_short.replace(" ", "")
     return project_number, project_number_short
-
-
-# Perform image pre-processing based on image src and input args
 
 
 def pre_process_image(path, args, age_detect=None):
@@ -476,6 +465,8 @@ class UiMainwindow(object):
                 # Get image size to crop full page to top right corner
                 # Top right corner is first to analyze as the large englobe logo messes up tesseract
                 w, h = image.size
+                if debug:
+                    print('Image size (w, h): ({0}, {1})'.format(w, h))
                 # save top right corner image as jpg
                 image.crop((1300, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
                 # save full image as .jpg
@@ -502,6 +493,8 @@ class UiMainwindow(object):
                         y2 = int(360 * scale)
                         x1 = int(1100 / scale)
                         x2 = int(1550 * scale)
+                        if debug:
+                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -656,6 +649,8 @@ class UiMainwindow(object):
                             y2 = 2150
                         if x2 > 1700:
                             x2 = 1650
+                        if debug:
+                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
                         # crop image to project number location
                         cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what project number image looks like to be analyzed
@@ -776,7 +771,8 @@ class UiMainwindow(object):
                     break_string = break_string + '_{0}dConcStrength_S{1}({2})' \
                         .format(age, break_set_string.replace("None", "NA"), break_date)
 
-            # Need a way to determine package number
+            # todo Create static database file containing directories, short hand description, and emails for projects
+            # Need a way to determine package number, for now just use placeholder
             package_number = "04"
 
             file_title = package_number + "-" + str(project_number_short) + "_SomeProjectDescription"
