@@ -9,8 +9,8 @@ import time
 import regex as re
 import sqlite3
 import random
-
-debug = False
+# todo Figure out why some forms are causing a crash without any info being output
+debug = True
 
 #############
 # Changing scope of this project
@@ -53,8 +53,6 @@ def output(self):
 
 def analyze_image(img_path):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    # text = pytesseract.image_to_string(Image.open(img_path), config="--psm 6")
-    # text = pytesseract.image_to_string(img_path, config="--psm 6")
     text = pytesseract.image_to_string(img_path, config="--psm 6")
     # If debug enabled, print all detected text
     if debug:
@@ -422,7 +420,7 @@ class UiMainwindow(object):
 
         # iterate through all input files
         # for each file scan top right of sheet ((w/2, 0, w, h/8))
-        # if top left of sheet contains "test" its a concrete break sheet
+        # if top right of sheet contains "test" its a concrete break sheet
         # pre process entire image
         # from preprocessed image - crop to (1100,320, 1550, 360)
         # search resultant tesseract data for project_number
@@ -438,17 +436,6 @@ class UiMainwindow(object):
         # split results by \n, find result in split equal to len(compressive_strength[splitdata])
         # this should return age of most recent broken cylinder
 
-        # if top left of sheet contains "placement" it is a placement sheet
-        # if top left of sheet contains "field or density" it is a density report
-
-        ################################################################################################################
-        # Concrete break sheet "test" important locations
-        # Set no. Location - (100, 675, 300, 750)
-        # Standard break sheet - Age at test Location (450, 830, 620, 1100)
-        # Standard break sheet - Compressive strength Location - (1150, 830, 1350, 1100)
-        # Standard break sheet - date cast location - (1260, 710, 1475, 750)
-        # Standard break sheet - project number location - (1100, 320, 1550, 360)
-        ################################################################################################################
         # Import images from file path "f" using pdf2image to open
         for f in self.fileNames:
             # Each pdf page is stored as image info in an array called images_jpg
@@ -475,7 +462,6 @@ class UiMainwindow(object):
                 sheet_type = "NA"
                 date_cast = "NA"
                 break_ages = "NA"
-                sheet_type_file = "NA"
                 date_placed = "NA"
 
                 jpg_replace_string = str(count) + ".jpg"
@@ -505,33 +491,49 @@ class UiMainwindow(object):
                 # if top right image analysis yields "test" it is a concrete break sheet
                 if text.lower().find("test") > 0 & text.lower().find("placement") <= 0:
                     sheet_type = "3"  # 3 = break
-                    sheet_type_file = "dConcStrength_S"
                     # debug, print sheet type to screen
                     if debug:
                         print('Sheet Type: {0}'.format(sheet_type))
                     # Preprocess full image saved previously and analyze specific sections for remaining data
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
-                    # crop image to project number location
-                    cv2.imwrite(f_jpg, image[300:360, 1100:1550])
-                    # debug, show what project number image looks like to be analyzed
-                    if debug:
-                        cv2.imshow("ProjectNumber", image[300:360, 1100:1550])
-                        cv2.waitKey(0)
-                    # analyze project number image for project number
-                    project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(300 / scale)
+                        y2 = int(360 * scale)
+                        x1 = int(1100 / scale)
+                        x2 = int(1550 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to project number location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what project number image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+                        # analyze project number image for project number
+                        project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                        if project_number is not "NA":
+                            break
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
                                                                                       project_number_short))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        cv2.imwrite(f_jpg,
-                                    image[int(675 / scale):int(750 * scale), int(100 / scale):int(300 * scale)])
+                        y1 = int(675 / scale)
+                        y2 = int(750 * scale)
+                        x1 = int(100 / scale)
+                        x2 = int(300 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what set number image looks like to be analyzed
                         if debug:
-                            cv2.imshow("Set Number", image[int(675 / scale):int(750 * scale),
-                                                     int(100 / scale):int(300 * scale)])
+                            cv2.imshow("Set Number", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         # analyze set number image for set number
                         set_number_text = analyze_image(f_jpg)
@@ -553,13 +555,19 @@ class UiMainwindow(object):
                         print('Set Number: {0}'.format(set_number))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(710 / scale)
+                        y2 = int(750 * scale)
+                        x1 = int(1260 / scale)
+                        x2 = int(1475 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
                         # crop image to date cast location
-                        cv2.imwrite(f_jpg,
-                                    image[int(710 / scale):int(750 * scale), int(1260 / scale):int(1475 * scale)])
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what date cast image looks like to be analyzed
                         if debug:
-                            cv2.imshow("Date Cast:", image[int(710 / scale):int(750 * scale), int(1260 / scale):
-                                                                                              int(1475 * scale)])
+                            cv2.imshow("Date Cast:", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         # analyze date cast image for date cast
                         date_cast_text = analyze_image(f_jpg)
@@ -574,35 +582,59 @@ class UiMainwindow(object):
                     if debug:
                         print('Date Cast: {0}'.format(date_cast))
 
-                    # crop image to break strengths location
-                    cv2.imwrite(f_jpg, image[830:1100, 1150:1350])
-                    # debug, show what break strengths looks like to be analyzed
-                    if debug:
-                        cv2.imshow("Break Strengths", image[830:1100, 1150:1350])
-                        cv2.waitKey(0)
-                    # analyze break strengths for break strengths
-                    break_strengths_text = analyze_image(f_jpg)
-                    break_strengths = break_strengths_text.split("\n")
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(830 / scale)
+                        y2 = int(1100 * scale)
+                        x1 = int(1150 / scale)
+                        x2 = int(1350 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to break strengths location
+                        cv2.imwrite(f_jpg,
+                                    image[y1:y2, x1:x2])
+                        # debug, show what break strengths looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Break Strengths", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+                        # analyze break strengths for break strengths
+                        break_strengths_text = analyze_image(f_jpg)
+                        break_strengths = break_strengths_text.split("\n")
+                        if break_strengths is not "NA":
+                            break
                     # debug, print the break strengths
                     if debug:
                         print('Break Strengths: {0}'.format(break_strengths))
 
-                    # crop image to latest break age location
-                    cv2.imwrite(f_jpg, image[830:1100, 450:620])
-                    # debug, show what latest break age looks like to be analyzed
-                    if debug:
-                        cv2.imshow("Break Strengths", image[830:1100, 450:620])
-                        cv2.waitKey(0)
-                    # analyze latest break age for age
-                    break_age_text = analyze_image(f_jpg)
-                    break_ages = break_age_text.split("\n")
-                    # debug, print the latest break age
-                    if debug:
-                        print('All Break Ages: {0}'.format(break_ages))
-                    if len(break_strengths) > 0:
-                        break_ages = break_ages[len(break_strengths) - 1]
-                    else:
-                        break_ages = break_ages[0]
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(830 / scale)
+                        y2 = int(1100 * scale)
+                        x1 = int(450 / scale)
+                        x2 = int(620 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to latest break age location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what latest break age looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Break Strengths", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+                        # analyze latest break age for age
+                        break_age_text = analyze_image(f_jpg)
+                        break_ages = break_age_text.split("\n")
+                        # debug, print the latest break age
+                        if debug:
+                            print('All Break Ages: {0}'.format(break_ages))
+                        if len(break_strengths) > 0:
+                            break_ages = break_ages[len(break_strengths) - 1]
+                        else:
+                            break_ages = break_ages[0]
+                        if break_ages is not "NA":
+                            break
+
                     if debug:
                         print('Latest Break Age: {0}'.format(break_ages))
 
@@ -616,13 +648,19 @@ class UiMainwindow(object):
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(290 / scale)
+                        y2 = int(350 * scale)
+                        x1 = int(1050 / scale)
+                        x2 = int(1550 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
                         # crop image to project number location
-                        cv2.imwrite(f_jpg,
-                                    image[int(290 / scale):int(350 * scale), int(1050 / scale):int(1550 * scale)])
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what project number image looks like to be analyzed
                         if debug:
-                            cv2.imshow("ProjectNumber", image[int(290 / scale):int(350 * scale),
-                                                        int(1050 / scale):int(1550 * scale)])
+                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         # analyze project number image for project number
                         project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
@@ -633,14 +671,21 @@ class UiMainwindow(object):
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
                                                                                       project_number_short))
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(700 / scale)
+                        y2 = int(740 * scale)
+                        x1 = int(1250 / scale)
+                        x2 = int(1450 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
                         # crop image to date placed location
-                        cv2.imwrite(f_jpg, image[int(700 / scale):int(740 * scale),
-                                           int(1250 / scale):int(1450 * scale)])
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what date placed image looks like to be analyzed
                         if debug:
-                            cv2.imshow("Date Cast:", image[int(700 / scale):int(740 * scale),
-                                                     int(1250 / scale):int(1450 * scale)])
+                            cv2.imshow("Date Cast:", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
+
                         # analyze date placed image for date cast
                         date_placed_text = analyze_image(f_jpg)
                         if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M | re.I) is not None:
@@ -711,9 +756,11 @@ class UiMainwindow(object):
             for i in range(0, len(records)):
                 if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
                     break_age_array.append(records[i][4])
+            break_age_array.reverse()
             for age in break_age_array:
                 break_set_no = []
                 break_set_string = ""
+                break_date_array = []
                 for i in range(0, len(records)):
                     if records[i][4] == age:
                         break_date_array.append(records[i][1])
