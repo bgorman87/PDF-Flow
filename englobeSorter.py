@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PIL import Image
 from pdf2image import convert_from_path, pdfinfo_from_path
+import hashlib
 import pytesseract
 import argparse
 import cv2
@@ -9,7 +10,10 @@ import time
 import regex as re
 import sqlite3
 import random
-# todo Figure out why some forms are causing a crash without any info being output
+
+# todo Figure out why some forms (placements especially) are causing a crash without any info being output
+#   Remove 0 from beginning of project numbers if there is one
+#   Find out why the leading 0 in set number is disappearing and why set numbers >2 digits are only showing 2 digits
 debug = True
 
 # Biggest issues to solve currently
@@ -30,9 +34,36 @@ debug = True
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
 
+project_data_file = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.txt"
+project_data_md5 = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_md5.txt"
+
+# iterate through text file and add data to database
+def update_project_data():
+    pass
+
+def md5(file_name):
+    hash_md5 = hashlib.md5()
+    with open(file_name, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
+file_md5_curr = str(md5(project_data_file))
+f = open(project_data_md5, "r")
+file_md5_prev = str(f.readline())
+f.close()
+if str(file_md5_curr) != str(file_md5_prev):
+    update_project_data()
+    with open(project_data_md5, "w+") as file:
+        file.write(str(file_md5_curr))
+    print("Project data updated")
+else:
+    print("Project data has not changed")
+
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
-cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
+cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No TEXT, Age INTEGER)''')
 
 tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 print(os.getcwd())
@@ -357,6 +388,7 @@ class UiMainwindow(object):
         rename_path = os.path.abspath(os.path.join(os.getcwd(), str(self.fileRename.text()) + ".pdf"))
         os.rename(self.listWidget.currentItem().data(QtCore.Qt.UserRole), rename_path)
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, rename_path)
+        self.listWidget.currentItem().setText(self.fileRename.text())
         # except Exception as e:
         #     print(e)
 
@@ -508,7 +540,11 @@ class UiMainwindow(object):
                         # analyze project number image for project number
                         project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
                         if project_number is not "NA":
+                            if project_number[0] == "0":
+                                project_number = project_number[1:]
+                                project_number_short = project_number_short[1:]
                             break
+
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
@@ -518,7 +554,7 @@ class UiMainwindow(object):
                         y1 = int(675 / scale)
                         y2 = int(750 * scale)
                         x1 = int(100 / scale)
-                        x2 = int(300 * scale)
+                        x2 = int(400 * scale)
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -540,9 +576,11 @@ class UiMainwindow(object):
                             break
                         else:
                             set_number = "NA"
-                    # for consistency, add 0 in front of single digit set numbers
+                        # for consistency, add 0 in front of single digit set numbers
+                        # print('Length set_no: {0}'.format(len(set_number)))
                     if len(set_number) < 2:
                         set_number = "0" + str(set_number)
+
                     # debug, print the set number
                     if debug:
                         print('Set Number: {0}'.format(set_number))
