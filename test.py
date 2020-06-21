@@ -1,7 +1,11 @@
-import sqlite3
+import json
 
-db = sqlite3.connect('database.db')
-cur = db.cursor()
-cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No INTEGER, Age INTEGER)''')
+filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
 
-db.commit()
+# Read JSON data into the datastore variable
+if filename:
+    with open(filename, 'r') as f:
+        datastore = json.load(f)
+
+for i in datastore:
+    print('Project: {0}\nDesc: {1}'.format(i['project_number'], i['project_description']))
