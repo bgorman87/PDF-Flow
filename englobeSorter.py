@@ -10,11 +10,19 @@ import time
 import regex as re
 import sqlite3
 import random
+import json
+
+json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+
+# Read JSON data into the datastore variable
+if json_filename:
+    with open(json_filename, 'r') as f:
+        datastore = json.load(f)
 
 # todo Figure out why some forms (placements especially) are causing a crash without any info being output
 #   Remove 0 from beginning of project numbers if there is one
 #   Find out why the leading 0 in set number is disappearing and why set numbers >2 digits are only showing 2 digits
-debug = True
+debug = False
 
 # Biggest issues to solve currently
 # 1 - Dealing with files containing undetected data
@@ -34,32 +42,7 @@ debug = True
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
 
-project_data_file = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.txt"
-project_data_md5 = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_md5.txt"
-
-# iterate through text file and add data to database
-def update_project_data():
-    pass
-
-def md5(file_name):
-    hash_md5 = hashlib.md5()
-    with open(file_name, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
-
-
-file_md5_curr = str(md5(project_data_file))
-f = open(project_data_md5, "r")
-file_md5_prev = str(f.readline())
-f.close()
-if str(file_md5_curr) != str(file_md5_prev):
-    update_project_data()
-    with open(project_data_md5, "w+") as file:
-        file.write(str(file_md5_curr))
-    print("Project data updated")
-else:
-    print("Project data has not changed")
+project_data_file = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
 
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
@@ -809,11 +792,46 @@ class UiMainwindow(object):
                     break_string = break_string + '_{0}dConcStrength_S{1}({2})' \
                         .format(age, break_set_string.replace("None", "NA"), break_date)
 
-            # todo Create static database file containing directories, short hand description, and emails for projects
-            # Need a way to determine package number, for now just use placeholder
-            package_number = "04"
+            # Placeholder package number till directory system is in place
+            # package_number = "04"
 
-            file_title = package_number + "-" + str(project_number_short) + "_SomeProjectDescription"
+            for project_data in datastore:
+                if project_number_short.replace(".", "") == project_data["project_number"].replace(".", "") or \
+                        project_number_short.replace("-", "") == project_data["project_number"].replace("-", ""):
+                    project_description = project_data["project_description"]
+                    file_path = project_data["project_directory"]
+                    break
+                elif (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                        project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and \
+                        project_number[-1] == project_data["project_number"][-1]:
+                    project_description = project_data["project_description"]
+                    file_path = project_data["project_directory"]
+                else:
+                    project_description = "SomeProjectDescription"
+                    file_path = f.replace(f.split("/").pop(), "")
+
+            # Wont happen much in full use but may encounter same file names during testing
+            # Just add a random integer at end of file for now
+            os.chdir(file_path)
+            rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
+            if os.path.isfile(rename_path):
+                file_title = file_title + str(random.randint(1, 999))
+                rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
+            os.rename(f, rename_path)
+
+            only_files = [f for f in os.listdir(os.getcwd()) if os.path.isfile(os.path.join(os.getcwd(), f))]
+            package_number_old = 0
+
+            if only_files:
+                for file in only_files:
+                    package_number = int(re.search(r"(\d+)-[\dA-z]", file, re.I))
+                    if package_number > package_number_old:
+                        package_number_highest = package_number
+                    package_number_old = package_number
+            else:  # No files in directory yet
+                package_number_highest = "01"
+
+            file_title = package_number_highest + "-" + str(project_number_short) + "_" + project_description
 
             split_name = f.split("/").pop()
             if placement_string != "":
@@ -825,14 +843,6 @@ class UiMainwindow(object):
 
             print_string = split_name + " renamed to " + file_title + "\n"
             self.outputBox.appendPlainText(print_string)
-            # Wont happen much in full use but may encounter same file names during testing
-            # Just add a random integer at end of file for now
-            os.chdir(f.replace(f.split("/").pop(), ""))
-            rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
-            if os.path.isfile(rename_path):
-                file_title = file_title + str(random.randint(1, 999))
-                rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
-            os.rename(f, rename_path)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, rename_path)
             self.listWidget.addItem(self.listWidgetItem)
