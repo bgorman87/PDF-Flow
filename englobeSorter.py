@@ -1,7 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PIL import Image
-from pdf2image import convert_from_path, pdfinfo_from_path
-import hashlib
+from pdf2image import convert_from_path
 import pytesseract
 import argparse
 import cv2
@@ -11,13 +10,7 @@ import regex as re
 import sqlite3
 import random
 import json
-
-json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
-
-# Read JSON data into the datastore variable
-if json_filename:
-    with open(json_filename, 'r') as f:
-        datastore = json.load(f)
+import shutil
 
 # todo Figure out why some forms (placements especially) are causing a crash without any info being output
 #   Remove 0 from beginning of project numbers if there is one
@@ -42,7 +35,13 @@ debug = False
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
 
-project_data_file = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+
+# Read JSON data into the datastore variable
+if json_filename:
+    with open(json_filename, 'r') as f:
+        datastore = json.load(f)
 
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
@@ -134,7 +133,7 @@ def detect_projectnumber(text):
     # 0200: ^([0-2]\d+[.-\s]+\d+[.-\s]\d+[.-\s]+\d{4})
     # r = StringIO(text)
     if re.search(r"(B[.-\s]\d+[.-\s]+\d{1})", text, re.M) is not None:
-        project_number = re.search(r"^(B[.-\s]\d+[.-\s]+\d{1})", text, re.M).group()
+        project_number = re.search(r"^(B[.-\s]\d+[.-\s]+\d{1})", text, re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
         project_number_short = project_number
@@ -167,6 +166,10 @@ def detect_projectnumber(text):
         project_number = "NA"
         project_number_short = "NA"
     project_number_short = project_number_short.replace(" ", "")
+    if project_number_short[0] == "0":
+        project_number_short = project_number_short[1:]
+    if project_number[0] == "0":
+        project_number = project_number[1:]
     return project_number, project_number_short
 
 
@@ -364,13 +367,23 @@ class UiMainwindow(object):
 
     def file_rename_button_handler(self):
         # try:
-        file_path = self.listWidget.currentItem().data(QtCore.Qt.UserRole)
+        file_path = self.listWidget.currentItem().data(QtCore.Qt.UserRole).split("%%")
+        file_path_transit_src = file_path[0]
+        file_path_project_src = file_path[1]
+
         if debug:
-            print('Renamed File Path: {0}'.format(file_path))
-        os.chdir(file_path.replace(file_path.split("\\").pop(), ""))
-        rename_path = os.path.abspath(os.path.join(os.getcwd(), str(self.fileRename.text()) + ".pdf"))
-        os.rename(self.listWidget.currentItem().data(QtCore.Qt.UserRole), rename_path)
-        self.listWidget.currentItem().setData(QtCore.Qt.UserRole, rename_path)
+            print('Renamed File Path: \n{0}\n{1}'.format(file_path_transit_src, file_path_project_src))
+        # os.chdir(file_path.replace(file_path.split("\\").pop(), ""))
+        rename_path_transit = os.path.abspath(os.path.join(
+            file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
+            str(self.fileRename.text()) + ".pdf"))
+        rename_path_project = os.path.abspath(os.path.join(
+            file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
+            str(self.fileRename.text()) + ".pdf"))
+        os.rename(file_path_transit_src, rename_path_transit)
+        os.rename(file_path_project_src, rename_path_project)
+        data = rename_path_transit + "%%" + rename_path_project
+        self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
         self.listWidget.currentItem().setText(self.fileRename.text())
         # except Exception as e:
         #     print(e)
@@ -390,9 +403,11 @@ class UiMainwindow(object):
         self.outputBox.appendPlainText("Analyzing Queue Folder...\n")
 
     def list_widget_handler(self):
-        image_pdf = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole))
+        file_path = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)).split("%%")
+        file_path_transit_src = file_path[0]
+        file_path_project_src = file_path[1]
         try:
-            image_jpeg = convert_from_path(image_pdf, fmt="jpeg", poppler_path=popplerpath)
+            image_jpeg = convert_from_path(file_path_transit_src, fmt="jpeg", poppler_path=popplerpath)
         except Exception as e:
             print(e)
         if image_jpeg:
@@ -402,7 +417,7 @@ class UiMainwindow(object):
                 x = 0
                 y = (count - 1) * 2200
                 result.paste(temp, (x, y))
-            name_jpeg = image_pdf.replace(".pdf", ".jpg")
+            name_jpeg = file_path_transit_src.replace(".pdf", ".jpg")
             result.save(name_jpeg, 'JPEG')
             pix = QtGui.QPixmap(name_jpeg)
             pix = pix.scaledToWidth(self.graphicsView.width())
@@ -410,7 +425,7 @@ class UiMainwindow(object):
             scene.addItem(item)
             self.graphicsView.setScene(scene)
             os.remove(name_jpeg)
-            set_text = self.listWidget.currentItem().text().split("/").pop().replace(".pdf", "")
+            set_text = file_path_transit_src.split("\\").pop().replace(".pdf", "")
             self.fileRename.setText(set_text)
         else:
             print("image_jpeg list is empty")
@@ -802,36 +817,49 @@ class UiMainwindow(object):
                     file_path = project_data["project_directory"]
                     break
                 elif (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                        project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and \
+                      project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and \
                         project_number[-1] == project_data["project_number"][-1]:
                     project_description = project_data["project_description"]
                     file_path = project_data["project_directory"]
+                    break
                 else:
                     project_description = "SomeProjectDescription"
                     file_path = f.replace(f.split("/").pop(), "")
 
-            # Wont happen much in full use but may encounter same file names during testing
-            # Just add a random integer at end of file for now
-            os.chdir(file_path)
-            rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
-            if os.path.isfile(rename_path):
-                file_title = file_title + str(random.randint(1, 999))
-                rename_path = os.path.abspath(os.path.join(os.getcwd(), file_title + ".pdf"))
-            os.rename(f, rename_path)
-
-            only_files = [f for f in os.listdir(os.getcwd()) if os.path.isfile(os.path.join(os.getcwd(), f))]
+            only_files = [f[0:6] for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f)) and
+                          f[-4:] == ".pdf"]
+            print(only_files)
             package_number_old = 0
-
+            package_number_highest = 0
+            package_numbers = []
             if only_files:
                 for file in only_files:
-                    package_number = int(re.search(r"(\d+)-[\dA-z]", file, re.I))
-                    if package_number > package_number_old:
-                        package_number_highest = package_number
-                    package_number_old = package_number
+                    if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
+                        package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
+                        print("package_number: {0}\npackage_number[-1]: {1}".format(package_number, package_number[-1]))
+                        package_numbers.append(int(package_number[-1]))
+                #         if "-" in package_number[-1]:
+                #             package_number = package_number[-1].split("-")
+                #             package_number_int = int(package_number[-1])
+                #         else:
+                #             package_number_int = int(package_number[-1])
+                #         if package_number_int > package_number_old:
+                #             package_number_highest = package_number_int
+                #         package_number_old = package_number_int
+                # if package_number_highest != 0:
+                #     package_number_highest += 1
+                #     if len(str(package_number_highest)) < 2:
+                #         package_number_highest_str = "0" + str(package_number_highest)
+                #     else:
+                #         package_number_highest_str = str(package_number_highest)
+                # else:  # there were files in directory, but searches for package number returned nothing
+                #     package_number_highest_str = "NA"
             else:  # No files in directory yet
-                package_number_highest = "01"
+                package_number_highest_str = "01"
+            package_number_highest_str = str(max(package_numbers)+1)
+            print("Max value = {0}".format(max(package_numbers)))
 
-            file_title = package_number_highest + "-" + str(project_number_short) + "_" + project_description
+            file_title = package_number_highest_str + "-" + str(project_number_short) + "_" + project_description
 
             split_name = f.split("/").pop()
             if placement_string != "":
@@ -841,11 +869,27 @@ class UiMainwindow(object):
             if placement_string == "" and break_string == "":
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
 
-            print_string = split_name + " renamed to " + file_title + "\n"
+            # Wont happen much in full use but may encounter same file names during testing
+            # Just add a random integer at end of file for now
+            os.chdir(file_path)
+            rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
+            rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
+            if os.path.isfile(rename_path) or os.path.isfile(rename_path_project_dir):
+                file_title = file_title + str(random.randint(1, 999))
+                rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
+                rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
+            os.rename(f, rename_path)
+            shutil.copy(rename_path, rename_path_project_dir)
+
+            print_string = split_name + " renamed to " + file_title + " and saved in project folder:\n" + file_path + \
+                           "\n"
+            data = rename_path + "%%" + rename_path_project_dir
             self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
-            self.listWidgetItem.setData(QtCore.Qt.UserRole, rename_path)
+            self.listWidgetItem.setData(QtCore.Qt.UserRole, data)
             self.listWidget.addItem(self.listWidgetItem)
+
+            # rename button - make so renames both transit and project files
 
             cur.execute("DELETE From files")
 
