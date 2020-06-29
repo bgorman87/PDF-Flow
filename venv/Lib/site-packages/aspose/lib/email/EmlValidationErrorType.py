@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class EmlValidationErrorType(IntEnum):
+    MESSAGE_STRUCTURE_ERROR = 0
+    EMAIL_ADDRESS_ERROR = 1
+    TRANSFER_ENCODING_ERROR = 2

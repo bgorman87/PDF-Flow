@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class BodyContentType(IntEnum):
+    PLAIN_TEXT = 0
+    HTML = 1
+    RTF = 2

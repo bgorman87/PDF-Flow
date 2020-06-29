@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MailPriority(IntEnum):
+    NORMAL = 0
+    LOW = 1
+    HIGH = 2

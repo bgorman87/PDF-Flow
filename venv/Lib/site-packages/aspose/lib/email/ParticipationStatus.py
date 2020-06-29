@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class ParticipationStatus(IntEnum):
+    NEEDS_ACTION = 0
+    ACCEPTED = 1
+    DECLINED = 2
+    TENTATIVE = 3
+    DELEGATED = 4

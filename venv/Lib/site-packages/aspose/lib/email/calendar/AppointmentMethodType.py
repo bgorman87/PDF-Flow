@@ -1,0 +1,12 @@
+from enum import IntEnum
+
+class AppointmentMethodType(IntEnum):
+    NONE = 0
+    PUBLISH = 1
+    REQUEST = 2
+    REPLY = 3
+    ADD = 4
+    CANCEL = 5
+    REFRESH = 6
+    COUNTER = 7
+    DECLINE_COUNTER = 8

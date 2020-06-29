@@ -1,0 +1,9 @@
+from enum import IntEnum
+
+class MapiTaskMode(IntEnum):
+    NOT_ASSIGNED = 0
+    REQUEST_EMBEDDED = 1
+    ACCEPTED = 2
+    REJECTED = 3
+    UPDATE_EMBEDDED = 4
+    ASSIGNED = 5

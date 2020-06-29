@@ -1,0 +1,19 @@
+from enum import IntEnum
+
+class VCardPhotoType(IntEnum):
+    GIF = 0
+    CGM = 1
+    WMF = 2
+    BMP = 3
+    MET = 4
+    PMB = 5
+    DIB = 6
+    PICT = 7
+    TIFF = 8
+    PS = 9
+    PDF = 10
+    JPEG = 11
+    MPEG = 12
+    MPEG2 = 13
+    AVI = 14
+    QTIME = 15

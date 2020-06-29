@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class MapiSensitivity(IntEnum):
+    NONE = 0
+    PERSONAL = 1
+    PRIVATE = 2
+    COMPANY_CONFIDENTIAL = 3

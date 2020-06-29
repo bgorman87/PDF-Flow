@@ -1,0 +1,20 @@
+from enum import IntEnum
+
+class ImapStatusCode(IntEnum):
+    OK = 0
+    NO = 1
+    BAD = 2
+    PREAUTH = 3
+    BYE = 4
+    ALERT = 5
+    BAD_CHARSET = 6
+    CAPABILITY = 7
+    PARSE = 8
+    PERMANENT_FLAGS = 9
+    READ_ONLY = 10
+    READ_WRITE = 11
+    TRY_CREATE = 12
+    UIDNEXT = 13
+    UIDVALIDITY = 14
+    UNSEEN = 15
+    UNSOLICITED = 16

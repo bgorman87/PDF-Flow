@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class EndType(IntEnum):
+    NONE = 0
+    UNTIL = 1
+    COUNT = 2

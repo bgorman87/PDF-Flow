@@ -1,0 +1,11 @@
+from enum import IntEnum
+
+class MapiCalendarRecurrencePatternType(IntEnum):
+    DAY = 0
+    WEEK = 1
+    MONTH = 2
+    MONTH_END = 4
+    MONTH_NTH = 3
+    HJ_MONTH = 10
+    HJ_MONTH_NTH = 11
+    HJ_MONTH_END = 12

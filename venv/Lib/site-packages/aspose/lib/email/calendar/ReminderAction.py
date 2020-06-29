@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class ReminderAction(IntEnum):
+    AUDIO = 0
+    DISPLAY = 1
+    EMAIL = 2
+    PROCEDURE = 3
+    NONE = 4

@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class FolderKind(IntEnum):
+    NORMAL = 1
+    SEARCH = 2

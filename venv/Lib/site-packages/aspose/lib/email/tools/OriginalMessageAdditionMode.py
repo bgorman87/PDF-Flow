@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class OriginalMessageAdditionMode(IntEnum):
+    NONE = 0
+    ATTACHMENT = 1
+    TEXTPART = 2

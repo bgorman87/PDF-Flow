@@ -1,0 +1,16 @@
+from enum import IntEnum
+
+class EncryptionProtocols(IntEnum):
+    NOT_SPECIFIED = 0
+    SSL_2 = 0
+    B_0000_0000_0000_1100 = 1
+    SSL_3 = 0
+    B_0000_0000_0011_0000 = 1
+    TLS = 0
+    B_0000_0000_1100_0000 = 1
+    TLS_11 = 0
+    B_0000_0011_0000_0000 = 1
+    TLS_12 = 0
+    B_0000_1100_0000_0000 = 1
+    TLS_13 = 0
+    B_0011_0000_0000_0000 = 1

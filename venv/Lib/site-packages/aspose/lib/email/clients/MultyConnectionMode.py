@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class MultyConnectionMode(IntEnum):
+    ENABLE = 0
+    DISABLE = 1

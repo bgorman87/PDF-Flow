@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class FileFormatVersion(IntEnum):
+    UNICODE = 0
+    ANSI = 1

@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class AllowedConferenceSolutionTypes(IntEnum):
+    NOT_DEFINED = 0
+    EVENT_HANGOUT = 1
+    EVENT_NAMED_HANGOUT = 2
+    HANGOUTS_MEET = 3

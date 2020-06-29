@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class CompressionType(IntEnum):
+    NOT_DEFINED = -1
+    NONE = 0
+    DEFLATE = 1

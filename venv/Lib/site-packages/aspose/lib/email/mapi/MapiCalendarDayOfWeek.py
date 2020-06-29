@@ -1,0 +1,10 @@
+from enum import IntEnum
+
+class MapiCalendarDayOfWeek(IntEnum):
+    SATURDAY = 64
+    FRIDAY = 32
+    THURSDAY = 16
+    WEDNESDAY = 8
+    TUESDAY = 4
+    MONDAY = 2
+    SUNDAY = 1

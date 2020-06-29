@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ListFoldersReturnOptions(IntEnum):
+    NONE = 0
+    SUBSCRIBED = 1
+    CHILDREN = 2

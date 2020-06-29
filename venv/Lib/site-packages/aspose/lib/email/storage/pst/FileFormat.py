@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class FileFormat(IntEnum):
+    PST = 0
+    OST = 1

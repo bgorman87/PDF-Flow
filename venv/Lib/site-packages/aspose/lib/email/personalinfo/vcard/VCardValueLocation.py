@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class VCardValueLocation(IntEnum):
+    INLINE = 0
+    URL = 1
+    CID = 2
+    URI = 3

@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class VCardUrlType(IntEnum):
+    NONE = 0
+    HOME = 1
+    WORK = 2

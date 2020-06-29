@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MapiContactGender(IntEnum):
+    UNSPECIFIED = 0
+    FEMALE = 1
+    MALE = 2

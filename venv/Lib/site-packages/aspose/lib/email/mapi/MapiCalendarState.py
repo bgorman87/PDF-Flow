@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MapiCalendarState(IntEnum):
+    MEETING = 1
+    RECEIVED = 2
+    CANCELED = 4

@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class NotificationType(IntEnum):
+    EVENT_CREATION = 0
+    EVENT_CHANGE = 1
+    EVENT_CANCELLATION = 2
+    EVENT_RESPONSE = 3
+    AGENDA = 4

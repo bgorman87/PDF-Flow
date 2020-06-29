@@ -1,0 +1,4 @@
+from enum import IntEnum
+
+class MessageObjectLoadFormat(IntEnum):
+    MSG = 0

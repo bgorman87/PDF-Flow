@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class MapiJournalFlags(IntEnum):
+    NONE = 0
+    HAS_ATTACHMENT = 1073741824

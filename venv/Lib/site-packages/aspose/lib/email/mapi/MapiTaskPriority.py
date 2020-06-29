@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MapiTaskPriority(IntEnum):
+    LOW = -1
+    NORMAL = 0
+    HIGH = 1

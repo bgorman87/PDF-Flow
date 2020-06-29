@@ -1,0 +1,13 @@
+from enum import IntEnum
+
+class ContactFieldsSet(IntEnum):
+    NONE = 0
+    NAME_INFO = 1
+    PERSONAL_INFO = 2
+    PROFESSIONAL_INFO = 4
+    PHYSICAL_ADDRESSES = 8
+    TELEPHONES = 16
+    ELECTRONIC_ADDRESSES = 32
+    EVENTS = 64
+    OTHER_FIELDS = 128
+    ALL_EXISTING = 256

@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class AppointmentAction(IntEnum):
+    CREATE = 0
+    UPDATE = 1
+    CANCEL = 2

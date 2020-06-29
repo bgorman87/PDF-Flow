@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class BackupOptions(IntEnum):
+    NONE = 0
+    RECURSIVE = 1

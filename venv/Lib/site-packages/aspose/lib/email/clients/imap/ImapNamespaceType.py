@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ImapNamespaceType(IntEnum):
+    PERSONAL = 0
+    OTHER_USERS = 1
+    SHARED = 2
