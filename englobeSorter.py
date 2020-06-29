@@ -59,6 +59,24 @@ def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
+def email_attachment_rename(current_name, changed_file):
+    try:
+        attachments = []
+        outlook = win32.Dispatch('outlook.application').GetNameSpace("MAPI")
+        drafts = outlook.GetDefaultFolder(16)  # 16 = drafts
+        emails = drafts.Items
+        for message in emails:
+            if message.Attachments:
+                for attachment in message.Attachments:
+                    if attachment.filename == current_name:
+                        attachment.delete()
+                        message.Attachments.Add(changed_file)
+                    if debug:
+                        print(attachment.filename)
+    except Exception as e:
+        print(e)
+
+
 def email_handler(recipients, recipients_cc, subject, attachment):
     signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
     if os.path.isfile(signature_path):
@@ -417,6 +435,7 @@ class UiMainwindow(object):
         if file_path_project_src != file_path_transit_src:
             os.rename(file_path_project_src, rename_path_project)
         data = rename_path_transit + "%%" + rename_path_project
+        email_attachment_rename(file_path_transit_src.split("\\").pop(), rename_path_transit)
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
         self.listWidget.currentItem().setText(self.fileRename.text())
         # except Exception as e:
