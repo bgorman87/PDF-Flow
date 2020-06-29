@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class MSIntendedStatus(IntEnum):
+    NOT_DEFINED = -1
+    FREE = 0
+    TENTATIVE = 1
+    BUSY = 2
+    OOF = 3

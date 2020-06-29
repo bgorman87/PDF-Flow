@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class NotificationMethod(IntEnum):
+    EMAIL = 0
+    SMS = 1

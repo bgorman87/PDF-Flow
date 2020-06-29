@@ -1,0 +1,9 @@
+from enum import IntEnum
+
+class MapiRecipientType(IntEnum):
+    BCC = 3
+    CC = 2
+    ORIG = 0
+    P1 = 268435456
+    TO = 1
+    UNKNOWN = -1

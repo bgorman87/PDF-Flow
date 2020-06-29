@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class OutlookMessageFormat(IntEnum):
+    ASCII = 0
+    UNICODE = 1

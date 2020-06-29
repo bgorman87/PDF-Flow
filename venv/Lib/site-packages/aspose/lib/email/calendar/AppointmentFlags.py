@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class AppointmentFlags(IntEnum):
+    NONE = 0
+    ALL_DAY_EVENT = 1

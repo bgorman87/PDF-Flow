@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class SecurityOptions(IntEnum):
+    NONE = 0
+    SSLEXPLICIT = 1
+    SSLIMPLICIT = 2
+    SSLAUTO = 4
+    AUTO = 256

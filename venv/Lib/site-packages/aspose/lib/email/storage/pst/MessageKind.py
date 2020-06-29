@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class MessageKind(IntEnum):
+    NORMAL = 1
+    FOLDER_ASSOCIATED_INFORMATION = 2

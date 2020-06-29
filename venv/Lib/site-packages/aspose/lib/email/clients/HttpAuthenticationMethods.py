@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class HttpAuthenticationMethods(IntEnum):
+    NO_AUTHENTICATION = 1
+    BASIC = 2

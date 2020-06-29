@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class ListFoldersOptions(IntEnum):
+    NONE = 0
+    SUBSCRIBED = 1
+    REMOTE = 2
+    RECURSIVE_MATCH = 4

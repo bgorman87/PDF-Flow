@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class MailSensitivity(IntEnum):
+    NONE = 0
+    NORMAL = 1
+    PERSONAL = 2
+    PRIVATE = 3
+    COMPANY_CONFIDENTIAL = 4

@@ -1,0 +1,10 @@
+from enum import IntEnum
+
+class MapiDistributionListContactAddressType(IntEnum):
+    BUSINESS_FAX = 0
+    HOME_FAX = 1
+    PRIMARY_FAX = 2
+    EMAIL_1 = 4
+    EMAIL_2 = 5
+    EMAIL_3 = 6
+    NONE = 3

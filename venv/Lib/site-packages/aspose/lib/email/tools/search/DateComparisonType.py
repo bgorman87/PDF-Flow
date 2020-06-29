@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class DateComparisonType(IntEnum):
+    BY_DATE = 0
+    BY_DATE_TIME = 1

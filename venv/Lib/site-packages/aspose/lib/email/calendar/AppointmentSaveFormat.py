@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class AppointmentSaveFormat(IntEnum):
+    ICS = 0
+    MSG = 1

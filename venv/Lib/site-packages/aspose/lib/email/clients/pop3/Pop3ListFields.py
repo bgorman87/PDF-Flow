@@ -1,0 +1,9 @@
+from enum import IntEnum
+
+class Pop3ListFields(IntEnum):
+    UNIQUE_ID = 1
+    SEQUENCE_NUMBER = 2
+    SIZE = 4
+    HEADER = 8
+    MAIN = 7
+    ALL = 8

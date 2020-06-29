@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class Pop3ConnectionState(IntEnum):
+    AUTHENTICATION = 0
+    TRANSACTION = 1
+    UPDATE = 2

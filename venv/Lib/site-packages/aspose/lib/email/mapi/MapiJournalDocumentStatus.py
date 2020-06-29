@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class MapiJournalDocumentStatus(IntEnum):
+    NONE = 0
+    PRINTED = 1
+    SAVED = 2
+    ROUTED = 4
+    POSTED = 8

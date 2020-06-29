@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class SocksAuthenticationMethods(IntEnum):
+    NO_AUTHENTICATION = 1
+    PLAIN_TEXT = 2

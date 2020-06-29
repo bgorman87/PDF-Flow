@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class SmtpDeliveryMethod(IntEnum):
+    NETWORK = 0
+    SPECIFIED_PICKUP_DIRECTORY = 1
+    PICKUP_DIRECTORY_FROM_IIS = 2

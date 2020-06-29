@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class SocksVersion(IntEnum):
+    SOCKS_V4 = 4
+    SOCKS_V5 = 5

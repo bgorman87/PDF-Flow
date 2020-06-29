@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class MapiCalendarRecurrenceFrequency(IntEnum):
+    NONE = 0
+    DAILY = 8202
+    WEEKLY = 8203
+    MONTHLY = 8204
+    YEARLY = 8205

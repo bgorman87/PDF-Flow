@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class MapiCalendarBusyStatus(IntEnum):
+    FREE = 0
+    TENTATIVE = 1
+    BUSY = 2
+    OUT_OF_OFFICE = 3

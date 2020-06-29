@@ -1,0 +1,4 @@
+from enum import IntEnum
+
+class TaskSaveFormat(IntEnum):
+    MSG = 0

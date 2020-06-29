@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class AppointmentTransparency(IntEnum):
+    NOT_DEFINED = -1
+    TRANSPARENT = 0
+    OPAQUE = 2

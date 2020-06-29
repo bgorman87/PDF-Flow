@@ -1,0 +1,11 @@
+from enum import IntEnum
+
+class Frequency(IntEnum):
+    NONE = 0
+    SECONDLY = 1
+    MINUTELY = 2
+    HOURLY = 3
+    DAILY = 4
+    WEEKLY = 5
+    MONTHLY = 6
+    YEARLY = 7

@@ -1,0 +1,18 @@
+from enum import IntEnum
+
+class MapiMessageFlags(IntEnum):
+    ZERO = 0
+    READ = 1
+    UNMODIFIED = 2
+    SUBMIT = 4
+    UNSENT = 8
+    HASATTACH = 16
+    FROMME = 32
+    ASSOCIATED = 64
+    RESEND = 128
+    NOTIFYREAD = 256
+    NOTIFYUNREAD = 512
+    EVERREAD = 1024
+    ORIGIN_X400 = 4096
+    ORIGIN_INTERNET = 8192
+    ORIGIN_MISC_EXT = 32768

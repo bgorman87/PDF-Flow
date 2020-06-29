@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ContactSaveFormat(IntEnum):
+    VCARD = 0
+    WEB_DAV = 1
+    MSG = 2

@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MapiTaskOwnership(IntEnum):
+    NOT_ASSIGNED = 0
+    ASSIGNERS_COPY = 1
+    ASSIGNEES_COPY = 2

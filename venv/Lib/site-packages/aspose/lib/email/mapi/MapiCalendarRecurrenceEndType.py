@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class MapiCalendarRecurrenceEndType(IntEnum):
+    NONE = 0
+    END_AFTER_DATE = 8225
+    END_AFTER_NOCCURRENCES = 8226
+    NEVER_END = 8227

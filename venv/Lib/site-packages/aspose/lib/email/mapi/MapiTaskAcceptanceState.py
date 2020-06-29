@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class MapiTaskAcceptanceState(IntEnum):
+    NOT_ASSIGNED = 0
+    UNKNOWN = 1
+    ACCEPTED = 2
+    REJECTED = 3

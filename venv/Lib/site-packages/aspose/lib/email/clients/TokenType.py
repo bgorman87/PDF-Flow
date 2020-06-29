@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class TokenType(IntEnum):
+    ACCESS_TOKEN = 0
+    REFRESH_TOKEN = 1

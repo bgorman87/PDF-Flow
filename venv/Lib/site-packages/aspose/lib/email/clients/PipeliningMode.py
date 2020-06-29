@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class PipeliningMode(IntEnum):
+    AUTO = 0
+    ENABLED = 1
+    DISABLED = 2

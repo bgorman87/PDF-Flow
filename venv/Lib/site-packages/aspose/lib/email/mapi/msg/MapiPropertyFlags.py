@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class MapiPropertyFlags(IntEnum):
+    MANDATORY = 1
+    READABLE = 2
+    WRITABLE = 4

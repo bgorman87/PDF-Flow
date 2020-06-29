@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class MapiRecipientTrackStatus(IntEnum):
+    NONE = 0
+    TENTATIVE = 1
+    ACCEPTED = 2
+    DECLINED = 3

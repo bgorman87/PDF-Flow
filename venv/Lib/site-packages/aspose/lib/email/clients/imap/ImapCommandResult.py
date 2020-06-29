@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class ImapCommandResult(IntEnum):
+    UNDETERMINED = 0
+    SUCCESS = 1
+    FAILURE = 2
+    ERROR = 3
+    CONTINUATION_REQUEST = 4

@@ -1,0 +1,18 @@
+from enum import IntEnum
+
+class VCardTelephoneType(IntEnum):
+    NONE = 0
+    VOICE = 1
+    PREF = 2
+    WORK = 4
+    HOME = 8
+    FAX = 16
+    CELL = 32
+    PAGER = 64
+    BBS = 128
+    MODEM = 256
+    CAR = 512
+    ISDN = 1024
+    VIDEO = 2048
+    PCS = 4096
+    MSG = 8192

@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class TextFormat(IntEnum):
+    TEXT = 0
+    HTML = 1

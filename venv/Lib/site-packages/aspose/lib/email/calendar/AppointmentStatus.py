@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class AppointmentStatus(IntEnum):
+    NOT_DEFINED = -1
+    CANCELLED = 0
+    TENTATIVE = 1
+    CONFIRMED = 2

@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ConnectionAsgmtType(IntEnum):
+    USE_MAIN_OR_DEFAULT = 0
+    USE_MAIN = 1
+    USE_DEFAULT = 2

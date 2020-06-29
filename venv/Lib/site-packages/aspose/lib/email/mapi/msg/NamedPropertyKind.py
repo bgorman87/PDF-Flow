@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class NamedPropertyKind(IntEnum):
+    NUMERICAL = 0
+    STRING = 1

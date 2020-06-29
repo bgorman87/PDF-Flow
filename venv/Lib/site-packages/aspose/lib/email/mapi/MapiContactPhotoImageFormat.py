@@ -1,0 +1,9 @@
+from enum import IntEnum
+
+class MapiContactPhotoImageFormat(IntEnum):
+    UNDEFINED = -1
+    JPEG = 0
+    GIF = 1
+    WMF = 2
+    BMP = 3
+    TIFF = 4

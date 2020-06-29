@@ -1,0 +1,9 @@
+from enum import IntEnum
+
+class DSNAction(IntEnum):
+    NONE = 0
+    DELAYED = 1
+    DELIVERED = 2
+    EXPANDED = 3
+    FAILED = 4
+    RELAYED = 5

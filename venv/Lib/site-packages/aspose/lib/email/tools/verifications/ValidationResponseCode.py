@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class ValidationResponseCode(IntEnum):
+    VALIDATION_SUCCESS = 0
+    SYNTAX_VALIDATION_FAILED = -1
+    DOMAIN_VALIDATION_FAILED = -2
+    MAIL_SERVER_VALIDATION_ERROR = -3

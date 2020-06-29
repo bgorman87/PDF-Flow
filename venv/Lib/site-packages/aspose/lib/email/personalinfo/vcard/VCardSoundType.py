@@ -1,0 +1,11 @@
+from enum import IntEnum
+
+class VCardSoundType(IntEnum):
+    BASIC = 0
+    WAVE = 1
+    PCM = 2
+    AIFF = 3
+    MPEG = 4
+    MP4 = 5
+    OGG = 6
+    WMA = 7

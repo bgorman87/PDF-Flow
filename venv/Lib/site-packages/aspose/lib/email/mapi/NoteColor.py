@@ -1,0 +1,8 @@
+from enum import IntEnum
+
+class NoteColor(IntEnum):
+    BLUE = 0
+    GREEN = 1
+    PINK = 2
+    YELLOW = 3
+    WHITE = 4

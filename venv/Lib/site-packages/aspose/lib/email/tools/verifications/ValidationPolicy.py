@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ValidationPolicy(IntEnum):
+    SYNTAX_ONLY = 0
+    SYNTAX_AND_DOMAIN = 1
+    MAIL_SERVER = 2

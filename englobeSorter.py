@@ -11,6 +11,7 @@ import sqlite3
 import random
 import json
 import shutil
+import win32com.client as win32
 
 # todo Figure out why some forms (placements especially) are causing a crash without any info being output
 #   Remove 0 from beginning of project numbers if there is one
@@ -35,8 +36,10 @@ debug = False
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
 
-json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+home_dir = os.getcwd()
+
+# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
 
 # Read JSON data into the datastore variable
 if json_filename:
@@ -54,6 +57,27 @@ popplerpath = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
+
+
+def email_handler(recipients, recipients_cc, subject, attachment):
+    signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
+    if os.path.isfile(signature_path):
+        with open(signature_path, "r") as file:
+            body_text = file.read()
+    else:
+        print("Signature File Not Found")
+        pass
+    try:
+        outlook = win32.Dispatch('outlook.application')
+        mail = outlook.CreateItem(0)
+        mail.To = recipients
+        mail.CC = recipients_cc
+        mail.Subject = subject
+        mail.HtmlBody = body_text
+        mail.Attachments.Add(attachment)
+        mail.Save()
+    except Exception as e:
+        print(e)
 
 
 def analyze_image(img_path):
@@ -248,7 +272,7 @@ class UiMainwindow(object):
 
         self.SelectFiles = QtWidgets.QPushButton(self.tab)
         self.SelectFiles.setObjectName("SelectFiles")
-        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 2)
+        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 1)
 
         self.outputBox = QtWidgets.QPlainTextEdit(self.tab)
         self.outputBox.setObjectName("outputBox")
@@ -269,7 +293,11 @@ class UiMainwindow(object):
 
         self.analyzeButton = QtWidgets.QPushButton(self.tab)
         self.analyzeButton.setObjectName("analyzeButton")
-        self.gridLayout.addWidget(self.analyzeButton, 3, 2, 1, 2)
+        self.gridLayout.addWidget(self.analyzeButton, 3, 1, 1, 2)
+
+        self.emailButton = QtWidgets.QPushButton(self.tab)
+        self.emailButton.setObjectName("emailButton")
+        self.gridLayout.addWidget(self.emailButton, 3, 3, 1, 1)
 
         self.tab_2 = QtWidgets.QWidget()
         self.tabWidget.addTab(self.tab, "")
@@ -335,12 +363,17 @@ class UiMainwindow(object):
         self.fileRenameButton.clicked.connect(self.file_rename_button_handler)
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
+        self.emailButton.setText(_translate("MainWindow", "E-Mail"))
+        self.emailButton.clicked.connect(self.email_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
         self.label_3.setText(_translate("MainWindow", "File Output Viewer:"))
         self.label_4.setText(_translate("MainWindow", "Combined Files:"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Output"))
         self.listWidget.itemClicked.connect(self.list_widget_handler)
         self.listWidget.itemDoubleClicked.connect(self.rename_file_handler)
+
+    def email_button_handler(self, recipients, cc_recipients, subject, attachment):
+        pass
 
     def select_files_handler(self):
         self.open_file_dialog()
@@ -381,7 +414,8 @@ class UiMainwindow(object):
             file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
             str(self.fileRename.text()) + ".pdf"))
         os.rename(file_path_transit_src, rename_path_transit)
-        os.rename(file_path_project_src, rename_path_project)
+        if file_path_project_src != file_path_transit_src:
+            os.rename(file_path_project_src, rename_path_project)
         data = rename_path_transit + "%%" + rename_path_project
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
         self.listWidget.currentItem().setText(self.fileRename.text())
@@ -457,6 +491,8 @@ class UiMainwindow(object):
 
         # Import images from file path "f" using pdf2image to open
         for f in self.fileNames:
+            # till dexter number identification uin place use 00000000
+            dexter_number = "0000000"
             # Each pdf page is stored as image info in an array called images_jpg
             images_jpeg = convert_from_path(f, poppler_path=popplerpath)
 
@@ -815,16 +851,25 @@ class UiMainwindow(object):
                         project_number_short.replace("-", "") == project_data["project_number"].replace("-", ""):
                     project_description = project_data["project_description"]
                     file_path = project_data["project_directory"]
+                    email_recipient_to = project_data["project_email_to"]
+                    email_recipient_cc = project_data["project_email_cc"]
+                    email_recipient_subject = project_data["project_email_subject"]
                     break
                 elif (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
                       project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and \
                         project_number[-1] == project_data["project_number"][-1]:
                     project_description = project_data["project_description"]
                     file_path = project_data["project_directory"]
+                    email_recipient_to = project_data["project_email_to"]
+                    email_recipient_cc = project_data["project_email_cc"]
+                    email_recipient_subject = project_data["project_email_subject"]
                     break
                 else:
                     project_description = "SomeProjectDescription"
                     file_path = f.replace(f.split("/").pop(), "")
+                    email_recipient_to = ""
+                    email_recipient_cc = ""
+                    email_recipient_subject = ""
 
             only_files = [f[0:6] for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f)) and
                           f[-4:] == ".pdf"]
@@ -857,7 +902,8 @@ class UiMainwindow(object):
             else:  # No files in directory yet
                 package_number_highest_str = "01"
             package_number_highest_str = str(max(package_numbers)+1)
-            print("Max value = {0}".format(max(package_numbers)))
+            if debug:
+                print("Max value = {0}".format(max(package_numbers)))
 
             file_title = package_number_highest_str + "-" + str(project_number_short) + "_" + project_description
 
@@ -879,7 +925,8 @@ class UiMainwindow(object):
                 rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
                 rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
             os.rename(f, rename_path)
-            shutil.copy(rename_path, rename_path_project_dir)
+            if rename_path != rename_path_project_dir:
+                shutil.copy(rename_path, rename_path_project_dir)
 
             print_string = split_name + " renamed to " + file_title + " and saved in project folder:\n" + file_path + \
                            "\n"
@@ -888,9 +935,9 @@ class UiMainwindow(object):
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, data)
             self.listWidget.addItem(self.listWidgetItem)
-
-            # rename button - make so renames both transit and project files
-
+            if "Dexter" in email_recipient_subject:
+                email_recipient_subject = email_recipient_subject.replace("%%", dexter_number)
+            email_handler(email_recipient_to, email_recipient_cc, email_recipient_subject, rename_path)
             cur.execute("DELETE From files")
 
 

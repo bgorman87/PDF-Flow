@@ -1,11 +1,19 @@
-import json
+import win32com.client as win32
 
-filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+recipients = "bgorman@live.com; bgorman@live.ca"
+cc_recipients = "brandon.gorman@englobecorp.com"
+subject = "97 Troop Avenue - Concrete Testing Results"
+with open("Signature/CONCRETE.htm", "r") as file:
+    body_text = file.read()
 
-# Read JSON data into the datastore variable
-if filename:
-    with open(filename, 'r') as f:
-        datastore = json.load(f)
+attachment = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\March 2020 District Contact Listings.pdf"
 
-for i in datastore:
-    print('Project: {0}\nDesc: {1}'.format(i['project_number'], i['project_description']))
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = recipients
+mail.CC = cc_recipients
+mail.Subject = subject
+mail.HtmlBody = body_text
+mail.Attachments.Add(attachment)
+mail.Save()
+

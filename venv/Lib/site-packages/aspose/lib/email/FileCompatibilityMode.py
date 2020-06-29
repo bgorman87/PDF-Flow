@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class FileCompatibilityMode(IntEnum):
+    NONE = 0
+    ALLOW_CRONLY = 1
+    PRESERVE_TNEF_ATTACHMENTS = 2

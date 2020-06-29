@@ -1,0 +1,7 @@
+from enum import IntEnum
+
+class RestoreOptions(IntEnum):
+    NONE = 0
+    RECURSIVE = 1
+    REMOVE_NONEXISTENT_FOLDERS = 2
+    REMOVE_NONEXISTENT_ITEMS = 4

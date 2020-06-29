@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ConnectionState(IntEnum):
+    CLOSED = 0
+    OPEN = 1
+    BROKEN = 16

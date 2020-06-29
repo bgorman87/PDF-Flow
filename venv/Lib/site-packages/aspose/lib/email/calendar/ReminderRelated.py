@@ -1,0 +1,5 @@
+from enum import IntEnum
+
+class ReminderRelated(IntEnum):
+    START = 0
+    END = 1

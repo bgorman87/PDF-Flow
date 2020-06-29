@@ -1,0 +1,6 @@
+from enum import IntEnum
+
+class ReminderMethods(IntEnum):
+    EMAIL = 0
+    SMS = 1
+    POPUP = 2
