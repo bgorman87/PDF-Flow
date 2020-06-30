@@ -822,6 +822,45 @@ class UiMainwindow(object):
                 db.commit()
                 count += 1
 
+                if "2000746" in project_number_short:  # Dexter Project
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(1650 / scale)
+                        y2 = int(1850 * scale)
+                        x1 = int(550 / scale)
+                        x2 = int(1500 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to date placed location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what date placed image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Dexter Number:", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+
+                        # analyze date placed image for date cast
+                        dexter_number_text = analyze_image(f_jpg)
+                        if re.search(r"(\d{7}[-\s]\d+)", dexter_number_text, re.M | re.I) is not None:
+                            dexter_number = re.search(r"(\d{7}[-\s]\d+)", dexter_number_text, re.M + re.I) \
+                                .groups()
+                            dexter_number = dexter_number[-1].replace("\n", "")
+                            break
+                        elif re.search(r"(\d{7})", dexter_number_text, re.M | re.I) is not None:
+                            dexter_number = re.search(r"(\d{7})", dexter_number_text, re.M + re.I) \
+                                .groups()
+                            dexter_number = dexter_number[-1].replace("\n", "")
+                            break
+                        else:
+                            dexter_number = "NA"
+                    # debug, print the date cast
+                    if debug:
+                        print('Dexter Number: {0}'.format(dexter_number))
+
+                if os.path.isfile(full_jpg):
+                    os.remove(full_jpg)
+                if os.path.isfile(f_jpg):
+                    os.remove(f_jpg)
             cur.execute("SELECT * From files")
             if debug:
                 print(cur.fetchall())
@@ -946,6 +985,8 @@ class UiMainwindow(object):
                 print("Max value = {0}".format(max(package_numbers)))
             if "P-00" in project_number_short:
                 project_number_short = project_number_short.replace("P-00", "P-")
+            if "Dexter" in project_description:
+                project_description = project_description.replace("%%", dexter_number)
             file_title = package_number_highest_str + "-" + str(project_number_short) + "_" + project_description
 
             split_name = f.split("/").pop()
