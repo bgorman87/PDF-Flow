@@ -13,7 +13,9 @@ import json
 import shutil
 import win32com.client as win32
 
-# todo: - sort ages properly
+# todo: - Make json file update every time analyze is pressed
+#  - Format package number to be at least 2 digits
+#       - sort ages properly
 #       - Format project numbers after removing all spaces/dots/hyphens
 
 debug = False
@@ -38,8 +40,9 @@ debug = False
 
 home_dir = os.getcwd()
 
-# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+
+json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
 
 # Read JSON data into the datastore variable
 if json_filename:
@@ -951,7 +954,8 @@ class UiMainwindow(object):
 
             only_files = [f[0:6] for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f)) and
                           f[-4:] == ".pdf"]
-            print(only_files)
+            if debug:
+                print(only_files)
             package_number_old = 0
             package_number_highest = 0
             package_numbers = []
@@ -981,6 +985,8 @@ class UiMainwindow(object):
             else:  # No files in directory yet
                 package_number_highest_str = "01"
             package_number_highest_str = str(max(package_numbers)+1)
+            if len(package_number_highest_str) < 2:
+                package_number_highest_str = "0" + package_number_highest_str
             if debug:
                 print("Max value = {0}".format(max(package_numbers)))
             if "P-00" in project_number_short:
