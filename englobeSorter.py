@@ -13,9 +13,9 @@ import json
 import shutil
 import win32com.client as win32
 
-# todo Figure out why some forms (placements especially) are causing a crash without any info being output
-#   Remove 0 from beginning of project numbers if there is one
-#   Find out why the leading 0 in set number is disappearing and why set numbers >2 digits are only showing 2 digits
+# todo: - sort ages properly
+#       - Format project numbers after removing all spaces/dots/hyphens
+
 debug = False
 
 # Biggest issues to solve currently
@@ -61,7 +61,6 @@ def output(self):
 
 def email_attachment_rename(current_name, changed_file):
     try:
-        attachments = []
         outlook = win32.Dispatch('outlook.application').GetNameSpace("MAPI")
         drafts = outlook.GetDefaultFolder(16)  # 16 = drafts
         emails = drafts.Items
@@ -169,41 +168,58 @@ def date_formatter(date_array):
 
 def detect_projectnumber(text):
     # Regex expressions for job numbers
-    # B numbers: ^(B[.-\s]\d+[.-\s]+\d{1})
-    # P numbers: ^(P[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})
-    # 1900: ^(1\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})
-    # 0200: ^([0-2]\d+[.-\s]+\d+[.-\s]\d+[.-\s]+\d{4})
+    # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
+    # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
+    # 1900: ^(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
+    # 0200: ^([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d{4})
     # r = StringIO(text)
-    if re.search(r"(B[.-\s]\d+[.-\s]+\d{1})", text, re.M) is not None:
-        project_number = re.search(r"^(B[.-\s]\d+[.-\s]+\d{1})", text, re.M).groups()
+    if re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M) is not None:
+        project_number = re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
         project_number_short = project_number
-    elif re.search(r"(P[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})", text, re.M) is not None:
-        project_number = re.search(r"(P[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})", text, re.M).groups()
+    elif re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M) is not None:
+        project_number = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
-        project_number_short = re.search(r"(P[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+)", project_number, re.M).groups()
-        project_number_short = project_number_short[-1]
-    elif re.search(r"(1\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})", text, re.M) is not None:
-        project_number = re.search(r"(1\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d+[.-\s]+\d{3})", text,
+        if re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", project_number, re.M) is not None:
+            project_number_short = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", project_number, re.M).groups()
+            project_number_short = project_number_short[-1]
+        else:
+            project_number_short = project_number
+    elif re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M) is not None:
+        project_number = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M).groups()
+        project_number = project_number[-1]
+        project_number = project_number.replace(" ", "")
+        project_number_short = project_number
+    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M) is not None:
+        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text,
                                    re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
-        project_number_short = re.search(r"(1\d+[.-\s]+\d+)", project_number, re.M).groups()
-        project_number_short = project_number_short[-1]
-    elif re.search(r"([0-2]\d+[.-\s]+\d+[.-\s]\d+[.-\s]+\d+)", text, re.M) is not None:
-        project_number = re.search(r"([0-2]\d+[.-\s]+\d+[.-\s]\d+[.-\s]+\d+)", text, re.M).groups()
+        if re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M) is not None:
+            project_number_short = re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M).groups()
+            project_number_short = project_number_short[-1]
+        else:
+            project_number_short = project_number
+    elif re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d+)", text, re.M) is not None:
+        project_number = re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d+)", text, re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
-        project_number_short = re.search(r"([0-2]\d+[.-\s]+\d+)", project_number, re.M).groups()
-        project_number_short = project_number_short[-1]
-    elif re.search(r"([0-2]\d+[.-\s]+\d+[.-\s]\d+)", text, re.M) is not None:
-        project_number = re.search(r"([0-2]\d+[.-\s]+\d+[.-\s]\d+)", text, re.M).groups()
+        if re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M) is not None:
+            project_number_short = re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M).groups()
+            project_number_short = project_number_short[-1]
+        else:
+            project_number_short = project_number
+    elif re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+)", text, re.M) is not None:
+        project_number = re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+)", text, re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
-        project_number_short = re.search(r"([0-2]\d+[.-\s]+\d+)", project_number, re.M).groups()
-        project_number_short = project_number_short[-1]
+        if re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M) is not None:
+            project_number_short = re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M).groups()
+            project_number_short = project_number_short[-1]
+        else:
+            project_number_short = project_number
     else:
         project_number = "NA"
         project_number_short = "NA"
@@ -655,8 +671,9 @@ class UiMainwindow(object):
                             cv2.waitKey(0)
                         # analyze date cast image for date cast
                         date_cast_text = analyze_image(f_jpg)
-                        if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M | re.I) is not None:
-                            date_cast = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_cast_text, re.M + re.I).groups()
+                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M | re.I) is not None:
+                            date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M + re.I)\
+                                .groups()
                             date_cast = date_cast[-1].replace("\n", "")
                             break
                         else:
@@ -717,6 +734,8 @@ class UiMainwindow(object):
                         else:
                             break_ages = break_ages[0]
                         if break_ages is not "NA":
+                            if break_ages.upper() == "AP":
+                                break_ages = "56"
                             break
 
                     if debug:
@@ -774,8 +793,9 @@ class UiMainwindow(object):
 
                         # analyze date placed image for date cast
                         date_placed_text = analyze_image(f_jpg)
-                        if re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M | re.I) is not None:
-                            date_placed = re.search(r"(\d+[\s-]+[A-z]{3}.*\d+)", date_placed_text, re.M + re.I).groups()
+                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M | re.I) is not None:
+                            date_placed = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M + re.I)\
+                                .groups()
                             date_placed = date_placed[-1].replace("\n", "")
                             break
                         else:
@@ -817,8 +837,8 @@ class UiMainwindow(object):
             density_string = ""
             sieve_string = ""
 
-            # For multi page files, some files may not detect project number properly so iterate through all pages and get
-            # project number from a successful detection
+            # For multi page files, some files may not detect project number properly
+            # so iterate through all pages and get project number from a successful detection
             for i in range(0, len(records)):
                 if records[i][0] is not None:
                     project_number_short = records[i][0]
@@ -838,11 +858,11 @@ class UiMainwindow(object):
             break_age_array = []
 
             # iterate through the local database records and if sheet type is break sheet, store date cast into an array
-            # need to format dates for each possible age from 0 - 99
+            # need to format dates for each possible age from 0 - 56
             for i in range(0, len(records)):
                 if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
                     break_age_array.append(records[i][4])
-            break_age_array.reverse()
+            # break_age_array.reverse()
             for age in break_age_array:
                 break_set_no = []
                 break_set_string = ""
@@ -900,7 +920,8 @@ class UiMainwindow(object):
                 for file in only_files:
                     if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
                         package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
-                        print("package_number: {0}\npackage_number[-1]: {1}".format(package_number, package_number[-1]))
+                        if debug:
+                            print("package_number: {0}\npackage_number[-1]: {1}".format(package_number, package_number[-1]))
                         package_numbers.append(int(package_number[-1]))
                 #         if "-" in package_number[-1]:
                 #             package_number = package_number[-1].split("-")
@@ -923,7 +944,8 @@ class UiMainwindow(object):
             package_number_highest_str = str(max(package_numbers)+1)
             if debug:
                 print("Max value = {0}".format(max(package_numbers)))
-
+            if "P-00" in project_number_short:
+                project_number_short = project_number_short.replace("P-00", "P-")
             file_title = package_number_highest_str + "-" + str(project_number_short) + "_" + project_description
 
             split_name = f.split("/").pop()
