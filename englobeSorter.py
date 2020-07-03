@@ -14,7 +14,7 @@ import shutil
 import win32com.client as win32
 
 # todo: - Make json file update every time analyze is pressed
-#  - Format package number to be at least 2 digits
+#       - Format package number to be at least 2 digits
 #       - sort ages properly
 #       - Format project numbers after removing all spaces/dots/hyphens
 
@@ -40,9 +40,8 @@ debug = False
 
 home_dir = os.getcwd()
 
-
-json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
 
 # Read JSON data into the datastore variable
 if json_filename:
@@ -57,6 +56,12 @@ tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesse
 print(os.getcwd())
 popplerpath = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
+def IntTest(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
@@ -534,15 +539,14 @@ class UiMainwindow(object):
             # Each pdf page is stored as image info in an array called images_jpg
             images_jpeg = convert_from_path(f, poppler_path=popplerpath)
 
-            # initialize variables in case no pages detected, prevent crashing
+            # initialize variables in case no pages detected, prevents crashing
             project_number = "NA"
             project_number_short = "NA"
-            set_number = "NA"
             sheet_type = "NA"
-            date_cast = "NA"
-            break_ages = "NA"
-            sheet_type_file = "NA"
-            date_placed = "NA"
+            project_description = "NA"
+            email_recipient_to = "NA"
+            email_recipient_subject = "NA"
+            email_recipient_cc = "NA"
 
             # need to iterate through the image info array to analyze each individual image.
             for image in images_jpeg:
@@ -556,6 +560,8 @@ class UiMainwindow(object):
                 date_cast = "NA"
                 break_ages = "NA"
                 date_placed = "NA"
+                date_tested = "NA"
+                project_description = "NA"
 
                 jpg_replace_string = str(count) + ".jpg"
                 # Get path variable to save pdf files as same name but as .jpg
@@ -675,7 +681,7 @@ class UiMainwindow(object):
                         # analyze date cast image for date cast
                         date_cast_text = analyze_image(f_jpg)
                         if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M | re.I) is not None:
-                            date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M + re.I)\
+                            date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M + re.I) \
                                 .groups()
                             date_cast = date_cast[-1].replace("\n", "")
                             break
@@ -729,17 +735,18 @@ class UiMainwindow(object):
                         # analyze latest break age for age
                         break_age_text = analyze_image(f_jpg)
                         break_ages = break_age_text.split("\n")
-                        # debug, print the latest break age
-                        if debug:
-                            print('All Break Ages: {0}'.format(break_ages))
-                        if len(break_strengths) > 0:
-                            break_ages = break_ages[len(break_strengths) - 1]
-                        else:
-                            break_ages = break_ages[0]
-                        if break_ages is not "NA":
-                            if break_ages.upper() == "AP":
-                                break_ages = "56"
-                            break
+                        if IntTest(break_ages[0]):
+                            # debug, print the latest break age
+                            if debug:
+                                print('All Break Ages: {0}'.format(break_ages))
+                            if len(break_strengths) > 0:
+                                break_ages = break_ages[len(break_strengths) - 1]
+                            else:
+                                break_ages = break_ages[0]
+                            if break_ages is not "NA" and IntTest(break_ages):
+                                if break_ages.upper() == "AP":
+                                    break_ages = "56"
+                                break
 
                     if debug:
                         print('Latest Break Age: {0}'.format(break_ages))
@@ -794,10 +801,10 @@ class UiMainwindow(object):
                             cv2.imshow("Date Cast:", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
 
-                        # analyze date placed image for date cast
+                        # analyze date placed image for date placed
                         date_placed_text = analyze_image(f_jpg)
                         if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M | re.I) is not None:
-                            date_placed = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M + re.I)\
+                            date_placed = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M + re.I) \
                                 .groups()
                             date_placed = date_placed[-1].replace("\n", "")
                             break
@@ -806,9 +813,75 @@ class UiMainwindow(object):
                     # debug, print the date cast
                     if debug:
                         print('Date Placed: {0}'.format(date_placed))
+                elif text.lower().find("density") > 0:
+                    sheet_type = "5"  # 5 = "field density"
+                    sheet_type_file = "FieldDensity("
+                    # debug, print sheet type to screen
+                    if debug:
+                        print('Sheet Type: {0}'.format(sheet_type))
+                    # Preprocess full image saved previously and analyze specific sections for remaining data
+                    pre_process_image(full_jpg, args)
+                    image = cv2.imread(full_jpg)
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(290 / scale)
+                        y2 = int(350 * scale)
+                        x1 = int(1050 / scale)
+                        x2 = int(1550 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        if debug:
+                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                        # crop image to project number location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what project number image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+                        # analyze project number image for project number
+                        project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                        if project_number != "NA":
+                            break
+                    # debug, print the project number
+                    if debug:
+                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
+                                                                                      project_number_short))
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(660 / scale)
+                        y2 = int(725 * scale)
+                        x1 = int(300 / scale)
+                        x2 = int(475 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to date tested location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what date placed image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
 
-                if sheet_type == "3":  # 3 = break
+                        # analyze date tested image for date tested
+                        date_tested_text = analyze_image(f_jpg)
+                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_tested_text, re.M | re.I) is not None:
+                            date_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_tested_text, re.M + re.I) \
+                                .groups()
+                            date_tested = date_tested[-1].replace("\n", "")
+                            break
+                        else:
+                            date_tested = "NA"
+                    # debug, print the date cast
+                    if debug:
+                        print('Date Tested: {0}'.format(date_tested))
+
+                if sheet_type == "1":  # 1 = placement
+                    params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
+                elif sheet_type == "3":  # 3 = break
                     params = [project_number_short, date_cast, sheet_type, set_number, break_ages]
+                elif sheet_type == "5":  # 5 = field density
+                    params = [project_number_short, date_tested, sheet_type, set_number, break_ages]
                 else:
                     params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
                 # Turn "NA" results into None results to help with sorting in sqlite3
@@ -859,7 +932,6 @@ class UiMainwindow(object):
                     # debug, print the date cast
                     if debug:
                         print('Dexter Number: {0}'.format(dexter_number))
-
                 if os.path.isfile(full_jpg):
                     os.remove(full_jpg)
                 if os.path.isfile(f_jpg):
@@ -895,6 +967,16 @@ class UiMainwindow(object):
                 placement_date = date_formatter(placement_date_array)
                 placement_string = '_ConcretePlacement({0})'.format(placement_date)
 
+            density_date_array = []
+            # iterate through the local database records and if sheet type is density, store date placed into an array
+            for i in range(0, len(records)):
+                if records[i][2] == "5":  # 5 = placement
+                    density_date_array.append(records[i][1])
+                    # todo - Finish making density string
+            if density_date_array:
+                density_date = date_formatter(density_date_array)
+                density_string = '_FieldDensity({0})'.format(density_date)
+
             # initialize/reset date_array for each new input file
             break_date_array = []
             break_age_array = []
@@ -904,7 +986,7 @@ class UiMainwindow(object):
             for i in range(0, len(records)):
                 if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
                     break_age_array.append(records[i][4])
-            # break_age_array.reverse()
+            break_age_array.reverse()
             for age in break_age_array:
                 break_set_no = []
                 break_set_string = ""
@@ -928,23 +1010,26 @@ class UiMainwindow(object):
             # package_number = "04"
 
             for project_data in datastore:
-                if project_number_short.replace(".", "") == project_data["project_number"].replace(".", "") or \
-                        project_number_short.replace("-", "") == project_data["project_number"].replace("-", ""):
-                    project_description = project_data["project_description"]
-                    file_path = project_data["project_directory"]
-                    email_recipient_to = project_data["project_email_to"]
-                    email_recipient_cc = project_data["project_email_cc"]
-                    email_recipient_subject = project_data["project_email_subject"]
-                    break
-                elif (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                      project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and \
-                        project_number[-1] == project_data["project_number"][-1]:
-                    project_description = project_data["project_description"]
-                    file_path = project_data["project_directory"]
-                    email_recipient_to = project_data["project_email_to"]
-                    email_recipient_cc = project_data["project_email_cc"]
-                    email_recipient_subject = project_data["project_email_subject"]
-                    break
+                if (project_number_short.replace(".", "") == project_data["project_number"].replace(".", "") or
+                        project_number_short.replace("-", "") == project_data["project_number"].replace("-", "")) or \
+                        ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                          project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                         project_number[-1] == project_data["project_number"][-1]):
+                    if (sheet_type == "5" and "Gravels" in project_data["contract_number"]) or \
+                            (sheet_type == "7" and "Asphalt" in project_data["contract_number"]):
+                        project_description = project_data["project_description"]
+                        file_path = project_data["project_directory"]
+                        email_recipient_to = project_data["project_email_to"]
+                        email_recipient_cc = project_data["project_email_cc"]
+                        email_recipient_subject = project_data["project_email_subject"]
+                        break
+                    else:
+                        project_description = project_data["project_description"]
+                        file_path = project_data["project_directory"]
+                        email_recipient_to = project_data["project_email_to"]
+                        email_recipient_cc = project_data["project_email_cc"]
+                        email_recipient_subject = project_data["project_email_subject"]
+                        break
                 else:
                     project_description = "SomeProjectDescription"
                     file_path = f.replace(f.split("/").pop(), "")
@@ -964,27 +1049,12 @@ class UiMainwindow(object):
                     if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
                         package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
                         if debug:
-                            print("package_number: {0}\npackage_number[-1]: {1}".format(package_number, package_number[-1]))
+                            print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
+                                                                                        package_number[-1]))
                         package_numbers.append(int(package_number[-1]))
-                #         if "-" in package_number[-1]:
-                #             package_number = package_number[-1].split("-")
-                #             package_number_int = int(package_number[-1])
-                #         else:
-                #             package_number_int = int(package_number[-1])
-                #         if package_number_int > package_number_old:
-                #             package_number_highest = package_number_int
-                #         package_number_old = package_number_int
-                # if package_number_highest != 0:
-                #     package_number_highest += 1
-                #     if len(str(package_number_highest)) < 2:
-                #         package_number_highest_str = "0" + str(package_number_highest)
-                #     else:
-                #         package_number_highest_str = str(package_number_highest)
-                # else:  # there were files in directory, but searches for package number returned nothing
-                #     package_number_highest_str = "NA"
             else:  # No files in directory yet
                 package_number_highest_str = "01"
-            package_number_highest_str = str(max(package_numbers)+1)
+            package_number_highest_str = str(max(package_numbers) + 1)
             if len(package_number_highest_str) < 2:
                 package_number_highest_str = "0" + package_number_highest_str
             if debug:
@@ -1000,7 +1070,9 @@ class UiMainwindow(object):
                 file_title = file_title + placement_string
             if break_string != "":
                 file_title = file_title + break_string
-            if placement_string == "" and break_string == "":
+            if density_string != "":
+                file_title = file_title + density_string
+            if placement_string == "" and break_string == "" and density_string == "":
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
 
             # Wont happen much in full use but may encounter same file names during testing
