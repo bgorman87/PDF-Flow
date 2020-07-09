@@ -13,10 +13,13 @@ import json
 import shutil
 import win32com.client as win32
 
-# todo: - Make json file update every time analyze is pressed
-#       - Format package number to be at least 2 digits
-#       - sort ages properly
+# todo: - Input SA and Asphalt sheet ability
 #       - Format project numbers after removing all spaces/dots/hyphens
+#       - Generate project_number_short from json file instead of from detected text to get better file name result
+#       - If email draft not in focus, attachment does not get renamed
+#       - Cumberland Asphalt get detected even though its a gravels sheet
+#       - Set numbers do not show up in proper order
+#       - Break Age should be in order of date therefore oldest break first
 
 debug = False
 
@@ -39,14 +42,6 @@ debug = False
 # and handle when one is not found
 
 home_dir = os.getcwd()
-
-# json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
-
-# Read JSON data into the datastore variable
-if json_filename:
-    with open(json_filename, 'r') as f:
-        datastore = json.load(f)
 
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
@@ -200,8 +195,18 @@ def detect_projectnumber(text):
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
         project_number_short = project_number
-    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M) is not None:
-        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text,
+    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d)", text, re.M) is not None:
+        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d)", text,
+                                   re.M).groups()
+        project_number = project_number[-1]
+        project_number = project_number.replace(" ", "")
+        if re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M) is not None:
+            project_number_short = re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M).groups()
+            project_number_short = project_number_short[-1]
+        else:
+            project_number_short = project_number
+    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M) is not None:
+        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text,
                                    re.M).groups()
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
@@ -314,32 +319,44 @@ class UiMainwindow(object):
 
         self.SelectFiles = QtWidgets.QPushButton(self.tab)
         self.SelectFiles.setObjectName("SelectFiles")
-        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 1)
+        self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 2)
 
         self.outputBox = QtWidgets.QPlainTextEdit(self.tab)
         self.outputBox.setObjectName("outputBox")
         self.outputBox.setReadOnly(True)
-        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 4)
+        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 7)
 
         self.line = QtWidgets.QFrame(self.tab)
         self.line.setFrameShape(QtWidgets.QFrame.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line.setObjectName("line")
-        self.gridLayout.addWidget(self.line, 2, 0, 1, 4)
+        self.gridLayout.addWidget(self.line, 2, 0, 1, 8)
 
         self.line_2 = QtWidgets.QFrame(self.tab)
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
-        self.gridLayout.addWidget(self.line_2, 4, 0, 1, 4)
+        self.gridLayout.addWidget(self.line_2, 4, 0, 1, 8)
 
         self.analyzeButton = QtWidgets.QPushButton(self.tab)
         self.analyzeButton.setObjectName("analyzeButton")
-        self.gridLayout.addWidget(self.analyzeButton, 3, 1, 1, 2)
+        self.gridLayout.addWidget(self.analyzeButton, 3, 2, 1, 2)
 
         self.emailButton = QtWidgets.QPushButton(self.tab)
         self.emailButton.setObjectName("emailButton")
-        self.gridLayout.addWidget(self.emailButton, 3, 3, 1, 1)
+        self.gridLayout.addWidget(self.emailButton, 3, 4, 1, 2)
+
+        self.testBox = QtWidgets.QComboBox(self.tab)
+        self.testBox.setObjectName("testBox")
+        self.gridLayout.addWidget(self.testBox, 3, 6, 1, 1)
+        self.testBox.setEditable(True)
+        self.testBox.lineEdit().setAlignment(QtCore.Qt.AlignCenter)
+        self.testBox.addItems(["Test", "Live"])
+        self.testBox.setEditable(False)
+
+        self.debugBox = QtWidgets.QCheckBox(self.tab)
+        self.debugBox.setObjectName("debugBox")
+        self.gridLayout.addWidget(self.debugBox, 3, 7, 1, 1)
 
         self.tab_2 = QtWidgets.QWidget()
         self.tabWidget.addTab(self.tab, "")
@@ -406,6 +423,7 @@ class UiMainwindow(object):
         self.analyzeButton.setText(_translate("MainWindow", "Analyze"))
         self.analyzeButton.clicked.connect(self.analyze_button_handler)
         self.emailButton.setText(_translate("MainWindow", "E-Mail"))
+        self.debugBox.setText(_translate("MainWindow", "Debug"))
         self.emailButton.clicked.connect(self.email_button_handler)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Input"))
         self.label_3.setText(_translate("MainWindow", "File Output Viewer:"))
@@ -416,6 +434,24 @@ class UiMainwindow(object):
 
     def email_button_handler(self, recipients, cc_recipients, subject, attachment):
         pass
+
+    def json_setup(self):
+        if self.testBox.currentText() != "Test":
+            json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+        else:
+            json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+
+        # Read JSON data into the datastore variable
+        if json_filename:
+            with open(json_filename, 'r') as f:
+                self.datastore = json.load(f)
+
+    def debug_check(self):
+        global debug
+        if self.debugBox.isChecked():
+            debug = True
+        else:
+            debug = False
 
     def select_files_handler(self):
         self.open_file_dialog()
@@ -469,6 +505,8 @@ class UiMainwindow(object):
         self.analyzeButton.setEnabled(False)
         time.sleep(1)
         if self.fileNames is not None:
+            self.json_setup()
+            self.debug_check()
             self.outputBox.appendPlainText("Analyzing...\n")
             time.sleep(1)
             self.data_processing()
@@ -972,7 +1010,6 @@ class UiMainwindow(object):
             for i in range(0, len(records)):
                 if records[i][2] == "5":  # 5 = placement
                     density_date_array.append(records[i][1])
-                    # todo - Finish making density string
             if density_date_array:
                 density_date = date_formatter(density_date_array)
                 density_string = '_FieldDensity({0})'.format(density_date)
@@ -1000,7 +1037,12 @@ class UiMainwindow(object):
                         if k == 0:
                             break_set_string = str(temp_set)
                         else:
-                            break_set_string = break_set_string + "," + str(temp_set)
+                            if int(temp_set) == int(current_set) + 1:
+                                replace_string = "-" + current_set
+                                break_set_string = break_set_string.replace(replace_string, "") + "-" + str(temp_set)
+                            else:
+                                break_set_string = break_set_string + "," + str(temp_set)
+                        current_set = temp_set
                 if break_date_array:
                     break_date = date_formatter(break_date_array)
                     break_string = break_string + '_{0}dConcStrength_S{1}({2})' \
@@ -1009,7 +1051,7 @@ class UiMainwindow(object):
             # Placeholder package number till directory system is in place
             # package_number = "04"
 
-            for project_data in datastore:
+            for project_data in self.datastore:
                 if (project_number_short.replace(".", "") == project_data["project_number"].replace(".", "") or
                         project_number_short.replace("-", "") == project_data["project_number"].replace("-", "")) or \
                         ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
