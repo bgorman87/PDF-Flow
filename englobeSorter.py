@@ -1,25 +1,26 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PIL import Image
-from pdf2image import convert_from_path
-import pytesseract
 import argparse
-import cv2
-import os
-import time
-import regex as re
-import sqlite3
-import random
+import datetime
 import json
+import os
+import random
 import shutil
+import sqlite3
+import time
+
+import cv2
+import pytesseract
+import regex as re
 import win32com.client as win32
+from PIL import Image
+from PyQt5 import QtCore, QtGui, QtWidgets
+from pdf2image import convert_from_path
 
 # todo: - Input SA and Asphalt sheet ability
-#       - Format project numbers after removing all spaces/dots/hyphens
-#       - Generate project_number_short from json file instead of from detected text to get better file name result
-#       - If email draft not in focus, attachment does not get renamed
+#       - Upon changing name in output, regex check pkg-project_number_ if project_number changed,
+#       retrieve desc and save to appropriate locations
+#       - Akerley Blvd still detected for all burnside pours
+#       - In JSON file put in long project number, better detection
 #       - Cumberland Asphalt get detected even though its a gravels sheet
-#       - Set numbers do not show up in proper order
-#       - Break Age should be in order of date therefore oldest break first
 
 debug = False
 
@@ -49,55 +50,69 @@ cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No TE
 
 tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 print(os.getcwd())
-popplerpath = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
+poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
-def IntTest(s):
+months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9,
+          "Nov": 10, "Dec": 11}
+
+data_store = []
+
+
+def project_info(project_number, project_number_short, f, sheet_type, analyzed):
+    file_path = f.replace(f.split("/").pop(), "")
+    if file_path == "":
+        file_path = f.replace(f.split("\\").pop(), "")
+    project_description = "SomeProjectDescription"
+    email_recipient_to = ""
+    email_recipient_cc = ""
+    email_recipient_subject = ""
+    for project_data in data_store:
+        if (project_number_short.replace(".", "") == project_data["project_number_short"].replace(".", "") or
+            project_number_short.replace("-", "") == project_data["project_number_short"].replace("-", "")) or \
+                ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                  project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                 project_number[-1] == project_data["project_number"][-1]):
+            if (sheet_type == "5" and "Gravels" in project_data["contract_number"]) or \
+                    (sheet_type == "7" and "Asphalt" in project_data["contract_number"]):
+                project_description = project_data["project_description"]
+                file_path = project_data["project_directory"]
+                email_recipient_to = project_data["project_email_to"]
+                email_recipient_cc = project_data["project_email_cc"]
+                email_recipient_subject = project_data["project_email_subject"]
+                project_number = project_data["project_number"]
+                project_number_short = project_data["project_number_short"]
+                break
+            else:
+                project_description = project_data["project_description"]
+                file_path = project_data["project_directory"]
+                email_recipient_to = project_data["project_email_to"]
+                email_recipient_cc = project_data["project_email_cc"]
+                email_recipient_subject = project_data["project_email_subject"]
+                project_number = project_data["project_number"]
+                project_number_short = project_data["project_number_short"]
+                break
+
+    if analyzed:
+        return project_number, project_number_short, email_recipient_to, email_recipient_cc, \
+               email_recipient_subject
+    else:
+        return project_number, project_number_short, project_description, file_path
+
+
+def integer_test(s):
     try:
         int(s)
         return True
     except ValueError:
         return False
 
+
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
-def email_attachment_rename(current_name, changed_file):
-    try:
-        outlook = win32.Dispatch('outlook.application').GetNameSpace("MAPI")
-        drafts = outlook.GetDefaultFolder(16)  # 16 = drafts
-        emails = drafts.Items
-        for message in emails:
-            if message.Attachments:
-                for attachment in message.Attachments:
-                    if attachment.filename == current_name:
-                        attachment.delete()
-                        message.Attachments.Add(changed_file)
-                    if debug:
-                        print(attachment.filename)
-    except Exception as e:
-        print(e)
-
-
-def email_handler(recipients, recipients_cc, subject, attachment):
-    signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
-    if os.path.isfile(signature_path):
-        with open(signature_path, "r") as file:
-            body_text = file.read()
-    else:
-        print("Signature File Not Found")
-        pass
-    try:
-        outlook = win32.Dispatch('outlook.application')
-        mail = outlook.CreateItem(0)
-        mail.To = recipients
-        mail.CC = recipients_cc
-        mail.Subject = subject
-        mail.HtmlBody = body_text
-        mail.Attachments.Add(attachment)
-        mail.Save()
-    except Exception as e:
-        print(e)
+def hamming_distance(found_value, file_value):
+    return sum(c1 != c2 for c1, c2 in zip(found_value, file_value))
 
 
 def analyze_image(img_path):
@@ -109,11 +124,31 @@ def analyze_image(img_path):
     return text
 
 
+def month_value(month):
+    return months[month]
+
+
+def month_closest(found_month):
+    # If detected month is not found in the months dictionary, it is obviously a bad detected letter
+    # To ease file renaming (not perfect), find month closest in similarity and assume that was the one detected.
+    closest_month = found_month
+    if found_month not in months:
+        similarity_highest = 999
+        for month in months:
+            similarity = hamming_distance(found_month, month)
+            if similarity < similarity_highest:
+                closest_month = month
+                similarity_highest = similarity
+    return closest_month
+
+
 def date_formatter(date_array):
     if date_array:
         date_day = []
         date_month = []
         date_year = []
+        # Iterate through the dates and store the day value, and the month value.
+        # these should be the same length so indexing will be identical between both
         for temp_date in date_array:
             if temp_date is not None:
                 if re.search(r"(\d+)[\s-]+", temp_date, re.I) is not None:
@@ -136,30 +171,52 @@ def date_formatter(date_array):
                 date_month.append("NA")
                 date_year.append("NA")
 
+        # Iterate through the stored months to find how many are unique
+        month_unique = []
+        for z, month in enumerate(date_month):
+            closest_month = month_closest(month)
+            date_month[z] = closest_month
+            if closest_month not in month_unique:
+                month_unique.append(closest_month)
+
+        for i in range(0, len(date_year)):
+            if len(date_year[i]) <= 2:
+                date_year[i] = "20" + date_year[i]
+            # To reduce misdetected years, if month is Feb to Nov assume year is current year.
+            if months[date_month[i]] != 0 or months[date_month[i]] != 11:
+                now = datetime.datetime.now()
+                date_year[i] = str(now.year)
+
+        # Iterate through the stored years to find how many are unique (99% will be 1 year)
         year_unique = []
         for year in date_year:
             if year not in year_unique:
                 year_unique.append(year)
-        month_unique = []
-        for month in date_month:
-            if month not in month_unique:
-                month_unique.append(month)
-
+        year_unique.sort(key=int)
+        month_unique.sort(key=month_value)
         date_string = ""
-
+        # For each unique year and month find how many day values there are for each
         for i, year in enumerate(year_unique):
             for k, month in enumerate(month_unique):
                 date_day_string = ""
                 day_unique = []
+                # For each month-year combo, find number of unique days
+                # This just gets rid of duplicate dates in the filename.
                 for j in range(0, len(date_month)):
                     if date_year[j] == year and date_month[j] == month:
                         if date_day[j] not in day_unique:
                             day_unique.append(date_day[j])
+                day_unique.sort(key=int)
+                # Using the stored unique days for month-year combo, format into filename
                 for j in range(0, len(day_unique)):
                     if j == 0:
                         date_day_string = day_unique[j]
                     else:
-                        date_day_string = date_day_string + "," + day_unique[j]
+                        if int(day_unique[j]) == int(day_unique[j - 1]) + 1:
+                            replace_string = "-" + day_unique[j - 1]
+                            date_day_string = date_day_string.replace(replace_string, "") + "-" + day_unique[j]
+                        else:
+                            date_day_string = date_day_string + "," + day_unique[j]
                 if k == 0:
                     date_string = date_day_string + "-" + month + "-" + year
                 else:
@@ -289,64 +346,81 @@ class UiMainwindow(object):
 
     def __init__(self):
         self.fileNames = None
+        self.analyzed = False
+        self.centralwidget = QtWidgets.QWidget()
+        self.layoutGrid = QtWidgets.QGridLayout()
+        self.tabWidget = QtWidgets.QTabWidget()
+        self.label = QtWidgets.QLabel()
+        self.tab = QtWidgets.QWidget()
+        self.gridLayout = QtWidgets.QGridLayout(self.tab)
+        self.SelectFiles = QtWidgets.QPushButton(self.tab)
+        self.line = QtWidgets.QFrame(self.tab)
+        self.line_2 = QtWidgets.QFrame(self.tab)
+        self.analyzeButton = QtWidgets.QPushButton(self.tab)
+        self.emailButton = QtWidgets.QPushButton(self.tab)
+        self.testBox = QtWidgets.QComboBox(self.tab)
+        self.debugBox = QtWidgets.QCheckBox(self.tab)
+        self.tab_2 = QtWidgets.QWidget()
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.tab_2)
+        self.outputBox = QtWidgets.QPlainTextEdit(self.tab)
+        self.label_4 = QtWidgets.QLabel(self.tab_2)
+        self.listWidget = QtWidgets.QListWidget(self.tab_2)
+        self.fileRename = QtWidgets.QLineEdit(self.tab_2)
+        self.fileRenameButton = QtWidgets.QPushButton(self.tab_2)
+        self.label_3 = QtWidgets.QLabel(self.tab_2)
+        self.graphicsView = QtWidgets.QGraphicsView(self.tab_2)
+        self.status_bar = QtWidgets.QStatusBar()
+        self.dialog = QtWidgets.QFileDialog()
+        self.listWidgetItem = QtWidgets.QListWidgetItem()
+        self.project_numbers = []
+        self.project_numbers_short = []
 
     progress_update = QtCore.pyqtSignal(int)
 
     def setup_ui(self, main_window):
         main_window.setObjectName("MainWindow")
-        main_window.resize(600, 900)
+        main_window.resize(500, 500)
+        main_window.statusBar().setSizeGripEnabled(False)
 
         self.centralwidget = QtWidgets.QWidget(main_window)
         self.centralwidget.setObjectName("centralwidget")
-        self.layoutGrid = QtWidgets.QGridLayout()
-        self.centralwidget.setLayout(self.layoutGrid)
+        self.layoutGrid = QtWidgets.QGridLayout(self.centralwidget)
 
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
-        self.tabWidget.setGeometry(QtCore.QRect(10, 0, 348, 591))
         self.tabWidget.setObjectName("tabWidget")
         self.tabWidget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.layoutGrid.addWidget(self.tabWidget)
+        self.layoutGrid.addWidget(self.tabWidget, 0, 0, 1, 1)
 
         self.label = QtWidgets.QLabel(self.centralwidget)
-        self.label.setGeometry(QtCore.QRect(10, 590, 141, 21))
         self.label.setObjectName("creatorLabel")
-        self.layoutGrid.addWidget(self.label)
+        self.layoutGrid.addWidget(self.label, 1, 0, 1, 3)
 
-        self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
-        self.gridLayout = QtWidgets.QGridLayout(self.tab)
         self.gridLayout.setObjectName("gridLayout")
 
-        self.SelectFiles = QtWidgets.QPushButton(self.tab)
         self.SelectFiles.setObjectName("SelectFiles")
         self.gridLayout.addWidget(self.SelectFiles, 3, 0, 1, 2)
 
-        self.outputBox = QtWidgets.QPlainTextEdit(self.tab)
         self.outputBox.setObjectName("outputBox")
         self.outputBox.setReadOnly(True)
-        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 7)
+        self.gridLayout.addWidget(self.outputBox, 5, 0, 1, 8)
 
-        self.line = QtWidgets.QFrame(self.tab)
         self.line.setFrameShape(QtWidgets.QFrame.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line.setObjectName("line")
         self.gridLayout.addWidget(self.line, 2, 0, 1, 8)
 
-        self.line_2 = QtWidgets.QFrame(self.tab)
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
         self.gridLayout.addWidget(self.line_2, 4, 0, 1, 8)
 
-        self.analyzeButton = QtWidgets.QPushButton(self.tab)
         self.analyzeButton.setObjectName("analyzeButton")
         self.gridLayout.addWidget(self.analyzeButton, 3, 2, 1, 2)
 
-        self.emailButton = QtWidgets.QPushButton(self.tab)
         self.emailButton.setObjectName("emailButton")
         self.gridLayout.addWidget(self.emailButton, 3, 4, 1, 2)
 
-        self.testBox = QtWidgets.QComboBox(self.tab)
         self.testBox.setObjectName("testBox")
         self.gridLayout.addWidget(self.testBox, 3, 6, 1, 1)
         self.testBox.setEditable(True)
@@ -354,40 +428,31 @@ class UiMainwindow(object):
         self.testBox.addItems(["Test", "Live"])
         self.testBox.setEditable(False)
 
-        self.debugBox = QtWidgets.QCheckBox(self.tab)
         self.debugBox.setObjectName("debugBox")
         self.gridLayout.addWidget(self.debugBox, 3, 7, 1, 1)
 
-        self.tab_2 = QtWidgets.QWidget()
         self.tabWidget.addTab(self.tab, "")
         self.tab_2.setObjectName("tab_2")
-        self.gridLayout_2 = QtWidgets.QGridLayout(self.tab_2)
         self.gridLayout_2.setObjectName("gridLayout_2")
 
-        self.label_4 = QtWidgets.QLabel(self.tab_2)
         self.label_4.setGeometry(QtCore.QRect(10, 10, 81, 16))
         self.label_4.setObjectName("combinedFilesLabel")
         self.gridLayout_2.addWidget(self.label_4, 0, 0, 1, 2)
 
-        self.listWidget = QtWidgets.QListWidget(self.tab_2)
         self.listWidget.setGeometry(QtCore.QRect(10, 30, 320, 100))
         self.listWidget.setObjectName("listWidget")
         self.gridLayout_2.addWidget(self.listWidget, 1, 0, 5, 5)
 
-        self.fileRename = QtWidgets.QLineEdit(self.tab_2)
-        self.fileRename.setObjectName("filerenamer")
+        self.fileRename.setObjectName("file rename")
         self.gridLayout_2.addWidget(self.fileRename, 6, 0, 1, 4)
 
-        self.fileRenameButton = QtWidgets.QPushButton(self.tab_2)
         self.fileRenameButton.setObjectName("fileRenameButton")
         self.gridLayout_2.addWidget(self.fileRenameButton, 6, 4, 1, 1)
 
-        self.label_3 = QtWidgets.QLabel(self.tab_2)
         self.label_3.setGeometry(QtCore.QRect(10, 140, 100, 16))
         self.label_3.setObjectName("pdfOutputLabel")
         self.gridLayout_2.addWidget(self.label_3, 7, 0, 1, 2)
 
-        self.graphicsView = QtWidgets.QGraphicsView(self.tab_2)
         self.graphicsView.setGeometry(QtCore.QRect(10, 160, 320, 400))
         self.graphicsView.setObjectName("graphicsView")
         self.gridLayout_2.addWidget(self.graphicsView, 8, 0, 20, 5)
@@ -398,11 +463,11 @@ class UiMainwindow(object):
         self.label.raise_()
 
         main_window.setCentralWidget(self.centralwidget)
-        self.statusbar = QtWidgets.QStatusBar(main_window)
-        self.statusbar.setObjectName("statusbar")
-        main_window.setStatusBar(self.statusbar)
+        self.status_bar = QtWidgets.QStatusBar(main_window)
+        self.status_bar.setObjectName("status bar")
+        main_window.setStatusBar(self.status_bar)
 
-        self.retranslate_ui(main_window)
+        self.translate_ui(main_window)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
@@ -411,7 +476,7 @@ class UiMainwindow(object):
         main_window.setTabOrder(self.outputBox, self.tab)
         main_window.setTabOrder(self.tab, self.tab_2)
 
-    def retranslate_ui(self, main_window):
+    def translate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
         main_window.setWindowTitle(_translate("MainWindow", "Englobe Sorter"))
         self.label.setText(_translate("MainWindow", "Created By: Brandon Gorman"))
@@ -432,19 +497,61 @@ class UiMainwindow(object):
         self.listWidget.itemClicked.connect(self.list_widget_handler)
         self.listWidget.itemDoubleClicked.connect(self.rename_file_handler)
 
-    def email_button_handler(self, recipients, cc_recipients, subject, attachment):
-        pass
+    def email_button_handler(self):
+        if self.analyzed:
+            signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
+            if os.path.isfile(signature_path):
+                with open(signature_path, "r") as file:
+                    body_text = file.read()
+            else:
+                print("Signature File Not Found")
+                pass
+            all_list_titles = []
+            all_list_data = []
+            for i in range(self.listWidget.count()):
+                all_list_data.append(self.listWidget.item(i).data(QtCore.Qt.UserRole).split("%%")[0])
+                all_list_titles.append(self.listWidget.item(i).text())
+            for i, project_number in enumerate(self.project_numbers):
+                if self.project_numbers_short[i][0] == "P":
+                    self.project_numbers_short[i] = self.project_numbers_short[i].replace("P-", "P-00")
+                project_number, project_number_short,\
+                    recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
+                                                                      all_list_data[i], None, self.analyzed)
+                attachment = all_list_data[i]
+                if "Dexter" in subject:
+                    dexter_number = "NA"
+                    if re.search(r"Dexter_([\d-]*)[_\dA-z]", all_list_titles[i], re.I) is not None:
+                        dexter_number = re.search(r"Dexter_([\d-]*)[_\dA-z]", all_list_titles[i], re.I).groups()
+                        dexter_number = dexter_number[-1]
+                    subject = subject.replace("%%", dexter_number)
+                try:
+                    outlook = win32.Dispatch('outlook.application')
+                    mail = outlook.CreateItem(0)
+                    mail.To = recipients
+                    mail.CC = recipients_cc
+                    mail.Subject = subject
+                    mail.HtmlBody = body_text
+                    mail.Attachments.Add(attachment)
+                    mail.Save()
+                    e = "Drafted email for: {0}".format(all_list_titles[i])
+                except Exception as e:
+                    print(e)
+                    pass
+                self.outputBox.appendPlainText(e)
+        else:
+            self.outputBox.appendPlainText("There aren't any analyzed files to e-mail.")
 
     def json_setup(self):
+        global data_store
         if self.testBox.currentText() != "Test":
             json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
         else:
             json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
 
-        # Read JSON data into the datastore variable
+        # Read JSON data into the data_store variable
         if json_filename:
             with open(json_filename, 'r') as f:
-                self.datastore = json.load(f)
+                data_store = json.load(f)
 
     def debug_check(self):
         global debug
@@ -458,7 +565,7 @@ class UiMainwindow(object):
 
     def open_file_dialog(self):
         self.dialog = QtWidgets.QFileDialog(directory=str(os.path.abspath(os.path.join(os.getcwd(), r"..\.."))))
-        self.fileNames, self.filters = QtWidgets.QFileDialog.getOpenFileNames()
+        self.fileNames, filters = QtWidgets.QFileDialog.getOpenFileNames()
 
         tuple(self.fileNames)
         if len(self.fileNames) == 1:
@@ -484,7 +591,6 @@ class UiMainwindow(object):
 
         if debug:
             print('Renamed File Path: \n{0}\n{1}'.format(file_path_transit_src, file_path_project_src))
-        # os.chdir(file_path.replace(file_path.split("\\").pop(), ""))
         rename_path_transit = os.path.abspath(os.path.join(
             file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
             str(self.fileRename.text()) + ".pdf"))
@@ -495,11 +601,8 @@ class UiMainwindow(object):
         if file_path_project_src != file_path_transit_src:
             os.rename(file_path_project_src, rename_path_project)
         data = rename_path_transit + "%%" + rename_path_project
-        email_attachment_rename(file_path_transit_src.split("\\").pop(), rename_path_transit)
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
         self.listWidget.currentItem().setText(self.fileRename.text())
-        # except Exception as e:
-        #     print(e)
 
     def analyze_button_handler(self):
         self.analyzeButton.setEnabled(False)
@@ -510,6 +613,7 @@ class UiMainwindow(object):
             self.outputBox.appendPlainText("Analyzing...\n")
             time.sleep(1)
             self.data_processing()
+            self.analyzed = True
         else:
             self.outputBox.appendPlainText("Please select at least 1 file to analyze...\n")
         self.analyzeButton.setEnabled(True)
@@ -520,9 +624,9 @@ class UiMainwindow(object):
     def list_widget_handler(self):
         file_path = str(self.listWidget.currentItem().data(QtCore.Qt.UserRole)).split("%%")
         file_path_transit_src = file_path[0]
-        file_path_project_src = file_path[1]
+        image_jpeg = []
         try:
-            image_jpeg = convert_from_path(file_path_transit_src, fmt="jpeg", poppler_path=popplerpath)
+            image_jpeg = convert_from_path(file_path_transit_src, fmt="jpeg", poppler_path=poppler_path)
         except Exception as e:
             print(e)
         if image_jpeg:
@@ -575,31 +679,24 @@ class UiMainwindow(object):
             # till dexter number identification uin place use 00000000
             dexter_number = "0000000"
             # Each pdf page is stored as image info in an array called images_jpg
-            images_jpeg = convert_from_path(f, poppler_path=popplerpath)
+            images_jpeg = convert_from_path(f, poppler_path=poppler_path)
 
             # initialize variables in case no pages detected, prevents crashing
             project_number = "NA"
             project_number_short = "NA"
             sheet_type = "NA"
-            project_description = "NA"
-            email_recipient_to = "NA"
-            email_recipient_subject = "NA"
-            email_recipient_cc = "NA"
-
+            project_number_found = False
             # need to iterate through the image info array to analyze each individual image.
             for image in images_jpeg:
                 # Set / reset count to 0 for appending file names
                 count = 0
                 # reset variables in case some do not get detected
-                project_number = "NA"
-                project_number_short = "NA"
                 set_number = "NA"
                 sheet_type = "NA"
                 date_cast = "NA"
                 break_ages = "NA"
                 date_placed = "NA"
                 date_tested = "NA"
-                project_description = "NA"
 
                 jpg_replace_string = str(count) + ".jpg"
                 # Get path variable to save pdf files as same name but as .jpg
@@ -636,30 +733,33 @@ class UiMainwindow(object):
                     # Preprocess full image saved previously and analyze specific sections for remaining data
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(300 / scale)
-                        y2 = int(360 * scale)
-                        x1 = int(1100 / scale)
-                        x2 = int(1550 * scale)
-                        if debug:
-                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to project number location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what project number image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze project number image for project number
-                        project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                        if project_number is not "NA":
-                            if project_number[0] == "0":
-                                project_number = project_number[1:]
-                                project_number_short = project_number_short[1:]
-                            break
+                    # Once a project number is found in a package, it stops looking, which speeds up analysis
+                    if not project_number_found:
+                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                            y1 = int(300 / scale)
+                            y2 = int(360 * scale)
+                            x1 = int(1100 / scale)
+                            x2 = int(1550 * scale)
+                            if debug:
+                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                            if y2 > 2200:
+                                y2 = 2150
+                            if x2 > 1700:
+                                x2 = 1650
+                            # crop image to project number location
+                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                            # debug, show what project number image looks like to be analyzed
+                            if debug:
+                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                                cv2.waitKey(0)
+                            # analyze project number image for project number
+                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                            if project_number is not "NA":
+                                if project_number[0] == "0":
+                                    project_number = project_number[1:]
+                                    project_number_short = project_number_short[1:]
+                                project_number_found = True
+                                break
 
                     # debug, print the project number
                     if debug:
@@ -773,7 +873,7 @@ class UiMainwindow(object):
                         # analyze latest break age for age
                         break_age_text = analyze_image(f_jpg)
                         break_ages = break_age_text.split("\n")
-                        if IntTest(break_ages[0]):
+                        if integer_test(break_ages[0]):
                             # debug, print the latest break age
                             if debug:
                                 print('All Break Ages: {0}'.format(break_ages))
@@ -781,7 +881,7 @@ class UiMainwindow(object):
                                 break_ages = break_ages[len(break_strengths) - 1]
                             else:
                                 break_ages = break_ages[0]
-                            if break_ages is not "NA" and IntTest(break_ages):
+                            if break_ages is not "NA" and integer_test(break_ages):
                                 if break_ages.upper() == "AP":
                                     break_ages = "56"
                                 break
@@ -791,7 +891,6 @@ class UiMainwindow(object):
 
                 elif text.lower().find("placement") > 0:
                     sheet_type = "1"  # 1 = "placement"
-                    sheet_type_file = "ConcretePlacement("
                     # debug, print sheet type to screen
                     if debug:
                         print('Sheet Type: {0}'.format(sheet_type))
@@ -853,7 +952,6 @@ class UiMainwindow(object):
                         print('Date Placed: {0}'.format(date_placed))
                 elif text.lower().find("density") > 0:
                     sheet_type = "5"  # 5 = "field density"
-                    sheet_type_file = "FieldDensity("
                     # debug, print sheet type to screen
                     if debug:
                         print('Sheet Type: {0}'.format(sheet_type))
@@ -982,12 +1080,11 @@ class UiMainwindow(object):
             if debug:
                 print(records)
 
-            # TODO Finish file naming for sieve, density, and undetected sheet types
+            # TODO Finish file naming for sieve, asphalt, and undetected sheet types
 
             placement_string = ""
             break_string = ""
             density_string = ""
-            sieve_string = ""
 
             # For multi page files, some files may not detect project number properly
             # so iterate through all pages and get project number from a successful detection
@@ -1015,7 +1112,6 @@ class UiMainwindow(object):
                 density_string = '_FieldDensity({0})'.format(density_date)
 
             # initialize/reset date_array for each new input file
-            break_date_array = []
             break_age_array = []
 
             # iterate through the local database records and if sheet type is break sheet, store date cast into an array
@@ -1023,7 +1119,7 @@ class UiMainwindow(object):
             for i in range(0, len(records)):
                 if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
                     break_age_array.append(records[i][4])
-            break_age_array.reverse()
+            break_age_array.sort(key=int, reverse=True)
             for age in break_age_array:
                 break_set_no = []
                 break_set_string = ""
@@ -1032,6 +1128,9 @@ class UiMainwindow(object):
                     if records[i][4] == age:
                         break_date_array.append(records[i][1])
                         break_set_no.append(records[i][3])
+                # Formats the set numbers for the filename, hyphenating consecutive numbers
+                break_set_no.sort(key=int)
+                current_set = -1
                 if break_set_no:
                     for k, temp_set in enumerate(break_set_no):
                         if k == 0:
@@ -1051,40 +1150,17 @@ class UiMainwindow(object):
             # Placeholder package number till directory system is in place
             # package_number = "04"
 
-            for project_data in self.datastore:
-                if (project_number_short.replace(".", "") == project_data["project_number"].replace(".", "") or
-                        project_number_short.replace("-", "") == project_data["project_number"].replace("-", "")) or \
-                        ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                          project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
-                         project_number[-1] == project_data["project_number"][-1]):
-                    if (sheet_type == "5" and "Gravels" in project_data["contract_number"]) or \
-                            (sheet_type == "7" and "Asphalt" in project_data["contract_number"]):
-                        project_description = project_data["project_description"]
-                        file_path = project_data["project_directory"]
-                        email_recipient_to = project_data["project_email_to"]
-                        email_recipient_cc = project_data["project_email_cc"]
-                        email_recipient_subject = project_data["project_email_subject"]
-                        break
-                    else:
-                        project_description = project_data["project_description"]
-                        file_path = project_data["project_directory"]
-                        email_recipient_to = project_data["project_email_to"]
-                        email_recipient_cc = project_data["project_email_cc"]
-                        email_recipient_subject = project_data["project_email_subject"]
-                        break
-                else:
-                    project_description = "SomeProjectDescription"
-                    file_path = f.replace(f.split("/").pop(), "")
-                    email_recipient_to = ""
-                    email_recipient_cc = ""
-                    email_recipient_subject = ""
+            project_number, project_number_short, project_description, file_path = project_info(project_number,
+                                                                                                project_number_short,
+                                                                                                f,
+                                                                                                sheet_type,
+                                                                                                self.analyzed)
 
             only_files = [f[0:6] for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f)) and
                           f[-4:] == ".pdf"]
             if debug:
                 print(only_files)
-            package_number_old = 0
-            package_number_highest = 0
+            package_number_highest_str = "01"
             package_numbers = []
             if only_files:
                 for file in only_files:
@@ -1094,11 +1170,10 @@ class UiMainwindow(object):
                             print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
                                                                                         package_number[-1]))
                         package_numbers.append(int(package_number[-1]))
-            else:  # No files in directory yet
-                package_number_highest_str = "01"
-            package_number_highest_str = str(max(package_numbers) + 1)
-            if len(package_number_highest_str) < 2:
-                package_number_highest_str = "0" + package_number_highest_str
+            if package_numbers:
+                package_number_highest_str = str(max(package_numbers) + 1)
+                if len(package_number_highest_str) < 2:
+                    package_number_highest_str = "0" + package_number_highest_str
             if debug:
                 print("Max value = {0}".format(max(package_numbers)))
             if "P-00" in project_number_short:
@@ -1131,15 +1206,14 @@ class UiMainwindow(object):
                 shutil.copy(rename_path, rename_path_project_dir)
 
             print_string = split_name + " renamed to " + file_title + " and saved in project folder:\n" + file_path + \
-                           "\n"
+                           '\n'
             data = rename_path + "%%" + rename_path_project_dir
             self.outputBox.appendPlainText(print_string)
             self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
             self.listWidgetItem.setData(QtCore.Qt.UserRole, data)
             self.listWidget.addItem(self.listWidgetItem)
-            if "Dexter" in email_recipient_subject:
-                email_recipient_subject = email_recipient_subject.replace("%%", dexter_number)
-            email_handler(email_recipient_to, email_recipient_cc, email_recipient_subject, rename_path)
+            self.project_numbers.append(project_number)
+            self.project_numbers_short.append(project_number_short)
             cur.execute("DELETE From files")
 
 
