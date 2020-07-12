@@ -15,10 +15,7 @@ from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pdf2image import convert_from_path
 
-# todo: - Fix Dates for sieve sheets
-#       - Save asphalt location and mix type for filename
-#       - Upon changing name in output, regex check pkg-project_number_ if project_number changed,
-#       retrieve desc and save to appropriate locations
+# todo - Fix updated_file_details renaming issues
 
 debug = False
 
@@ -127,6 +124,28 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                email_recipient_subject
     else:
         return project_number, project_number_short, project_description, file_path
+
+
+def detect_package_number(file_path):
+    only_files = [f_local[0:6] for f_local in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f_local))
+                  and f_local[-4:] == ".pdf"]
+    if debug:
+        print(only_files)
+    package_number_highest_str = "01"
+    package_numbers = []
+    if only_files:
+        for file in only_files:
+            if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
+                package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
+                if debug:
+                    print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
+                                                                                package_number[-1]))
+                package_numbers.append(int(package_number[-1]))
+    if package_numbers:
+        package_number_highest_str = str(max(package_numbers) + 1)
+        if len(package_number_highest_str) < 2:
+            package_number_highest_str = "0" + package_number_highest_str
+    return package_number_highest_str, package_numbers
 
 
 def integer_test(s):
@@ -545,8 +564,8 @@ class UiMainwindow(object):
                 if self.project_numbers_short[i][0] == "P":
                     self.project_numbers_short[i] = self.project_numbers_short[i].replace("P-", "P-00")
                 project_number, project_number_short, \
-                recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
-                                                                  all_list_data[i], None, self.analyzed)
+                    recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
+                                                                        all_list_data[i], None, self.analyzed)
                 attachment = all_list_data[i]
                 if "Dexter" in subject:
                     dexter_number = "NA"
@@ -614,25 +633,76 @@ class UiMainwindow(object):
             self.listWidget.editItem(self.listWidget.currentItem())
 
     def file_rename_button_handler(self):
-        # try:
         file_path = self.listWidget.currentItem().data(QtCore.Qt.UserRole).split("%%")
         file_path_transit_src = file_path[0]
-        file_path_project_src = file_path[1]
+        file_path_project_src = file_path[1]  # Project path may be changed if project number updated so declare up here
 
+        # See if project number is the edited string. If it is and description is == "SomeProjectDescription"
+        # Then the project was previously not detected properly so assume the project edit is correct and find
+        # details in the JSON file.
+        # Before renaming occurs Old data = entry in the listWidget
+        #                        New data = entry in the text edit box
+        description = "SomeProjectDescription"
+        old_description = ""
+        old_project_number = ""
+        new_project_number = ""
+        project_number_short = ""
+        old_package = ""
+        old_title = self.listWidget.currentItem().text()
+        project_details_changed = False
+        if re.search(r"_([A-z\.\d]+)_", old_title, re.M + re.I) is not None:
+            old_description = re.search(r"_([A-z\.\d]+)_", old_title, re.M + re.I).groups()
+            old_description = old_description[-1]
+        if old_description == description:
+            new_title = self.fileRename.text()
+            if re.search(r"-([\dPBpb\.-]+)_", old_title, re.M + re.I) is not None:
+                old_project_number = re.search(r"-([\dPBpb\.-]+)_", old_title, re.M + re.I).groups()
+                old_project_number = old_project_number[-1]
+            if re.search(r"-([\dPBpb\.-]+)_", new_title, re.M + re.I) is not None:
+                new_project_number = re.search(r"-([\dPBpb\.-]+)_", new_title, re.M + re.I).groups()
+                new_project_number = new_project_number[-1]
+            if old_project_number != new_project_number:
+                project_number, project_number_short,\
+                    description, file_path_project_src = project_info(new_project_number, new_project_number,
+                                                                            file_path_transit_src, None, False)
+            project_details_changed = True
+            if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
+                old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
+                old_package = old_package[-1]
+
+        if project_details_changed:
+            updated_file_details = old_title.replace("SomeProjectDescription", description)
+            updated_package = detect_package_number(file_path_project_src)[0]
+            updated_file_details = updated_file_details.replace(old_package, updated_package)
+            updated_file_details = updated_file_details.replace(old_project_number, project_number_short)
+            rename_path_transit = os.path.abspath(os.path.join(
+                file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
+                updated_file_details + ".pdf"))
+            rename_path_project = os.path.abspath(os.path.join(file_path_project_src, updated_file_details + ".pdf"))
+            if not os.path.isfile(file_path_project_src):
+                file_path_project_src = rename_path_project
+            os.rename(file_path_transit_src, rename_path_transit)
+            if os.path.isfile(file_path_project_src):
+                if file_path_project_src != file_path_transit_src:
+                    os.rename(file_path_project_src, rename_path_project)
+            else:
+                shutil.copy(rename_path_transit, rename_path_project)
+            self.listWidget.currentItem().setText(updated_file_details)
+        else:
+            rename_path_transit = os.path.abspath(os.path.join(
+                file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
+                str(self.fileRename.text()) + ".pdf"))
+            rename_path_project = os.path.abspath(os.path.join(
+                file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
+                str(self.fileRename.text()) + ".pdf"))
+            os.rename(file_path_transit_src, rename_path_transit)
+            if file_path_project_src != file_path_transit_src:  # If project and transit aren't the same, rename
+                os.rename(file_path_project_src, rename_path_project)
+            self.listWidget.currentItem().setText(self.fileRename.text())
         if debug:
             print('Renamed File Path: \n{0}\n{1}'.format(file_path_transit_src, file_path_project_src))
-        rename_path_transit = os.path.abspath(os.path.join(
-            file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
-            str(self.fileRename.text()) + ".pdf"))
-        rename_path_project = os.path.abspath(os.path.join(
-            file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
-            str(self.fileRename.text()) + ".pdf"))
-        os.rename(file_path_transit_src, rename_path_transit)
-        if file_path_project_src != file_path_transit_src:
-            os.rename(file_path_project_src, rename_path_project)
         data = rename_path_transit + "%%" + rename_path_project
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
-        self.listWidget.currentItem().setText(self.fileRename.text())
 
     def analyze_button_handler(self):
         self.analyzeButton.setEnabled(False)
@@ -1119,7 +1189,7 @@ class UiMainwindow(object):
 
                     # once analyzed, top right corner image is not required anymore, so delete
                     os.remove(f_jpg)
-                    if text.lower().find("Asphalt") > 0:
+                    if text.lower().find("asphalt") > 0:
                         sheet_type = "7"  # 7 = "Asphalt field density"
                         # debug, print sheet type to screen
                         if debug:
@@ -1254,8 +1324,6 @@ class UiMainwindow(object):
             if debug:
                 print(records)
 
-            # TODO Finish file naming for sieve, asphalt, and undetected sheet types
-
             placement_string = ""
             break_string = ""
             density_string = ""
@@ -1294,7 +1362,7 @@ class UiMainwindow(object):
                     asphalt_date_array.append(records[i][1])
             if asphalt_date_array:
                 asphalt_date = date_formatter(density_date_array)
-                asphalt_string = '_FieldDensity({0})'.format(asphalt_date)
+                asphalt_string = '_AsphaltCompaction({0})'.format(asphalt_date)
 
             sieve_date_array = []
             # iterate through the local database records and if sheet type is sieve, store date placed into an array
@@ -1302,7 +1370,7 @@ class UiMainwindow(object):
                 if records[i][2] == "9":  # 9 = sieve
                     sieve_date_array.append(records[i][1])
             if sieve_date_array:
-                sieve_date = date_formatter(density_date_array)
+                sieve_date = date_formatter(sieve_date_array)
                 sieve_string = '_SA({0})'.format(sieve_date)
 
             # initialize/reset date_array for each new input file
@@ -1350,24 +1418,7 @@ class UiMainwindow(object):
                                                                                                 sheet_type,
                                                                                                 self.analyzed)
 
-            only_files = [f[0:6] for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f)) and
-                          f[-4:] == ".pdf"]
-            if debug:
-                print(only_files)
-            package_number_highest_str = "01"
-            package_numbers = []
-            if only_files:
-                for file in only_files:
-                    if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
-                        package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
-                        if debug:
-                            print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
-                                                                                        package_number[-1]))
-                        package_numbers.append(int(package_number[-1]))
-            if package_numbers:
-                package_number_highest_str = str(max(package_numbers) + 1)
-                if len(package_number_highest_str) < 2:
-                    package_number_highest_str = "0" + package_number_highest_str
+            package_number_highest_str, package_numbers = detect_package_number(file_path)
             if debug:
                 print("Max value = {0}".format(max(package_numbers)))
             if "P-00" in project_number_short:
