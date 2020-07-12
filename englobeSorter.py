@@ -15,14 +15,13 @@ from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pdf2image import convert_from_path
 
-# todo: - Input SA and Asphalt sheet ability
+# todo: - Fix Dates for sieve sheets
+#       - Save asphalt location and mix type for filename
 #       - Upon changing name in output, regex check pkg-project_number_ if project_number changed,
 #       retrieve desc and save to appropriate locations
-#       - Akerley Blvd still detected for all burnside pours
-#       - In JSON file put in long project number, better detection
-#       - Cumberland Asphalt get detected even though its a gravels sheet
 
 debug = False
+
 
 # Biggest issues to solve currently
 # 1 - Dealing with files containing undetected data
@@ -41,6 +40,11 @@ debug = False
 # Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
 # Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
 # and handle when one is not found
+
+
+class ProjectFound(Exception):
+    pass
+
 
 home_dir = os.getcwd()
 
@@ -66,31 +70,57 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
     email_recipient_to = ""
     email_recipient_cc = ""
     email_recipient_subject = ""
-    for project_data in data_store:
-        if (project_number_short.replace(".", "") == project_data["project_number_short"].replace(".", "") or
-            project_number_short.replace("-", "") == project_data["project_number_short"].replace("-", "")) or \
-                ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                  project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
-                 project_number[-1] == project_data["project_number"][-1]):
-            if (sheet_type == "5" and "Gravels" in project_data["contract_number"]) or \
-                    (sheet_type == "7" and "Asphalt" in project_data["contract_number"]):
-                project_description = project_data["project_description"]
-                file_path = project_data["project_directory"]
-                email_recipient_to = project_data["project_email_to"]
-                email_recipient_cc = project_data["project_email_cc"]
-                email_recipient_subject = project_data["project_email_subject"]
-                project_number = project_data["project_number"]
-                project_number_short = project_data["project_number_short"]
-                break
-            else:
-                project_description = project_data["project_description"]
-                file_path = project_data["project_directory"]
-                email_recipient_to = project_data["project_email_to"]
-                email_recipient_cc = project_data["project_email_cc"]
-                email_recipient_subject = project_data["project_email_subject"]
-                project_number = project_data["project_number"]
-                project_number_short = project_data["project_number_short"]
-                break
+    try:
+        for temp_count in [1, 2]:
+            if temp_count == 1:
+                for project_data in data_store:
+                    if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                         project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                            project_number[-1] == project_data["project_number"][-1]):
+                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+                        elif sheet_type != "5" and sheet_type != "7":
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+            if temp_count == 2:
+                for project_data in data_store:
+                    if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                            project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
+                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+                        elif sheet_type != "5" and sheet_type != "7":
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+    except ProjectFound:
+        pass
 
     if analyzed:
         return project_number, project_number_short, email_recipient_to, email_recipient_cc, \
@@ -514,9 +544,9 @@ class UiMainwindow(object):
             for i, project_number in enumerate(self.project_numbers):
                 if self.project_numbers_short[i][0] == "P":
                     self.project_numbers_short[i] = self.project_numbers_short[i].replace("P-", "P-00")
-                project_number, project_number_short,\
-                    recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
-                                                                      all_list_data[i], None, self.analyzed)
+                project_number, project_number_short, \
+                recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
+                                                                  all_list_data[i], None, self.analyzed)
                 attachment = all_list_data[i]
                 if "Dexter" in subject:
                     dexter_number = "NA"
@@ -612,6 +642,7 @@ class UiMainwindow(object):
             self.debug_check()
             self.outputBox.appendPlainText("Analyzing...\n")
             time.sleep(1)
+            self.analyzed = False
             self.data_processing()
             self.analyzed = True
         else:
@@ -697,6 +728,8 @@ class UiMainwindow(object):
                 break_ages = "NA"
                 date_placed = "NA"
                 date_tested = "NA"
+                date_asphalt_tested = "NA"
+                sieve_date_tested = "NA"
 
                 jpg_replace_string = str(count) + ".jpg"
                 # Get path variable to save pdf files as same name but as .jpg
@@ -1011,13 +1044,154 @@ class UiMainwindow(object):
                     # debug, print the date cast
                     if debug:
                         print('Date Tested: {0}'.format(date_tested))
+                elif text.lower().find("sieve") > 0:
+                    sheet_type = "9"  # 5 = "sieve sheet"
+                    # debug, print sheet type to screen
+                    if debug:
+                        print('Sheet Type: {0}'.format(sheet_type))
+                    # Preprocess full image saved previously and analyze specific sections for remaining data
+                    pre_process_image(full_jpg, args)
+                    image = cv2.imread(full_jpg)
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(290 / scale)
+                        y2 = int(350 * scale)
+                        x1 = int(1050 / scale)
+                        x2 = int(1550 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        if debug:
+                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                        # crop image to project number location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what project number image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
+                        # analyze project number image for project number
+                        project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                        if project_number != "NA":
+                            break
+                    # debug, print the project number
+                    if debug:
+                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
+                                                                                      project_number_short))
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        y1 = int(650 / scale)
+                        y2 = int(700 * scale)
+                        x1 = int(1350 / scale)
+                        x2 = int(1550 * scale)
+                        if y2 > 2200:
+                            y2 = 2150
+                        if x2 > 1700:
+                            x2 = 1650
+                        # crop image to date tested location
+                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                        # debug, show what date placed image looks like to be analyzed
+                        if debug:
+                            cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
+                            cv2.waitKey(0)
 
-                if sheet_type == "1":  # 1 = placement
+                        # analyze date tested image for date tested
+                        sieve_date_tested_text = analyze_image(f_jpg)
+                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", sieve_date_tested_text, re.M | re.I) \
+                                is not None:
+                            sieve_date_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", sieve_date_tested_text,
+                                                          re.M + re.I).groups()
+                            sieve_date_tested = sieve_date_tested[-1].replace("\n", "")
+                            break
+                        else:
+                            sieve_date_tested = "NA"
+                    # debug, print the date cast
+                    if debug:
+                        print('Date Tested: {0}'.format(sieve_date_tested))
+                else:
+                    # Sheet isn't placement, break, or density, so need to look someplace else
+                    # Probably Asphalt
+                    image.crop((0, 1400, 900, 1650)).save(f_jpg, 'JPEG')
+                    # save full image as .jpg
+                    image.save(full_jpg, 'JPEG')
+                    pre_process_image(f_jpg, args)
+
+                    # Using tesseract on top right corner image, try and detect what type of sheet it is
+                    text = analyze_image(f_jpg)
+
+                    # once analyzed, top right corner image is not required anymore, so delete
+                    os.remove(f_jpg)
+                    if text.lower().find("Asphalt") > 0:
+                        sheet_type = "7"  # 7 = "Asphalt field density"
+                        # debug, print sheet type to screen
+                        if debug:
+                            print('Sheet Type: {0}'.format(sheet_type))
+                        # Preprocess full image saved previously and analyze specific sections for remaining data
+                        pre_process_image(full_jpg, args)
+                        image = cv2.imread(full_jpg)
+                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                            y1 = int(180 / scale)
+                            y2 = int(230 * scale)
+                            x1 = int(320 / scale)
+                            x2 = int(700 * scale)
+                            if y2 > 2200:
+                                y2 = 2150
+                            if x2 > 1700:
+                                x2 = 1650
+                            if debug:
+                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                            # crop image to project number location
+                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                            # debug, show what project number image looks like to be analyzed
+                            if debug:
+                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                                cv2.waitKey(0)
+                            # analyze project number image for project number
+                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                            if project_number != "NA":
+                                break
+                        # debug, print the project number
+                        if debug:
+                            print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
+                                                                                          project_number_short))
+                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                            y1 = int(260 / scale)
+                            y2 = int(300 * scale)
+                            x1 = int(1130 / scale)
+                            x2 = int(1330 * scale)
+                            if y2 > 2200:
+                                y2 = 2150
+                            if x2 > 1700:
+                                x2 = 1650
+                            # crop image to date tested location
+                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                            # debug, show what date placed image looks like to be analyzed
+                            if debug:
+                                cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
+                                cv2.waitKey(0)
+
+                            # analyze date tested image for date tested
+                            date_asphalt_tested_text = analyze_image(f_jpg)
+                            if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_asphalt_tested_text, re.M | re.I) \
+                                    is not None:
+                                date_asphalt_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})",
+                                                                date_asphalt_tested_text, re.M + re.I).groups()
+                                date_asphalt_tested = date_asphalt_tested[-1].replace("\n", "")
+                                break
+                            else:
+                                date_tested = "NA"
+                        # debug, print the date cast
+                        if debug:
+                            print('Date Tested: {0}'.format(date_asphalt_tested))
+
+                if sheet_type == "1":  # 1 = placement sheet
                     params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
-                elif sheet_type == "3":  # 3 = break
+                elif sheet_type == "3":  # 3 = break sheet
                     params = [project_number_short, date_cast, sheet_type, set_number, break_ages]
                 elif sheet_type == "5":  # 5 = field density
                     params = [project_number_short, date_tested, sheet_type, set_number, break_ages]
+                elif sheet_type == "7":  # 7 = asphalt field density
+                    params = [project_number_short, date_asphalt_tested, sheet_type, set_number, break_ages]
+                elif sheet_type == "9":  # 9 = sieve sheet
+                    params = [project_number_short, sieve_date_tested, sheet_type, set_number, break_ages]
                 else:
                     params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
                 # Turn "NA" results into None results to help with sorting in sqlite3
@@ -1085,6 +1259,8 @@ class UiMainwindow(object):
             placement_string = ""
             break_string = ""
             density_string = ""
+            asphalt_string = ""
+            sieve_string = ""
 
             # For multi page files, some files may not detect project number properly
             # so iterate through all pages and get project number from a successful detection
@@ -1105,11 +1281,29 @@ class UiMainwindow(object):
             density_date_array = []
             # iterate through the local database records and if sheet type is density, store date placed into an array
             for i in range(0, len(records)):
-                if records[i][2] == "5":  # 5 = placement
+                if records[i][2] == "5":  # 5 = density
                     density_date_array.append(records[i][1])
             if density_date_array:
                 density_date = date_formatter(density_date_array)
                 density_string = '_FieldDensity({0})'.format(density_date)
+
+            asphalt_date_array = []
+            # iterate through the local database records and if sheet type is asphalt, store date placed into an array
+            for i in range(0, len(records)):
+                if records[i][2] == "7":  # 7 = asphalt
+                    asphalt_date_array.append(records[i][1])
+            if asphalt_date_array:
+                asphalt_date = date_formatter(density_date_array)
+                asphalt_string = '_FieldDensity({0})'.format(asphalt_date)
+
+            sieve_date_array = []
+            # iterate through the local database records and if sheet type is sieve, store date placed into an array
+            for i in range(0, len(records)):
+                if records[i][2] == "9":  # 9 = sieve
+                    sieve_date_array.append(records[i][1])
+            if sieve_date_array:
+                sieve_date = date_formatter(density_date_array)
+                sieve_string = '_SA({0})'.format(sieve_date)
 
             # initialize/reset date_array for each new input file
             break_age_array = []
@@ -1189,7 +1383,12 @@ class UiMainwindow(object):
                 file_title = file_title + break_string
             if density_string != "":
                 file_title = file_title + density_string
-            if placement_string == "" and break_string == "" and density_string == "":
+            if asphalt_string != "":
+                file_title = file_title + asphalt_string
+            if sieve_string != "":
+                file_title = file_title + sieve_string
+            if placement_string == "" and break_string == "" and \
+                    density_string == "" and asphalt_string == "" and sieve_string == "":
                 file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
 
             # Wont happen much in full use but may encounter same file names during testing
