@@ -18,23 +18,7 @@ from pdf2image import convert_from_path
 debug = False
 
 
-# Biggest issues to solve currently
-# 1 - Dealing with files containing undetected data
-# Project number is most important as it will have save directory, project description short form, and required //
-# emails. Therefore If first sheet does not return a properly structured project number, search next sheet
-# and repeat until properly formatted number found. This can be done by scanning each document and iterating
-# through detected project numbers for one that is properly formatted.
-# Add each unidentified sheet to the list widget and upon double clicking, popup box appears
-# where user can input the 5 max data points a sheet would need, or any missing or incorrect data points
-# Once data is corrected, if any of the 5 data points were changed, redo the analysis
-# 2 - Renaming bundles if need be (Wrong info or name too long)
-# Find out FileNameTooLong Error and use Try Except statement
-# 3 - Make program more robust by adding in more Try Except statements
-# 4 - Have program create Outlook .msg file for each individual package
-# 5 - Project Number Exceptions
-# Not all Project numbers save to similar directory, therefore use sqlite to save directory for each project number
-# Dexter Project numbers have their own dexter number so will need to search entire comments section for one, //
-# and handle when one is not found
+# todo - For dexter number rerun dexter number analysis
 
 
 class ProjectFound(Exception):
@@ -56,6 +40,7 @@ months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, 
 
 data_store = []
 json_projects = []
+
 
 def project_info(project_number, project_number_short, f, sheet_type, analyzed):
     file_path = f.replace(f.split("/").pop(), "")
@@ -273,7 +258,7 @@ def date_formatter(date_array):
         return "NO_DATES"
 
 
-def detect_projectnumber(text):
+def detect_projectnumber(text, sheet_type='NA'):
     # Regex expressions for job numbers
     # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
     # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
@@ -340,6 +325,11 @@ def detect_projectnumber(text):
     else:
         project_number = "NA"
         project_number_short = "NA"
+    if sheet_type == '7':
+        if re.search(r"([0-2]\d+[\.-\s\d]+)", text, re.M) is not None:
+            project_number = re.search(r"([0-2]\d+[\.-\s\d]+)", text, re.M).groups()
+            project_number = project_number[-1]
+            project_number_short = project_number
     project_number_short = project_number_short.replace(" ", "")
     if project_number_short[0] == "0":
         project_number_short = project_number_short[1:]
@@ -601,7 +591,7 @@ class UiMainwindow(object):
             with open(json_filename, 'r') as f:
                 data_store = json.load(f)
         for item in data_store:
-            json_projects = item['project_number']
+            json_projects.append(item['project_number'])
 
     def debug_check(self):
         global debug
@@ -666,9 +656,9 @@ class UiMainwindow(object):
                 new_project_number = re.search(r"-([\dPBpb\.-]+)_", new_title, re.I).groups()
                 new_project_number = new_project_number[-1]
             if old_project_number != new_project_number:
-                project_number, project_number_short,\
+                project_number, project_number_short, \
                     description, file_path_project_src = project_info(new_project_number, new_project_number,
-                                                                            file_path_transit_src, None, False)
+                                                                        file_path_transit_src, None, False)
             project_details_changed = True
             if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
                 old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
@@ -864,12 +854,14 @@ class UiMainwindow(object):
                                 cv2.waitKey(0)
                             # analyze project number image for project number
                             project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            if project_number is not "NA" and project_number_short in json_projects:
-                                if project_number[0] == "0":
-                                    project_number = project_number[1:]
-                                    project_number_short = project_number_short[1:]
-                                project_number_found = True
-                                break
+                            for json_project in json_projects:
+                                if project_number is not "NA" and (project_number_short in json_project or
+                                                                   project_number in json_project):
+                                    if project_number[0] == "0":
+                                        project_number = project_number[1:]
+                                        project_number_short = project_number_short[1:]
+                                    project_number_found = True
+                                    break
 
                     # debug, print the project number
                     if debug:
@@ -978,10 +970,14 @@ class UiMainwindow(object):
                         cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what latest break age looks like to be analyzed
                         if debug:
-                            cv2.imshow("Break Strengths", image[y1:y2, x1:x2])
+                            cv2.imshow("Break Agess", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         # analyze latest break age for age
                         break_age_text = analyze_image(f_jpg)
+                        for num, character in enumerate(break_age_text):
+                            if integer_test(character):
+                                break_age_text = break_age_text[num:]
+                                break
                         break_ages = break_age_text.split("\n")
                         if integer_test(break_ages[0]) or break_ages[0] == "AP":
                             # debug, print the latest break age
@@ -1007,8 +1003,8 @@ class UiMainwindow(object):
                     # Preprocess full image saved previously and analyze specific sections for remaining data
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
-                    if not project_number_found:
-                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        if not project_number_found:
                             y1 = int(290 / scale)
                             y2 = int(350 * scale)
                             x1 = int(1050 / scale)
@@ -1027,12 +1023,16 @@ class UiMainwindow(object):
                                 cv2.waitKey(0)
                             # analyze project number image for project number
                             project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            if project_number is not "NA" and project_number_short in json_projects:
-                                if project_number[0] == "0":
-                                    project_number = project_number[1:]
-                                    project_number_short = project_number_short[1:]
-                                project_number_found = True
-                                break
+                            for json_project in json_projects:
+                                if project_number is not "NA" and (project_number_short in json_project or
+                                                                   project_number in json_project):
+                                    if project_number[0] == "0":
+                                        project_number = project_number[1:]
+                                        project_number_short = project_number_short[1:]
+                                    project_number_found = True
+                                    break
+                        else:
+                            break
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
@@ -1073,8 +1073,8 @@ class UiMainwindow(object):
                     # Preprocess full image saved previously and analyze specific sections for remaining data
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
-                    if not project_number_found:
-                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        if not project_number_found:
                             y1 = int(290 / scale)
                             y2 = int(350 * scale)
                             x1 = int(1050 / scale)
@@ -1093,12 +1093,16 @@ class UiMainwindow(object):
                                 cv2.waitKey(0)
                             # analyze project number image for project number
                             project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            if project_number is not "NA" and project_number_short in json_projects:
-                                if project_number[0] == "0":
-                                    project_number = project_number[1:]
-                                    project_number_short = project_number_short[1:]
-                                project_number_found = True
-                                break
+                            for json_project in json_projects:
+                                if project_number is not "NA" and (project_number_short in json_project or
+                                                                   project_number in json_project):
+                                    if project_number[0] == "0":
+                                        project_number = project_number[1:]
+                                        project_number_short = project_number_short[1:]
+                                    project_number_found = True
+                                    break
+                        else:
+                            break
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
@@ -1140,28 +1144,34 @@ class UiMainwindow(object):
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(290 / scale)
-                        y2 = int(350 * scale)
-                        x1 = int(1050 / scale)
-                        x2 = int(1550 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        if debug:
-                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                        # crop image to project number location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what project number image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze project number image for project number
-                        if project_number is not "NA" and project_number_short in json_projects:
-                            if project_number[0] == "0":
-                                project_number = project_number[1:]
-                                project_number_short = project_number_short[1:]
-                            project_number_found = True
+                        if not project_number_found:
+                            y1 = int(290 / scale)
+                            y2 = int(350 * scale)
+                            x1 = int(1050 / scale)
+                            x2 = int(1550 * scale)
+                            if y2 > 2200:
+                                y2 = 2150
+                            if x2 > 1700:
+                                x2 = 1650
+                            if debug:
+                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                            # crop image to project number location
+                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                            # debug, show what project number image looks like to be analyzed
+                            if debug:
+                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                                cv2.waitKey(0)
+                            # analyze project number image for project number
+                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                            for json_project in json_projects:
+                                if project_number is not "NA" and (project_number_short in json_project or
+                                                                   project_number in json_project):
+                                    if project_number[0] == "0":
+                                        project_number = project_number[1:]
+                                        project_number_short = project_number_short[1:]
+                                    project_number_found = True
+                                    break
+                        else:
                             break
                     # debug, print the project number
                     if debug:
@@ -1218,29 +1228,34 @@ class UiMainwindow(object):
                         pre_process_image(full_jpg, args)
                         image = cv2.imread(full_jpg)
                         for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                            y1 = int(180 / scale)
-                            y2 = int(230 * scale)
-                            x1 = int(320 / scale)
-                            x2 = int(700 * scale)
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            if debug:
-                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                            # crop image to project number location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what project number image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-                            # analyze project number image for project number
-                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            if project_number is not "NA" and project_number_short in json_projects:
-                                if project_number[0] == "0":
-                                    project_number = project_number[1:]
-                                    project_number_short = project_number_short[1:]
-                                project_number_found = True
+                            if not project_number_found:
+                                y1 = int(180 / scale)
+                                y2 = int(230 * scale)
+                                x1 = int(320 / scale)
+                                x2 = int(700 * scale)
+                                if y2 > 2200:
+                                    y2 = 2150
+                                if x2 > 1700:
+                                    x2 = 1650
+                                if debug:
+                                    print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                                # crop image to project number location
+                                cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                                # debug, show what project number image looks like to be analyzed
+                                if debug:
+                                    cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
+                                    cv2.waitKey(0)
+                                # analyze project number image for project number
+                                project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
+                                for json_project in json_projects:
+                                    if project_number is not "NA" and (project_number_short in json_project or
+                                                                       project_number in json_project):
+                                        if project_number[0] == "0":
+                                            project_number = project_number[1:]
+                                            project_number_short = project_number_short[1:]
+                                        project_number_found = True
+                                        break
+                            else:
                                 break
                         # debug, print the project number
                         if debug:
@@ -1385,8 +1400,8 @@ class UiMainwindow(object):
                 if records[i][2] == "7":  # 7 = asphalt
                     asphalt_date_array.append(records[i][1])
             if asphalt_date_array:
-                asphalt_date = date_formatter(density_date_array)
-                asphalt_string = '_AsphaltCompaction({0})'.format(asphalt_date)
+                asphalt_date = date_formatter(asphalt_date_array)
+                asphalt_string = '_FieldDensity({0})'.format(asphalt_date)
 
             sieve_date_array = []
             # iterate through the local database records and if sheet type is sieve, store date placed into an array
@@ -1415,9 +1430,9 @@ class UiMainwindow(object):
                         break_date_array.append(records[i][1])
                         break_set_no.append(records[i][3])
                 # Formats the set numbers for the filename, hyphenating consecutive numbers
-                break_set_no.sort(key=int)
                 current_set = -1
                 if break_set_no:
+                    break_set_no.sort(key=int)
                     for k, temp_set in enumerate(break_set_no):
                         if k == 0:
                             break_set_string = str(temp_set)
@@ -1475,7 +1490,10 @@ class UiMainwindow(object):
                 file_title = file_title + str(random.randint(1, 999))
                 rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
                 rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
-            os.rename(f, rename_path)
+            try:
+                os.rename(f, rename_path)
+            except Exception as e:
+                print(e)
             if rename_path != rename_path_project_dir:
                 shutil.copy(rename_path, rename_path_project_dir)
 
