@@ -18,23 +18,34 @@ from pdf2image import convert_from_path
 debug = False
 
 
-# todo - For dexter number rerun dexter number analysis
+# todo:- For dexter number rerun dexter number analysis
+#           - asphalt sheets
+#           - Make saving like e-mail, done after analyzing and editing the filename so that I wont have to deal
+#               with crash issues
+#           - Handle name too long errors PRIORITY
+#           - Email button maybe looks at project number and creates email off that if previous analysis was done
+#               this way I can load already named/analyzed files, and create emails
 
-
+# Exception rule to break out of multi-level for loops when trying to identify project numbers
 class ProjectFound(Exception):
     pass
 
 
+# set current working directory to variable to save files to
 home_dir = os.getcwd()
 
+# create a sqlite3 table in memory in order to easily sort and manipulate the analyzed results
 db = sqlite3.connect(':memory:')
 cur = db.cursor()
 cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No TEXT, Age INTEGER)''')
 
+# hard coded tesseract path from current working directory
 tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 print(os.getcwd())
+# hard coded tesseract path from current working directory
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
+# months dictionary used to correct mis-detected months (ex. its used to transform detected Jen to Jan)
 months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9,
           "Nov": 10, "Dec": 11}
 
@@ -42,21 +53,34 @@ data_store = []
 json_projects = []
 
 
+# project info function
+# By inputting the project number and detected variables, the function looks through the json data file, and returns
+# the desired project info such as where to save files to, who to send e-mail too and what the project description is
 def project_info(project_number, project_number_short, f, sheet_type, analyzed):
+    # file path isn't really used for anything here anymore as far as i can tell
     file_path = f.replace(f.split("/").pop(), "")
     if file_path == "":
         file_path = f.replace(f.split("\\").pop(), "")
+    # set default values in case project number is not in the JSON data file
     project_description = "SomeProjectDescription"
     email_recipient_to = ""
     email_recipient_cc = ""
     email_recipient_subject = ""
     try:
-        for temp_count in [1, 2]:
+        # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire
+        # project number. This will deliver the absolute correct returns for project description and save location,
+        # but because it has to detect more characters, there a higher chance it won't work properly, due to a 4 getting
+        # recognized as a 1, then the project number won't be in the JSON data file. To increase the odds of proper
+        # detection, this first option compares the short project numbers, and if they match, then looks at the last
+        # integer of the long project number, if those match as well, then the long project number is assumed to be
+        # correct.
+        for temp_count in [1, 2, 3]:
             if temp_count == 1:
                 for project_data in data_store:
-                    if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                         project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
-                            project_number[-1] == project_data["project_number"][-1]):
+                    if project_number.replace(".", "") == project_data["project_number"].replace(".", "") or \
+                            project_number.replace("-", "") == project_data["project_number"].replace("-", ""):
+                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
+                        # sheet_type == 7 then use the asphalt directory
                         if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                 (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
                             project_description = project_data["project_description"]
@@ -67,6 +91,7 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
                             raise ProjectFound
+                        # If the sheet_type is not a single compaction or asphalt sheet then use the
                         elif sheet_type != "5" and sheet_type != "7":
                             project_description = project_data["project_description"]
                             file_path = project_data["project_directory"]
@@ -77,6 +102,33 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                             project_number_short = project_data["project_number_short"]
                             raise ProjectFound
             if temp_count == 2:
+                for project_data in data_store:
+                    if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                         project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                            project_number[-1] == project_data["project_number"][-1]):
+                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
+                        # sheet_type == 7 then use the asphalt directory
+                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+                        # If the sheet_type is not a single compaction or asphalt sheet then use the
+                        elif sheet_type != "5" and sheet_type != "7":
+                            project_description = project_data["project_description"]
+                            file_path = project_data["project_directory"]
+                            email_recipient_to = project_data["project_email_to"]
+                            email_recipient_cc = project_data["project_email_cc"]
+                            email_recipient_subject = project_data["project_email_subject"]
+                            project_number = project_data["project_number"]
+                            project_number_short = project_data["project_number_short"]
+                            raise ProjectFound
+            if temp_count == 3:
                 for project_data in data_store:
                     if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
                             project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
@@ -147,9 +199,13 @@ def hamming_distance(found_value, file_value):
     return sum(c1 != c2 for c1, c2 in zip(found_value, file_value))
 
 
-def analyze_image(img_path):
+def analyze_image(img_path, psm_arg=6):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    text = pytesseract.image_to_string(img_path, config="--psm 6")
+    # config_str = "-l eng -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz " \
+    # "0123456789 --psm " + str(psm_arg)
+    config_str = "-l eng --psm " + str(psm_arg)
+    text = pytesseract.image_to_string(img_path, config=config_str)
+
     # If debug enabled, print all detected text
     if debug:
         print(text)
@@ -238,7 +294,8 @@ def date_formatter(date_array):
                     if date_year[j] == year and date_month[j] == month:
                         if date_day[j] not in day_unique:
                             day_unique.append(date_day[j])
-                day_unique.sort(key=int)
+                if day_unique:
+                    day_unique.sort(key=int)
                 # Using the stored unique days for month-year combo, format into filename
                 for j in range(0, len(day_unique)):
                     if j == 0:
@@ -265,8 +322,14 @@ def detect_projectnumber(text, sheet_type='NA'):
     # 1900: ^(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
     # 0200: ^([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d{4})
     # r = StringIO(text)
+    # text = text.replace(" ", "")
+    # test = re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M)
     if re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M) is not None:
-        project_number = re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M).groups()
+        try:
+            project_number = re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M).groups()
+        except AttributeError as e:
+            print(e)
+            project_number = str(re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M))
         project_number = project_number[-1]
         project_number = project_number.replace(" ", "")
         project_number_short = project_number
@@ -516,7 +579,7 @@ class UiMainwindow(object):
     def translate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
         main_window.setWindowTitle(_translate("MainWindow", "Englobe Sorter"))
-        self.label.setText(_translate("MainWindow", "Created By: Brandon Gorman"))
+        self.label.setText(_translate("MainWindow", "Created By Brandon Gorman"))
         self.SelectFiles.setText(_translate("MainWindow", "Select Files"))
         self.SelectFiles.clicked.connect(self.select_files_handler)
         self.fileRenameButton.setWhatsThis(_translate("MainWindow", "Rename the currently selected file"))
@@ -552,8 +615,8 @@ class UiMainwindow(object):
                 if self.project_numbers_short[i][0] == "P":
                     self.project_numbers_short[i] = self.project_numbers_short[i].replace("P-", "P-00")
                 project_number, project_number_short, \
-                    recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
-                                                                        all_list_data[i], None, self.analyzed)
+                recipients, recipients_cc, subject = project_info(project_number, self.project_numbers_short[i],
+                                                                  all_list_data[i], None, self.analyzed)
                 attachment = all_list_data[i]
                 if "Dexter" in subject:
                     dexter_number = "NA"
@@ -657,8 +720,8 @@ class UiMainwindow(object):
                 new_project_number = new_project_number[-1]
             if old_project_number != new_project_number:
                 project_number, project_number_short, \
-                    description, file_path_project_src = project_info(new_project_number, new_project_number,
-                                                                        file_path_transit_src, None, False)
+                description, file_path_project_src = project_info(new_project_number, new_project_number,
+                                                                  file_path_transit_src, None, False)
             project_details_changed = True
             if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
                 old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
@@ -816,10 +879,15 @@ class UiMainwindow(object):
                 image.crop((1300, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
                 # save full image as .jpg
                 image.save(full_jpg, 'JPEG')
+
                 pre_process_image(f_jpg, args)
 
+                if debug:
+                    image_test = cv2.imread(f_jpg)
+                    cv2.imshow("Top Corner", image_test)
+                    cv2.waitKey(0)
                 # Using tesseract on top right corner image, try and detect what type of sheet it is
-                text = analyze_image(f_jpg)
+                text = analyze_image(f_jpg, 6)
 
                 # once analyzed, top right corner image is not required anymore, so delete
                 os.remove(f_jpg)
@@ -834,8 +902,8 @@ class UiMainwindow(object):
                     pre_process_image(full_jpg, args)
                     image = cv2.imread(full_jpg)
                     # Once a project number is found in a package, it stops looking, which speeds up analysis
-                    if not project_number_found:
-                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                        if not project_number_found:
                             y1 = int(300 / scale)
                             y2 = int(360 * scale)
                             x1 = int(1100 / scale)
@@ -862,7 +930,8 @@ class UiMainwindow(object):
                                         project_number_short = project_number_short[1:]
                                     project_number_found = True
                                     break
-
+                        else:
+                            break
                     # debug, print the project number
                     if debug:
                         print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
@@ -970,7 +1039,7 @@ class UiMainwindow(object):
                         cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
                         # debug, show what latest break age looks like to be analyzed
                         if debug:
-                            cv2.imshow("Break Agess", image[y1:y2, x1:x2])
+                            cv2.imshow("Break Ages", image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         # analyze latest break age for age
                         break_age_text = analyze_image(f_jpg)
@@ -979,19 +1048,28 @@ class UiMainwindow(object):
                                 break_age_text = break_age_text[num:]
                                 break
                         break_ages = break_age_text.split("\n")
+                        break_strengths_bool = False
                         if integer_test(break_ages[0]) or break_ages[0] == "AP":
                             # debug, print the latest break age
                             if debug:
                                 print('All Break Ages: {0}'.format(break_ages))
                             if len(break_strengths) > 0:
-                                break_ages = break_ages[len(break_strengths) - 1]
+                                try:
+                                    break_ages = break_ages[len(break_strengths) - 1]
+                                    break_strengths_bool = True
+                                except Exception as e:
+                                    print(e)
+                                    break_strengths_bool = False
+                                if not break_strengths_bool:
+                                    break_ages = '999'
                             else:
                                 break_ages = break_ages[0]
                             if break_ages is not "NA" and (integer_test(break_ages) or break_ages == "AP"):
                                 if break_ages.upper() == "AP":
                                     break_ages = "56"
                                 break
-
+                    if not break_strengths_bool:
+                        break_ages = '999'
                     if debug:
                         print('Latest Break Age: {0}'.format(break_ages))
 
@@ -1318,14 +1396,24 @@ class UiMainwindow(object):
                 count += 1
 
                 if "2000746" in project_number_short:  # Dexter Project
+                    if sheet_type == "3":  # 1 == break
+                        y1_start = 1600
+                        y2_start = 1850
+                        x1_start = 550
+                        x2_start = 1500
+                    else:
+                        y1_start = 1600
+                        y2_start = 2000
+                        x1_start = 250
+                        x2_start = 1550
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(1650 / scale)
-                        y2 = int(1850 * scale)
-                        x1 = int(550 / scale)
-                        x2 = int(1500 * scale)
-                        if y2 > 2200:
+                        y1 = int(y1_start / scale)
+                        y2 = int(y2_start * scale)
+                        x1 = int(x1_start / scale)
+                        x2 = int(x2_start * scale)
+                        if y2 >= 2200:
                             y2 = 2150
-                        if x2 > 1700:
+                        if x2 >= 1700:
                             x2 = 1650
                         # crop image to date placed location
                         cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
@@ -1432,7 +1520,10 @@ class UiMainwindow(object):
                 # Formats the set numbers for the filename, hyphenating consecutive numbers
                 current_set = -1
                 if break_set_no:
-                    break_set_no.sort(key=int)
+                    if "None" in break_set_no or None in break_set_no:
+                        break_set_no.sort(key=str)
+                    else:
+                        break_set_no.sort(key=int)
                     for k, temp_set in enumerate(break_set_no):
                         if k == 0:
                             break_set_string = str(temp_set)
@@ -1494,8 +1585,13 @@ class UiMainwindow(object):
                 os.rename(f, rename_path)
             except Exception as e:
                 print(e)
+                continue
             if rename_path != rename_path_project_dir:
-                shutil.copy(rename_path, rename_path_project_dir)
+                try:
+                    shutil.copy(rename_path, rename_path_project_dir)
+                except Exception as e:
+                    print(e)
+                    continue
 
             print_string = split_name + " renamed to " + file_title + " and saved in project folder:\n" + file_path + \
                            '\n'
