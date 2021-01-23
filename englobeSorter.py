@@ -49,8 +49,10 @@ poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9,
           "Nov": 10, "Dec": 11}
 
+# global variables
 data_store = []
 json_projects = []
+mode = ""
 
 
 # project info function
@@ -66,6 +68,10 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
     email_recipient_to = ""
     email_recipient_cc = ""
     email_recipient_subject = ""
+    default_email_to = "brandon.gorman@englobecorp.com; bgorman@live.ca"
+    default_email_cc = "bgorman@live.com"
+    default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
+
     try:
         # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire
         # project number. This will deliver the absolute correct returns for project description and save location,
@@ -84,9 +90,14 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                         if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                 (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
@@ -94,9 +105,14 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                         # If the sheet_type is not a single compaction or asphalt sheet then use the
                         elif sheet_type != "5" and sheet_type != "7":
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
@@ -111,9 +127,14 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                         if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                 (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
@@ -121,9 +142,14 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                         # If the sheet_type is not a single compaction or asphalt sheet then use the
                         elif sheet_type != "5" and sheet_type != "7":
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
@@ -135,18 +161,28 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
                         if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                 (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
                             raise ProjectFound
                         elif sheet_type != "5" and sheet_type != "7":
                             project_description = project_data["project_description"]
-                            file_path = project_data["project_directory"]
-                            email_recipient_to = project_data["project_email_to"]
-                            email_recipient_cc = project_data["project_email_cc"]
+                            if mode != "Test":
+                                file_path = project_data["project_directory"]
+                                email_recipient_to = project_data["project_email_to"]
+                                email_recipient_cc = project_data["project_email_cc"]
+                            else:
+                                file_path = default_directory
+                                email_recipient_to = default_email_to
+                                email_recipient_cc = default_email_cc
                             email_recipient_subject = project_data["project_email_subject"]
                             project_number = project_data["project_number"]
                             project_number_short = project_data["project_number_short"]
@@ -271,9 +307,9 @@ def date_formatter(date_array):
             if len(date_year[i]) <= 2:
                 date_year[i] = "20" + date_year[i]
             # To reduce misdetected years, if month is Feb to Nov assume year is current year.
-            if months[date_month[i]] != 0 or months[date_month[i]] != 11:
-                now = datetime.datetime.now()
-                date_year[i] = str(now.year)
+            # if months[date_month[i]] != 0 or months[date_month[i]] != 11:
+            #     now = datetime.datetime.now()
+            #     date_year[i] = str(now.year)
 
         # Iterate through the stored years to find how many are unique (99% will be 1 year)
         year_unique = []
@@ -644,11 +680,14 @@ class UiMainwindow(object):
     def json_setup(self):
         global data_store
         global json_projects
-        if self.testBox.currentText() != "Test":
-            json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-        else:
-            json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+        global mode
 
+        mode = self.testBox.currentText()
+        # if self.testBox.currentText() != "Test":
+        #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+        # else:
+        #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+        json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
         # Read JSON data into the data_store variable
         if json_filename:
             with open(json_filename, 'r') as f:
@@ -938,10 +977,10 @@ class UiMainwindow(object):
                                                                                       project_number_short))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(675 / scale)
-                        y2 = int(750 * scale)
-                        x1 = int(100 / scale)
-                        x2 = int(400 * scale)
+                        y1 = int(635 / scale)
+                        y2 = int(675 * scale)
+                        x1 = int(260 / scale)
+                        x2 = int(320 * scale)
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -953,12 +992,12 @@ class UiMainwindow(object):
                             cv2.waitKey(0)
                         # analyze set number image for set number
                         set_number_text = analyze_image(f_jpg)
-                        if re.search(r"Set No[:\s]+(\d+)", set_number_text, re.M + re.I) is not None:
-                            set_number = re.search(r"Set No[:\s]+(\d+)", set_number_text, re.M + re.I).groups()
+                        if re.search(r"(\d+)", set_number_text, re.M + re.I) is not None:
+                            set_number = re.search(r"(\d+)", set_number_text, re.M + re.I).groups()
                             set_number = set_number[-1]
                             break
-                        elif re.search(r"SetNo[:\s]+(\d+)", set_number_text, re.M + re.I) is not None:
-                            set_number = re.search(r"SetNo[:\s]+(\d+)", set_number_text, re.M + re.I).groups()
+                        elif re.search(r"(\d+)", set_number_text, re.M + re.I) is not None:
+                            set_number = re.search(r"(\d+)", set_number_text, re.M + re.I).groups()
                             set_number = set_number[-1]
                             break
                         else:
@@ -973,10 +1012,10 @@ class UiMainwindow(object):
                         print('Set Number: {0}'.format(set_number))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(710 / scale)
-                        y2 = int(750 * scale)
-                        x1 = int(1260 / scale)
-                        x2 = int(1475 * scale)
+                        y1 = int(635 / scale)
+                        y2 = int(675 * scale)
+                        x1 = int(1270 / scale)
+                        x2 = int(1450 * scale)
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -1002,10 +1041,10 @@ class UiMainwindow(object):
                         print('Date Cast: {0}'.format(date_cast))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(830 / scale)
+                        y1 = int(770 / scale)
                         y2 = int(1100 * scale)
-                        x1 = int(1150 / scale)
-                        x2 = int(1350 * scale)
+                        x1 = int(1210 / scale)
+                        x2 = int(1290 * scale)
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -1027,10 +1066,10 @@ class UiMainwindow(object):
                         print('Break Strengths: {0}'.format(break_strengths))
 
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(830 / scale)
+                        y1 = int(770 / scale)
                         y2 = int(1100 * scale)
-                        x1 = int(450 / scale)
-                        x2 = int(620 * scale)
+                        x1 = int(510 / scale)
+                        x2 = int(555 * scale)
                         if y2 > 2200:
                             y2 = 2150
                         if x2 > 1700:
@@ -1061,7 +1100,11 @@ class UiMainwindow(object):
                                     print(e)
                                     break_strengths_bool = False
                                 if not break_strengths_bool:
-                                    break_ages = '999'
+                                    try:
+                                        break_ages = break_ages[-1]
+                                    except Exception as e:
+                                        print(e)
+                                        break_ages = '999'
                             else:
                                 break_ages = break_ages[0]
                             if break_ages is not "NA" and (integer_test(break_ages) or break_ages == "AP"):
@@ -1069,7 +1112,11 @@ class UiMainwindow(object):
                                     break_ages = "56"
                                 break
                     if not break_strengths_bool:
-                        break_ages = '999'
+                        try:
+                            break_ages = break_ages[-1]
+                        except Exception as e:
+                            print(e)
+                            break_ages = '999'
                     if debug:
                         print('Latest Break Age: {0}'.format(break_ages))
 
@@ -1396,11 +1443,11 @@ class UiMainwindow(object):
                 count += 1
 
                 if "2000746" in project_number_short:  # Dexter Project
-                    if sheet_type == "3":  # 1 == break
+                    if sheet_type == "3":  # == break
                         y1_start = 1600
                         y2_start = 1850
-                        x1_start = 550
-                        x2_start = 1500
+                        x1_start = 610
+                        x2_start = 1550
                     else:
                         y1_start = 1600
                         y2_start = 2000
