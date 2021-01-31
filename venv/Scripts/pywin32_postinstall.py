@@ -161,18 +161,15 @@ def CopyTo(desc, src, dest):
 # our pywintypes_system32 directory.
 def LoadSystemModule(lib_dir, modname):
     # See if this is a debug build.
-    import imp
-    for suffix_item in imp.get_suffixes():
-        if suffix_item[0]=='_d.pyd':
-            suffix = '_d'
-            break
-    else:
-        suffix = ""
+    import importlib.util, importlib.machinery
+    suffix = '_d' if '_d.pyd' in importlib.machinery.EXTENSION_SUFFIXES else ''
     filename = "%s%d%d%s.dll" % \
                (modname, sys.version_info[0], sys.version_info[1], suffix)
     filename = os.path.join(lib_dir, "pywin32_system32", filename)
-    mod = imp.load_dynamic(modname, filename)
-
+    loader = importlib.machinery.ExtensionFileLoader(modname, filename)
+    spec = importlib.machinery.ModuleSpec(name=modname, loader=loader, origin=filename)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
 
 def SetPyKeyVal(key_name, value_name, value):
     root_hkey = get_root_hkey()
@@ -186,7 +183,7 @@ def SetPyKeyVal(key_name, value_name, value):
     finally:
         root_key.Close()
     if verbose:
-        print(("-> %s\\%s[%s]=%r" % (root_key_name, key_name, value_name, value)))
+        print("-> %s\\%s[%s]=%r" % (root_key_name, key_name, value_name, value))
 
 def RegisterCOMObjects(register = 1):
     import win32com.server.register
@@ -217,7 +214,7 @@ def RegisterPythonwin(register=True):
     classes_root=get_root_hkey()
     ## Installer executable doesn't seem to pass anything to postinstall script indicating if it's a debug build,
     pythonwin_exe = os.path.join(lib_dir, "Pythonwin", "Pythonwin.exe")
-    pythonwin_edit_command=pythonwin_exe + ' /edit "%1"'
+    pythonwin_edit_command=pythonwin_exe + ' -edit "%1"'
 
     keys_vals = [
         ('Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\Pythonwin.exe', '', pythonwin_exe),
@@ -297,14 +294,14 @@ def fixup_dbi():
         if os.path.isfile(this_pyd) and os.path.isfile(py_name):
             try:
                 if os.path.isfile(this_dest):
-                    print(("Old dbi '%s' already exists - deleting '%s'" % (this_dest, this_pyd)))
+                    print("Old dbi '%s' already exists - deleting '%s'" % (this_dest, this_pyd))
                     os.remove(this_pyd)
                 else:
                     os.rename(this_pyd, this_dest)
-                    print(("renamed '%s'->'%s.old'" % (this_pyd, this_pyd)))
+                    print("renamed '%s'->'%s.old'" % (this_pyd, this_pyd))
                     file_created(this_pyd+".old")
             except os.error as exc:
-                print(("FAILED to rename '%s': %s" % (this_pyd, exc)))
+                print("FAILED to rename '%s': %s" % (this_pyd, exc))
 
 def install(lib_dir):
     import traceback
@@ -349,7 +346,7 @@ def install(lib_dir):
                 dst = os.path.join(dest_dir, base)
                 CopyTo("installing %s" % base, fname, dst)
                 if verbose:
-                    print(("Copied %s to %s" % (base, dst)))
+                    print("Copied %s to %s" % (base, dst))
                 # Register the files with the uninstaller
                 file_created(dst)
                 worked = 1
@@ -430,7 +427,7 @@ def install(lib_dir):
     make_dir = os.path.join(lib_dir, "win32com", "gen_py")
     if not os.path.isdir(make_dir):
         if verbose:
-            print(("Creating directory %s" % (make_dir,)))
+            print("Creating directory %s" % (make_dir,))
         directory_created(make_dir)
         os.mkdir(make_dir)
 
@@ -457,7 +454,7 @@ def install(lib_dir):
                 print("Shortcut to documentation created")
         else:
             if verbose:
-                print(("Can't install shortcuts - %r is not a folder" % (fldr,)))
+                print("Can't install shortcuts - %r is not a folder" % (fldr,))
     except Exception as details:
         print(details)
 
@@ -479,12 +476,12 @@ def uninstall(lib_dir):
     try:
         RegisterCOMObjects(False)
     except Exception as why:
-        print(("Failed to unregister COM objects: %s" % (why,)))
+        print("Failed to unregister COM objects: %s" % (why,))
 
     try:
         RegisterPythonwin(False)
     except Exception as why:
-        print(("Failed to unregister Pythonwin: %s" % (why,)))
+        print("Failed to unregister Pythonwin: %s" % (why,))
     else:
         if verbose:
             print('Unregistered Pythonwin')
@@ -495,7 +492,7 @@ def uninstall(lib_dir):
         if os.path.isdir(gen_dir):
             shutil.rmtree(gen_dir)
             if verbose:
-                print(("Removed directory %s" % (gen_dir,)))
+                print("Removed directory %s" % (gen_dir,))
 
         # Remove pythonwin compiled "config" files.
         pywin_dir = os.path.join(lib_dir, "Pythonwin", "pywin")
@@ -513,7 +510,7 @@ def uninstall(lib_dir):
             pass
 
     except Exception as why:
-        print(("Failed to remove misc files: %s" % (why,)))
+        print("Failed to remove misc files: %s" % (why,))
 
     try:
         fldr = get_shortcuts_folder()
@@ -522,9 +519,9 @@ def uninstall(lib_dir):
             if os.path.isfile(fqlink):
                 os.remove(fqlink)
                 if verbose:
-                    print(("Removed %s" % (link,)))
+                    print("Removed %s" % (link,))
     except Exception as why:
-        print(("Failed to remove shortcuts: %s" % (why,)))
+        print("Failed to remove shortcuts: %s" % (why,))
     # Now remove the system32 files.
     files = glob.glob(os.path.join(lib_dir, "pywin32_system32\\*.*"))
     # Try the system32 directory first - if that fails due to "access denied",
@@ -541,13 +538,13 @@ def uninstall(lib_dir):
                         os.remove(dst)
                         worked = 1
                         if verbose:
-                            print(("Removed file %s" % (dst)))
+                            print("Removed file %s" % (dst))
                     except Exception:
-                        print(("FAILED to remove %s" % (dst,)))
+                        print("FAILED to remove %s" % (dst,))
             if worked:
                 break
     except Exception as why:
-        print(("FAILED to remove system files: %s" % (why,)))
+        print("FAILED to remove system files: %s" % (why,))
 
 # NOTE: If this script is run from inside the bdist_wininst created
 # binary installer or uninstaller, the command line args are either
@@ -611,7 +608,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not args.quiet:
-        print(("Parsed arguments are: {}".format(args)))
+        print("Parsed arguments are: {}".format(args))
 
     if not args.install ^ args.remove:
         parser.error("You need to either choose to -install or -remove!")

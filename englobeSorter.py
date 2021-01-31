@@ -1,22 +1,16 @@
-import argparse
-import datetime
-import json
 import os
-import random
 import shutil
-import sqlite3
-import time
 
-import cv2
-import pytesseract
 import regex as re
 import win32com.client as win32
 from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pdf2image import convert_from_path
 
-debug = False
+from analysis import WorkerAnalyzeThread, detect_package_number
+from project_info import project_info, json_setup
 
+debug = False
 
 # todo:- For dexter number rerun dexter number analysis
 #           - asphalt sheets
@@ -26,468 +20,32 @@ debug = False
 #           - Email button maybe looks at project number and creates email off that if previous analysis was done
 #               this way I can load already named/analyzed files, and create emails
 
-# Exception rule to break out of multi-level for loops when trying to identify project numbers
-class ProjectFound(Exception):
-    pass
-
 
 # set current working directory to variable to save files to
 home_dir = os.getcwd()
 
-# create a sqlite3 table in memory in order to easily sort and manipulate the analyzed results
-db = sqlite3.connect(':memory:')
-cur = db.cursor()
-cur.execute('''CREATE TABLE files (Project TEXT, Date DATE, Type TEXT, Set_No TEXT, Age INTEGER)''')
-
-# hard coded tesseract path from current working directory
-tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 print(os.getcwd())
-# hard coded tesseract path from current working directory
+# hard coded poppler path from current working directory
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
-
-# months dictionary used to correct mis-detected months (ex. its used to transform detected Jen to Jan)
-months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9,
-          "Nov": 10, "Dec": 11}
-
-# global variables
-data_store = []
-json_projects = []
-mode = ""
-
-
-# project info function
-# By inputting the project number and detected variables, the function looks through the json data file, and returns
-# the desired project info such as where to save files to, who to send e-mail too and what the project description is
-def project_info(project_number, project_number_short, f, sheet_type, analyzed):
-    # file path isn't really used for anything here anymore as far as i can tell
-    file_path = f.replace(f.split("/").pop(), "")
-    if file_path == "":
-        file_path = f.replace(f.split("\\").pop(), "")
-    # set default values in case project number is not in the JSON data file
-    project_description = "SomeProjectDescription"
-    email_recipient_to = ""
-    email_recipient_cc = ""
-    email_recipient_subject = ""
-    default_email_to = "brandon.gorman@englobecorp.com; bgorman@live.ca"
-    default_email_cc = "bgorman@live.com"
-    default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
-
-    try:
-        # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire
-        # project number. This will deliver the absolute correct returns for project description and save location,
-        # but because it has to detect more characters, there a higher chance it won't work properly, due to a 4 getting
-        # recognized as a 1, then the project number won't be in the JSON data file. To increase the odds of proper
-        # detection, this first option compares the short project numbers, and if they match, then looks at the last
-        # integer of the long project number, if those match as well, then the long project number is assumed to be
-        # correct.
-        for temp_count in [1, 2, 3]:
-            if temp_count == 1:
-                for project_data in data_store:
-                    if project_number.replace(".", "") == project_data["project_number"].replace(".", "") or \
-                            project_number.replace("-", "") == project_data["project_number"].replace("-", ""):
-                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
-                        # sheet_type == 7 then use the asphalt directory
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        # If the sheet_type is not a single compaction or asphalt sheet then use the
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-            if temp_count == 2:
-                for project_data in data_store:
-                    if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                         project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
-                            project_number[-1] == project_data["project_number"][-1]):
-                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
-                        # sheet_type == 7 then use the asphalt directory
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        # If the sheet_type is not a single compaction or asphalt sheet then use the
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-            if temp_count == 3:
-                for project_data in data_store:
-                    if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                            project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-    except ProjectFound:
-        pass
-
-    if analyzed:
-        return project_number, project_number_short, email_recipient_to, email_recipient_cc, \
-               email_recipient_subject
-    else:
-        return project_number, project_number_short, project_description, file_path
-
-
-def detect_package_number(file_path):
-    only_files = [f_local[0:6] for f_local in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f_local))
-                  and f_local[-4:] == ".pdf"]
-    if debug:
-        print(only_files)
-    package_number_highest_str = "01"
-    package_numbers = []
-    if only_files:
-        for file in only_files:
-            if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
-                package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
-                if debug:
-                    print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
-                                                                                package_number[-1]))
-                package_numbers.append(int(package_number[-1]))
-    if package_numbers:
-        package_number_highest_str = str(max(package_numbers) + 1)
-        if len(package_number_highest_str) < 2:
-            package_number_highest_str = "0" + package_number_highest_str
-    return package_number_highest_str, package_numbers
-
-
-def integer_test(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
 
 
 def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
-def hamming_distance(found_value, file_value):
-    return sum(c1 != c2 for c1, c2 in zip(found_value, file_value))
-
-
-def analyze_image(img_path, psm_arg=6):
-    pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    # config_str = "-l eng -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz " \
-    # "0123456789 --psm " + str(psm_arg)
-    config_str = "-l eng --psm " + str(psm_arg)
-    text = pytesseract.image_to_string(img_path, config=config_str)
-
-    # If debug enabled, print all detected text
-    if debug:
-        print(text)
-    return text
-
-
-def month_value(month):
-    return months[month]
-
-
-def month_closest(found_month):
-    # If detected month is not found in the months dictionary, it is obviously a bad detected letter
-    # To ease file renaming (not perfect), find month closest in similarity and assume that was the one detected.
-    closest_month = found_month
-    if found_month not in months:
-        similarity_highest = 999
-        for month in months:
-            similarity = hamming_distance(found_month, month)
-            if similarity < similarity_highest:
-                closest_month = month
-                similarity_highest = similarity
-    return closest_month
-
-
-def date_formatter(date_array):
-    if date_array:
-        date_day = []
-        date_month = []
-        date_year = []
-        # Iterate through the dates and store the day value, and the month value.
-        # these should be the same length so indexing will be identical between both
-        for temp_date in date_array:
-            if temp_date is not None:
-                if re.search(r"(\d+)[\s-]+", temp_date, re.I) is not None:
-                    date_day_search = re.search(r"(\d+)[\s-]+", temp_date, re.I).groups()
-                    date_day.append(date_day_search[-1])
-                else:
-                    date_day.append("NA")
-                if re.search(r"\d+[\s-]+(\w+)[\s-]+", temp_date, re.I) is not None:
-                    date_month_search = re.search(r"\d+[\s-]+(\w+)[\s-]+", temp_date, re.I).groups()
-                    date_month.append(date_month_search[-1])
-                else:
-                    date_month.append("NA")
-                if re.search(r"\d+[\s-]+\w+[\s-]+(\d+)", temp_date, re.I) is not None:
-                    date_year_search = re.search(r"\d+[\s-]+\w+[\s-]+(\d+)", temp_date, re.I).groups()
-                    date_year.append(date_year_search[-1])
-                else:
-                    date_year.append("NA")
-            else:
-                date_day.append("NA")
-                date_month.append("NA")
-                date_year.append("NA")
-
-        # Iterate through the stored months to find how many are unique
-        month_unique = []
-        for z, month in enumerate(date_month):
-            closest_month = month_closest(month)
-            date_month[z] = closest_month
-            if closest_month not in month_unique:
-                month_unique.append(closest_month)
-
-        for i in range(0, len(date_year)):
-            if len(date_year[i]) <= 2:
-                date_year[i] = "20" + date_year[i]
-            # To reduce misdetected years, if month is Feb to Nov assume year is current year.
-            # if months[date_month[i]] != 0 or months[date_month[i]] != 11:
-            #     now = datetime.datetime.now()
-            #     date_year[i] = str(now.year)
-
-        # Iterate through the stored years to find how many are unique (99% will be 1 year)
-        year_unique = []
-        for year in date_year:
-            if year not in year_unique:
-                year_unique.append(year)
-        year_unique.sort(key=int)
-        month_unique.sort(key=month_value)
-        date_string = ""
-        # For each unique year and month find how many day values there are for each
-        for i, year in enumerate(year_unique):
-            for k, month in enumerate(month_unique):
-                date_day_string = ""
-                day_unique = []
-                # For each month-year combo, find number of unique days
-                # This just gets rid of duplicate dates in the filename.
-                for j in range(0, len(date_month)):
-                    if date_year[j] == year and date_month[j] == month:
-                        if date_day[j] not in day_unique:
-                            day_unique.append(date_day[j])
-                if day_unique:
-                    day_unique.sort(key=int)
-                # Using the stored unique days for month-year combo, format into filename
-                for j in range(0, len(day_unique)):
-                    if j == 0:
-                        date_day_string = day_unique[j]
-                    else:
-                        if int(day_unique[j]) == int(day_unique[j - 1]) + 1:
-                            replace_string = "-" + day_unique[j - 1]
-                            date_day_string = date_day_string.replace(replace_string, "") + "-" + day_unique[j]
-                        else:
-                            date_day_string = date_day_string + "," + day_unique[j]
-                if k == 0:
-                    date_string = date_day_string + "-" + month + "-" + year
-                else:
-                    date_string = date_string + "&" + date_day_string + "-" + month + "-" + year
-        return date_string
-    else:
-        return "NO_DATES"
-
-
-def detect_projectnumber(text, sheet_type='NA'):
-    # Regex expressions for job numbers
-    # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
-    # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
-    # 1900: ^(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
-    # 0200: ^([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d{4})
-    # r = StringIO(text)
-    # text = text.replace(" ", "")
-    # test = re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M)
-    if re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M) is not None:
-        try:
-            project_number = re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M).groups()
-        except AttributeError as e:
-            print(e)
-            project_number = str(re.search(r"^(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M))
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        project_number_short = project_number
-    elif re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M) is not None:
-        project_number = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})", text, re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        if re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", project_number, re.M) is not None:
-            project_number_short = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", project_number, re.M).groups()
-            project_number_short = project_number_short[-1]
-        else:
-            project_number_short = project_number
-    elif re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M) is not None:
-        project_number = re.search(r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        project_number_short = project_number
-    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d)", text, re.M) is not None:
-        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d)", text,
-                                   re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        if re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M) is not None:
-            project_number_short = re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M).groups()
-            project_number_short = project_number_short[-1]
-        else:
-            project_number_short = project_number
-    elif re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text, re.M) is not None:
-        project_number = re.search(r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)", text,
-                                   re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        if re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M) is not None:
-            project_number_short = re.search(r"(1\d+[\.-\s]+\d+)", project_number, re.M).groups()
-            project_number_short = project_number_short[-1]
-        else:
-            project_number_short = project_number
-    elif re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d+)", text, re.M) is not None:
-        project_number = re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d+)", text, re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        if re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M) is not None:
-            project_number_short = re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M).groups()
-            project_number_short = project_number_short[-1]
-        else:
-            project_number_short = project_number
-    elif re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+)", text, re.M) is not None:
-        project_number = re.search(r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+)", text, re.M).groups()
-        project_number = project_number[-1]
-        project_number = project_number.replace(" ", "")
-        if re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M) is not None:
-            project_number_short = re.search(r"([0-2]\d+[\.-\s]+\d+)", project_number, re.M).groups()
-            project_number_short = project_number_short[-1]
-        else:
-            project_number_short = project_number
-    else:
-        project_number = "NA"
-        project_number_short = "NA"
-    if sheet_type == '7':
-        if re.search(r"([0-2]\d+[\.-\s\d]+)", text, re.M) is not None:
-            project_number = re.search(r"([0-2]\d+[\.-\s\d]+)", text, re.M).groups()
-            project_number = project_number[-1]
-            project_number_short = project_number
-    project_number_short = project_number_short.replace(" ", "")
-    if project_number_short[0] == "0":
-        project_number_short = project_number_short[1:]
-    if project_number[0] == "0":
-        project_number = project_number[1:]
-    return project_number, project_number_short
-
-
-def pre_process_image(path, args, age_detect=None):
-    # load the image and convert it to grayscale
-    image = cv2.imread(path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # If sheet_type is none, then it is the first search trying to find sheet type
-    if age_detect is not None:
-        gray = cv2.resize(src=gray, dsize=(0, 0), fx=2.5, fy=2.5, interpolation=cv2.INTER_LINEAR)
-    # check to see if we should apply thresholding to preprocess the
-    # image
-    if args["preprocess"] == "thresh":
-        gray = cv2.threshold(gray, 0, 255,
-                             cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    # make a check to see if median blurring should be done to remove noise
-    elif args["preprocess"] == "blur":
-        gray = cv2.medianBlur(gray, 3)
-    # perform threshold and blur
-    elif args["preprocess"] == "default":
-        gray = cv2.bitwise_not(gray)
-        gray = cv2.threshold(gray, 0, 255,
-                             cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        gray = cv2.medianBlur(gray, 3)
-
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
-        gray = cv2.erode(gray, kernel, iterations=1)
-        gray = cv2.bitwise_not(gray)
-    # perform canny edge detection
-    elif args["preprocess"] == "canny":
-        gray = cv2.Canny(gray, 100, 200)
-
-    # write the grayscale image to disk as a temporary file so we can
-    # apply OCR to it
-    # filename = "{}.png".format(os.getpid())
-    # cv2.imwrite(filename, gray)
-    # cv2.imshow("Image", image)
-    if debug:
-        cv2.imshow("Output", gray)
-    # cv2.waitKey(0)
-    cv2.imwrite(path, gray)
-    return gray
-
-
 class UiMainwindow(object):
 
     def __init__(self):
+        self.analyzeWorker = None
         self.fileNames = None
         self.analyzed = False
+        self.progress = 0
         self.centralwidget = QtWidgets.QWidget()
         self.layoutGrid = QtWidgets.QGridLayout()
         self.tabWidget = QtWidgets.QTabWidget()
         self.label = QtWidgets.QLabel()
         self.tab = QtWidgets.QWidget()
+        self.progressBar = QtWidgets.QProgressBar()
         self.gridLayout = QtWidgets.QGridLayout(self.tab)
         self.SelectFiles = QtWidgets.QPushButton(self.tab)
         self.line = QtWidgets.QFrame(self.tab)
@@ -566,6 +124,12 @@ class UiMainwindow(object):
 
         self.debugBox.setObjectName("debugBox")
         self.gridLayout.addWidget(self.debugBox, 3, 7, 1, 1)
+
+        self.progressBar.setObjectName("progressBar")
+        self.progressBar = QtWidgets.QProgressBar()
+        self.progressBar.setStyle(QtWidgets.QStyleFactory.create("GTK"))
+        self.progressBar.setTextVisible(False)
+        self.gridLayout.addWidget(self.progressBar, 6, 0, 1, 8)
 
         self.tabWidget.addTab(self.tab, "")
         self.tab_2.setObjectName("tab_2")
@@ -677,24 +241,6 @@ class UiMainwindow(object):
         else:
             self.outputBox.appendPlainText("There aren't any analyzed files to e-mail.")
 
-    def json_setup(self):
-        global data_store
-        global json_projects
-        global mode
-
-        mode = self.testBox.currentText()
-        # if self.testBox.currentText() != "Test":
-        #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-        # else:
-        #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
-        json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-        # Read JSON data into the data_store variable
-        if json_filename:
-            with open(json_filename, 'r') as f:
-                data_store = json.load(f)
-        for item in data_store:
-            json_projects.append(item['project_number'])
-
     def debug_check(self):
         global debug
         if self.debugBox.isChecked():
@@ -736,7 +282,6 @@ class UiMainwindow(object):
         # Before renaming occurs Old data = entry in the listWidget
         #                        New data = entry in the text edit box
         description = "SomeProjectDescription"
-        old_description = ""
         old_project_number = ""
         new_project_number = ""
         project_number = ""
@@ -744,31 +289,27 @@ class UiMainwindow(object):
         old_package = ""
         old_title = self.listWidget.currentItem().text()
         project_details_changed = False
-        if re.search(r"_([A-z\.\d]+)_", old_title, re.I) is not None:
-            old_description = re.search(r"_([A-z\.\d]+)_", old_title, re.I).groups()
-            old_description = old_description[-1]
-        if old_description == description:
-            new_title = self.fileRename.text()
-            if re.search(r"-([\dPBpb\.-]+)_", old_title, re.I) is not None:
-                old_project_number = re.search(r"-([\dPBpb\.-]+)_", old_title, re.I).groups()
-                old_project_number = old_project_number[-1]
-            elif re.search(r"-(NA)_", old_title, re.I) is not None:
-                old_project_number = "NA"
-            if re.search(r"-([\dPBpb\.-]+)_", new_title, re.I) is not None:
-                new_project_number = re.search(r"-([\dPBpb\.-]+)_", new_title, re.I).groups()
-                new_project_number = new_project_number[-1]
-            if old_project_number != new_project_number:
-                project_number, project_number_short, \
-                description, file_path_project_src = project_info(new_project_number, new_project_number,
-                                                                  file_path_transit_src, None, False)
+        new_title = self.fileRename.text()
+        if re.search(r"-([\dPBpb\.-]+)_", old_title, re.I) is not None:
+            old_project_number = re.search(r"-([\dPBpb\.-]+)_", old_title, re.I).groups()
+            old_project_number = old_project_number[-1]
+        elif re.search(r"-(NA)_", old_title, re.I) is not None:
+            old_project_number = "NA"
+        if re.search(r"-([\dPBpb\.-]+)_", new_title, re.I) is not None:
+            new_project_number = re.search(r"-([\dPBpb\.-]+)_", new_title, re.I).groups()
+            new_project_number = new_project_number[-1]
+        if old_project_number != new_project_number:
+            project_number, project_number_short, \
+            description, file_path_project_src = project_info(new_project_number, new_project_number,
+                                                              file_path_transit_src, None, False)
             project_details_changed = True
-            if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
-                old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
-                old_package = old_package[-1]
+        if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
+            old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
+            old_package = old_package[-1]
 
         if project_details_changed:
             updated_file_details = old_title.replace("SomeProjectDescription", description)
-            updated_package = detect_package_number(file_path_project_src)[0]
+            updated_package = detect_package_number(file_path_project_src, debug)[0]
             updated_file_details = updated_file_details.replace(old_package, updated_package)
             updated_file_details = updated_file_details.replace(old_project_number, project_number_short)
             rename_path_transit = os.path.abspath(os.path.join(
@@ -803,14 +344,27 @@ class UiMainwindow(object):
         data = rename_path_transit + "%%" + rename_path_project
         self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
 
+    def evt_analyze_complete(self, results):
+        print_string = results[0]
+        file_title = results[1]
+        data = results[2]
+        project_number = results[3]
+        project_number_short = results[4]
+        self.outputBox.appendPlainText(print_string)
+        self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
+        self.listWidgetItem.setData(QtCore.Qt.UserRole, data)
+        self.listWidget.addItem(self.listWidgetItem)
+        self.project_numbers.append(project_number)
+        self.project_numbers_short.append(project_number_short)
+
+    def evt_analyze_progress(self, val):
+        self.progress += val
+        self.progressBar.setValue(int(self.progress/len(self.fileNames)))
+
     def analyze_button_handler(self):
-        self.analyzeButton.setEnabled(False)
-        time.sleep(1)
         if self.fileNames is not None:
-            self.json_setup()
+            json_setup(self.testBox.currentText())
             self.debug_check()
-            self.outputBox.appendPlainText("Analyzing...\n")
-            time.sleep(1)
             self.analyzed = False
             self.data_processing()
             self.analyzed = True
@@ -850,12 +404,6 @@ class UiMainwindow(object):
             print("image_jpeg list is empty")
 
     def data_processing(self):
-        # construct the argument parse and parse the arguments
-        ap = argparse.ArgumentParser()
-        ap.add_argument("-p", "--preprocess", type=str, default="default",
-                        help="type of pre-processing to be done")
-        args = vars(ap.parse_args())
-
         # iterate through all input files
         # for each file scan top right of sheet ((w/2, 0, w, h/8))
         # if top right of sheet contains "test" its a concrete break sheet
@@ -876,780 +424,10 @@ class UiMainwindow(object):
 
         # Import images from file path "f" using pdf2image to open
         for f in self.fileNames:
-            # till dexter number identification uin place use 00000000
-            dexter_number = "0000000"
-            # Each pdf page is stored as image info in an array called images_jpg
-            images_jpeg = convert_from_path(f, poppler_path=poppler_path)
-
-            # initialize variables in case no pages detected, prevents crashing
-            project_number = "NA"
-            project_number_short = "NA"
-            sheet_type = "NA"
-            project_number_found = False
-            # need to iterate through the image info array to analyze each individual image.
-            for image in images_jpeg:
-                # Set / reset count to 0 for appending file names
-                count = 0
-                # reset variables in case some do not get detected
-                set_number = "NA"
-                sheet_type = "NA"
-                date_cast = "NA"
-                break_ages = "NA"
-                date_placed = "NA"
-                date_tested = "NA"
-                date_asphalt_tested = "NA"
-                sieve_date_tested = "NA"
-
-                jpg_replace_string = str(count) + ".jpg"
-                # Get path variable to save pdf files as same name but as .jpg
-                f_jpg = f.replace(".pdf", jpg_replace_string)
-                # Get path variable to save entire sheet separately
-                jpg_full_replace_string = "-full" + str(count) + ".jpg"
-                full_jpg = f.replace(".pdf", jpg_full_replace_string)
-
-                # convert PDF files into images for analyzing
-                # Tesseract doesnt directly read from PDF files
-                # Get image size to crop full page to top right corner
-                # Top right corner is first to analyze as the large englobe logo messes up tesseract
-                w, h = image.size
-                if debug:
-                    print('Image size (w, h): ({0}, {1})'.format(w, h))
-                # save top right corner image as jpg
-                image.crop((1300, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
-                # save full image as .jpg
-                image.save(full_jpg, 'JPEG')
-
-                pre_process_image(f_jpg, args)
-
-                if debug:
-                    image_test = cv2.imread(f_jpg)
-                    cv2.imshow("Top Corner", image_test)
-                    cv2.waitKey(0)
-                # Using tesseract on top right corner image, try and detect what type of sheet it is
-                text = analyze_image(f_jpg, 6)
-
-                # once analyzed, top right corner image is not required anymore, so delete
-                os.remove(f_jpg)
-
-                # if top right image analysis yields "test" it is a concrete break sheet
-                if text.lower().find("test") > 0 & text.lower().find("placement") <= 0:
-                    sheet_type = "3"  # 3 = break
-                    # debug, print sheet type to screen
-                    if debug:
-                        print('Sheet Type: {0}'.format(sheet_type))
-                    # Preprocess full image saved previously and analyze specific sections for remaining data
-                    pre_process_image(full_jpg, args)
-                    image = cv2.imread(full_jpg)
-                    # Once a project number is found in a package, it stops looking, which speeds up analysis
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        if not project_number_found:
-                            y1 = int(300 / scale)
-                            y2 = int(360 * scale)
-                            x1 = int(1100 / scale)
-                            x2 = int(1550 * scale)
-                            if debug:
-                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            # crop image to project number location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what project number image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-                            # analyze project number image for project number
-                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            for json_project in json_projects:
-                                if project_number is not "NA" and (project_number_short in json_project or
-                                                                   project_number in json_project):
-                                    if project_number[0] == "0":
-                                        project_number = project_number[1:]
-                                        project_number_short = project_number_short[1:]
-                                    project_number_found = True
-                                    break
-                        else:
-                            break
-                    # debug, print the project number
-                    if debug:
-                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                      project_number_short))
-
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(635 / scale)
-                        y2 = int(675 * scale)
-                        x1 = int(260 / scale)
-                        x2 = int(320 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what set number image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Set Number", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze set number image for set number
-                        set_number_text = analyze_image(f_jpg)
-                        if re.search(r"(\d+)", set_number_text, re.M + re.I) is not None:
-                            set_number = re.search(r"(\d+)", set_number_text, re.M + re.I).groups()
-                            set_number = set_number[-1]
-                            break
-                        elif re.search(r"(\d+)", set_number_text, re.M + re.I) is not None:
-                            set_number = re.search(r"(\d+)", set_number_text, re.M + re.I).groups()
-                            set_number = set_number[-1]
-                            break
-                        else:
-                            set_number = "NA"
-                        # for consistency, add 0 in front of single digit set numbers
-                        # print('Length set_no: {0}'.format(len(set_number)))
-                    if len(set_number) < 2:
-                        set_number = "0" + str(set_number)
-
-                    # debug, print the set number
-                    if debug:
-                        print('Set Number: {0}'.format(set_number))
-
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(635 / scale)
-                        y2 = int(675 * scale)
-                        x1 = int(1270 / scale)
-                        x2 = int(1450 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to date cast location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what date cast image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Date Cast:", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze date cast image for date cast
-                        date_cast_text = analyze_image(f_jpg)
-                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M | re.I) is not None:
-                            date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", date_cast_text, re.M + re.I) \
-                                .groups()
-                            date_cast = date_cast[-1].replace("\n", "")
-                            break
-                        else:
-                            date_cast = "NA"
-
-                    # debug, print the date cast
-                    if debug:
-                        print('Date Cast: {0}'.format(date_cast))
-
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(770 / scale)
-                        y2 = int(1100 * scale)
-                        x1 = int(1210 / scale)
-                        x2 = int(1290 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to break strengths location
-                        cv2.imwrite(f_jpg,
-                                    image[y1:y2, x1:x2])
-                        # debug, show what break strengths looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Break Strengths", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze break strengths for break strengths
-                        break_strengths_text = analyze_image(f_jpg)
-                        break_strengths = break_strengths_text.split("\n")
-                        if break_strengths is not "NA":
-                            break
-                    # debug, print the break strengths
-                    if debug:
-                        print('Break Strengths: {0}'.format(break_strengths))
-
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(770 / scale)
-                        y2 = int(1100 * scale)
-                        x1 = int(510 / scale)
-                        x2 = int(555 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to latest break age location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what latest break age looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Break Ages", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        # analyze latest break age for age
-                        break_age_text = analyze_image(f_jpg)
-                        for num, character in enumerate(break_age_text):
-                            if integer_test(character):
-                                break_age_text = break_age_text[num:]
-                                break
-                        break_ages = break_age_text.split("\n")
-                        break_strengths_bool = False
-                        if integer_test(break_ages[0]) or break_ages[0] == "AP":
-                            # debug, print the latest break age
-                            if debug:
-                                print('All Break Ages: {0}'.format(break_ages))
-                            if len(break_strengths) > 0:
-                                try:
-                                    break_ages = break_ages[len(break_strengths) - 1]
-                                    break_strengths_bool = True
-                                except Exception as e:
-                                    print(e)
-                                    break_strengths_bool = False
-                                if not break_strengths_bool:
-                                    try:
-                                        break_ages = break_ages[-1]
-                                    except Exception as e:
-                                        print(e)
-                                        break_ages = '999'
-                            else:
-                                break_ages = break_ages[0]
-                            if break_ages is not "NA" and (integer_test(break_ages) or break_ages == "AP"):
-                                if break_ages.upper() == "AP":
-                                    break_ages = "56"
-                                break
-                    if not break_strengths_bool:
-                        try:
-                            break_ages = break_ages[-1]
-                        except Exception as e:
-                            print(e)
-                            break_ages = '999'
-                    if debug:
-                        print('Latest Break Age: {0}'.format(break_ages))
-
-                elif text.lower().find("placement") > 0:
-                    sheet_type = "1"  # 1 = "placement"
-                    # debug, print sheet type to screen
-                    if debug:
-                        print('Sheet Type: {0}'.format(sheet_type))
-                    # Preprocess full image saved previously and analyze specific sections for remaining data
-                    pre_process_image(full_jpg, args)
-                    image = cv2.imread(full_jpg)
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        if not project_number_found:
-                            y1 = int(290 / scale)
-                            y2 = int(350 * scale)
-                            x1 = int(1050 / scale)
-                            x2 = int(1550 * scale)
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            if debug:
-                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                            # crop image to project number location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what project number image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-                            # analyze project number image for project number
-                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            for json_project in json_projects:
-                                if project_number is not "NA" and (project_number_short in json_project or
-                                                                   project_number in json_project):
-                                    if project_number[0] == "0":
-                                        project_number = project_number[1:]
-                                        project_number_short = project_number_short[1:]
-                                    project_number_found = True
-                                    break
-                        else:
-                            break
-                    # debug, print the project number
-                    if debug:
-                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                      project_number_short))
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(700 / scale)
-                        y2 = int(740 * scale)
-                        x1 = int(1250 / scale)
-                        x2 = int(1450 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to date placed location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what date placed image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Date Cast:", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-
-                        # analyze date placed image for date placed
-                        date_placed_text = analyze_image(f_jpg)
-                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M | re.I) is not None:
-                            date_placed = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_placed_text, re.M + re.I) \
-                                .groups()
-                            date_placed = date_placed[-1].replace("\n", "")
-                            break
-                        else:
-                            date_placed = "NA"
-                    # debug, print the date cast
-                    if debug:
-                        print('Date Placed: {0}'.format(date_placed))
-                elif text.lower().find("density") > 0:
-                    sheet_type = "5"  # 5 = "field density"
-                    # debug, print sheet type to screen
-                    if debug:
-                        print('Sheet Type: {0}'.format(sheet_type))
-                    # Preprocess full image saved previously and analyze specific sections for remaining data
-                    pre_process_image(full_jpg, args)
-                    image = cv2.imread(full_jpg)
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        if not project_number_found:
-                            y1 = int(290 / scale)
-                            y2 = int(350 * scale)
-                            x1 = int(1050 / scale)
-                            x2 = int(1550 * scale)
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            if debug:
-                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                            # crop image to project number location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what project number image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-                            # analyze project number image for project number
-                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            for json_project in json_projects:
-                                if project_number is not "NA" and (project_number_short in json_project or
-                                                                   project_number in json_project):
-                                    if project_number[0] == "0":
-                                        project_number = project_number[1:]
-                                        project_number_short = project_number_short[1:]
-                                    project_number_found = True
-                                    break
-                        else:
-                            break
-                    # debug, print the project number
-                    if debug:
-                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                      project_number_short))
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(660 / scale)
-                        y2 = int(725 * scale)
-                        x1 = int(300 / scale)
-                        x2 = int(475 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to date tested location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what date placed image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-
-                        # analyze date tested image for date tested
-                        date_tested_text = analyze_image(f_jpg)
-                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_tested_text, re.M | re.I) is not None:
-                            date_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_tested_text, re.M + re.I) \
-                                .groups()
-                            date_tested = date_tested[-1].replace("\n", "")
-                            break
-                        else:
-                            date_tested = "NA"
-                    # debug, print the date cast
-                    if debug:
-                        print('Date Tested: {0}'.format(date_tested))
-                elif text.lower().find("sieve") > 0:
-                    sheet_type = "9"  # 5 = "sieve sheet"
-                    # debug, print sheet type to screen
-                    if debug:
-                        print('Sheet Type: {0}'.format(sheet_type))
-                    # Preprocess full image saved previously and analyze specific sections for remaining data
-                    pre_process_image(full_jpg, args)
-                    image = cv2.imread(full_jpg)
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        if not project_number_found:
-                            y1 = int(290 / scale)
-                            y2 = int(350 * scale)
-                            x1 = int(1050 / scale)
-                            x2 = int(1550 * scale)
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            if debug:
-                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                            # crop image to project number location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what project number image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-                            # analyze project number image for project number
-                            project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                            for json_project in json_projects:
-                                if project_number is not "NA" and (project_number_short in json_project or
-                                                                   project_number in json_project):
-                                    if project_number[0] == "0":
-                                        project_number = project_number[1:]
-                                        project_number_short = project_number_short[1:]
-                                    project_number_found = True
-                                    break
-                        else:
-                            break
-                    # debug, print the project number
-                    if debug:
-                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                      project_number_short))
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(650 / scale)
-                        y2 = int(700 * scale)
-                        x1 = int(1350 / scale)
-                        x2 = int(1550 * scale)
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to date tested location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what date placed image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-
-                        # analyze date tested image for date tested
-                        sieve_date_tested_text = analyze_image(f_jpg)
-                        if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", sieve_date_tested_text, re.M | re.I) \
-                                is not None:
-                            sieve_date_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", sieve_date_tested_text,
-                                                          re.M + re.I).groups()
-                            sieve_date_tested = sieve_date_tested[-1].replace("\n", "")
-                            break
-                        else:
-                            sieve_date_tested = "NA"
-                    # debug, print the date cast
-                    if debug:
-                        print('Date Tested: {0}'.format(sieve_date_tested))
-                else:
-                    # Sheet isn't placement, break, or density, so need to look someplace else
-                    # Probably Asphalt
-                    image.crop((0, 1400, 900, 1650)).save(f_jpg, 'JPEG')
-                    # save full image as .jpg
-                    image.save(full_jpg, 'JPEG')
-                    pre_process_image(f_jpg, args)
-
-                    # Using tesseract on top right corner image, try and detect what type of sheet it is
-                    text = analyze_image(f_jpg)
-
-                    # once analyzed, top right corner image is not required anymore, so delete
-                    os.remove(f_jpg)
-                    if text.lower().find("asphalt") > 0:
-                        sheet_type = "7"  # 7 = "Asphalt field density"
-                        # debug, print sheet type to screen
-                        if debug:
-                            print('Sheet Type: {0}'.format(sheet_type))
-                        # Preprocess full image saved previously and analyze specific sections for remaining data
-                        pre_process_image(full_jpg, args)
-                        image = cv2.imread(full_jpg)
-                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                            if not project_number_found:
-                                y1 = int(180 / scale)
-                                y2 = int(230 * scale)
-                                x1 = int(320 / scale)
-                                x2 = int(700 * scale)
-                                if y2 > 2200:
-                                    y2 = 2150
-                                if x2 > 1700:
-                                    x2 = 1650
-                                if debug:
-                                    print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                                # crop image to project number location
-                                cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                                # debug, show what project number image looks like to be analyzed
-                                if debug:
-                                    cv2.imshow("ProjectNumber", image[y1:y2, x1:x2])
-                                    cv2.waitKey(0)
-                                # analyze project number image for project number
-                                project_number, project_number_short = detect_projectnumber(analyze_image(f_jpg))
-                                for json_project in json_projects:
-                                    if project_number is not "NA" and (project_number_short in json_project or
-                                                                       project_number in json_project):
-                                        if project_number[0] == "0":
-                                            project_number = project_number[1:]
-                                            project_number_short = project_number_short[1:]
-                                        project_number_found = True
-                                        break
-                            else:
-                                break
-                        # debug, print the project number
-                        if debug:
-                            print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                          project_number_short))
-                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                            y1 = int(260 / scale)
-                            y2 = int(300 * scale)
-                            x1 = int(1130 / scale)
-                            x2 = int(1330 * scale)
-                            if y2 > 2200:
-                                y2 = 2150
-                            if x2 > 1700:
-                                x2 = 1650
-                            # crop image to date tested location
-                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                            # debug, show what date placed image looks like to be analyzed
-                            if debug:
-                                cv2.imshow("Date Tested:", image[y1:y2, x1:x2])
-                                cv2.waitKey(0)
-
-                            # analyze date tested image for date tested
-                            date_asphalt_tested_text = analyze_image(f_jpg)
-                            if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", date_asphalt_tested_text, re.M | re.I) \
-                                    is not None:
-                                date_asphalt_tested = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})",
-                                                                date_asphalt_tested_text, re.M + re.I).groups()
-                                date_asphalt_tested = date_asphalt_tested[-1].replace("\n", "")
-                                break
-                            else:
-                                date_tested = "NA"
-                        # debug, print the date cast
-                        if debug:
-                            print('Date Tested: {0}'.format(date_asphalt_tested))
-
-                if sheet_type == "1":  # 1 = placement sheet
-                    params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
-                elif sheet_type == "3":  # 3 = break sheet
-                    params = [project_number_short, date_cast, sheet_type, set_number, break_ages]
-                elif sheet_type == "5":  # 5 = field density
-                    params = [project_number_short, date_tested, sheet_type, set_number, break_ages]
-                elif sheet_type == "7":  # 7 = asphalt field density
-                    params = [project_number_short, date_asphalt_tested, sheet_type, set_number, break_ages]
-                elif sheet_type == "9":  # 9 = sieve sheet
-                    params = [project_number_short, sieve_date_tested, sheet_type, set_number, break_ages]
-                else:
-                    params = [project_number_short, date_placed, sheet_type, set_number, break_ages]
-                # Turn "NA" results into None results to help with sorting in sqlite3
-                count = 0
-                for item in params:
-                    if item == "NA":
-                        params[count] = None
-                    count += 1
-                if os.path.isfile(full_jpg):
-                    os.remove(full_jpg)
-                if os.path.isfile(f_jpg):
-                    os.remove(f_jpg)
-                cur.execute("INSERT INTO files VALUES(?,?,?,?,?)", params)
-                db.commit()
-                count += 1
-
-                if "2000746" in project_number_short:  # Dexter Project
-                    if sheet_type == "3":  # == break
-                        y1_start = 1600
-                        y2_start = 1850
-                        x1_start = 610
-                        x2_start = 1550
-                    else:
-                        y1_start = 1600
-                        y2_start = 2000
-                        x1_start = 250
-                        x2_start = 1550
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(y1_start / scale)
-                        y2 = int(y2_start * scale)
-                        x1 = int(x1_start / scale)
-                        x2 = int(x2_start * scale)
-                        if y2 >= 2200:
-                            y2 = 2150
-                        if x2 >= 1700:
-                            x2 = 1650
-                        # crop image to date placed location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what date placed image looks like to be analyzed
-                        if debug:
-                            cv2.imshow("Dexter Number:", image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-
-                        # analyze date placed image for date cast
-                        dexter_number_text = analyze_image(f_jpg)
-                        if re.search(r"(\d{7}[-\s]\d+)", dexter_number_text, re.M | re.I) is not None:
-                            dexter_number = re.search(r"(\d{7}[-\s]\d+)", dexter_number_text, re.M + re.I) \
-                                .groups()
-                            dexter_number = dexter_number[-1].replace("\n", "")
-                            break
-                        elif re.search(r"(\d{7})", dexter_number_text, re.M | re.I) is not None:
-                            dexter_number = re.search(r"(\d{7})", dexter_number_text, re.M + re.I) \
-                                .groups()
-                            dexter_number = dexter_number[-1].replace("\n", "")
-                            break
-                        else:
-                            dexter_number = "NA"
-                    # debug, print the date cast
-                    if debug:
-                        print('Dexter Number: {0}'.format(dexter_number))
-                if os.path.isfile(full_jpg):
-                    os.remove(full_jpg)
-                if os.path.isfile(f_jpg):
-                    os.remove(f_jpg)
-            cur.execute("SELECT * From files")
-            if debug:
-                print(cur.fetchall())
-            cur.execute("SELECT * From files ORDER BY Project, Type, Date, Set_No, Age")
-            records = cur.fetchall()
-            if debug:
-                print(records)
-
-            placement_string = ""
-            break_string = ""
-            density_string = ""
-            asphalt_string = ""
-            sieve_string = ""
-
-            # For multi page files, some files may not detect project number properly
-            # so iterate through all pages and get project number from a successful detection
-            for i in range(0, len(records)):
-                if records[i][0] is not None:
-                    project_number_short = records[i][0]
-
-            # initialize/reset date_array for each new input file
-            placement_date_array = []
-            # iterate through the local database records and if sheet type is placement, store date placed into an array
-            for i in range(0, len(records)):
-                if records[i][2] == "1":  # 1 = placement
-                    placement_date_array.append(records[i][1])
-            if placement_date_array:
-                placement_date = date_formatter(placement_date_array)
-                placement_string = '_ConcretePlacement({0})'.format(placement_date)
-
-            density_date_array = []
-            # iterate through the local database records and if sheet type is density, store date placed into an array
-            for i in range(0, len(records)):
-                if records[i][2] == "5":  # 5 = density
-                    density_date_array.append(records[i][1])
-            if density_date_array:
-                density_date = date_formatter(density_date_array)
-                density_string = '_FieldDensity({0})'.format(density_date)
-
-            asphalt_date_array = []
-            # iterate through the local database records and if sheet type is asphalt, store date placed into an array
-            for i in range(0, len(records)):
-                if records[i][2] == "7":  # 7 = asphalt
-                    asphalt_date_array.append(records[i][1])
-            if asphalt_date_array:
-                asphalt_date = date_formatter(asphalt_date_array)
-                asphalt_string = '_FieldDensity({0})'.format(asphalt_date)
-
-            sieve_date_array = []
-            # iterate through the local database records and if sheet type is sieve, store date placed into an array
-            for i in range(0, len(records)):
-                if records[i][2] == "9":  # 9 = sieve
-                    sieve_date_array.append(records[i][1])
-            if sieve_date_array:
-                sieve_date = date_formatter(sieve_date_array)
-                sieve_string = '_SA({0})'.format(sieve_date)
-
-            # initialize/reset date_array for each new input file
-            break_age_array = []
-
-            # iterate through the local database records and if sheet type is break sheet, store date cast into an array
-            # need to format dates for each possible age from 0 - 56
-            for i in range(0, len(records)):
-                if records[i][2] == "3" and records[i][4] not in break_age_array:  # 3 = break
-                    break_age_array.append(records[i][4])
-            break_age_array.sort(key=int, reverse=True)
-            for age in break_age_array:
-                break_set_no = []
-                break_set_string = ""
-                break_date_array = []
-                for i in range(0, len(records)):
-                    if records[i][4] == age:
-                        break_date_array.append(records[i][1])
-                        break_set_no.append(records[i][3])
-                # Formats the set numbers for the filename, hyphenating consecutive numbers
-                current_set = -1
-                if break_set_no:
-                    if "None" in break_set_no or None in break_set_no:
-                        break_set_no.sort(key=str)
-                    else:
-                        break_set_no.sort(key=int)
-                    for k, temp_set in enumerate(break_set_no):
-                        if k == 0:
-                            break_set_string = str(temp_set)
-                        else:
-                            if int(temp_set) == int(current_set) + 1:
-                                replace_string = "-" + current_set
-                                break_set_string = break_set_string.replace(replace_string, "") + "-" + str(temp_set)
-                            else:
-                                break_set_string = break_set_string + "," + str(temp_set)
-                        current_set = temp_set
-                if break_date_array:
-                    break_date = date_formatter(break_date_array)
-                    break_string = break_string + '_{0}dConcStrength_S{1}({2})' \
-                        .format(age, break_set_string.replace("None", "NA"), break_date)
-
-            # Placeholder package number till directory system is in place
-            # package_number = "04"
-
-            project_number, project_number_short, project_description, file_path = project_info(project_number,
-                                                                                                project_number_short,
-                                                                                                f,
-                                                                                                sheet_type,
-                                                                                                self.analyzed)
-
-            package_number_highest_str, package_numbers = detect_package_number(file_path)
-            if debug:
-                print("Max value = {0}".format(max(package_numbers)))
-            if "P-00" in project_number_short:
-                project_number_short = project_number_short.replace("P-00", "P-")
-            if "Dexter" in project_description:
-                project_description = project_description.replace("%%", dexter_number)
-            file_title = package_number_highest_str + "-" + str(project_number_short) + "_" + project_description
-
-            split_name = f.split("/").pop()
-            if placement_string != "":
-                file_title = file_title + placement_string
-            if break_string != "":
-                file_title = file_title + break_string
-            if density_string != "":
-                file_title = file_title + density_string
-            if asphalt_string != "":
-                file_title = file_title + asphalt_string
-            if sieve_string != "":
-                file_title = file_title + sieve_string
-            if placement_string == "" and break_string == "" and \
-                    density_string == "" and asphalt_string == "" and sieve_string == "":
-                file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
-
-            # Wont happen much in full use but may encounter same file names during testing
-            # Just add a random integer at end of file for now
-            os.chdir(file_path)
-            rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
-            rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
-            if os.path.isfile(rename_path) or os.path.isfile(rename_path_project_dir):
-                file_title = file_title + str(random.randint(1, 999))
-                rename_path = os.path.abspath(os.path.join(f.replace(f.split("/").pop(), ""), file_title + ".pdf"))
-                rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
-            try:
-                os.rename(f, rename_path)
-            except Exception as e:
-                print(e)
-                continue
-            if rename_path != rename_path_project_dir:
-                try:
-                    shutil.copy(rename_path, rename_path_project_dir)
-                except Exception as e:
-                    print(e)
-                    continue
-
-            print_string = split_name + " renamed to " + file_title + " and saved in project folder:\n" + file_path + \
-                           '\n'
-            data = rename_path + "%%" + rename_path_project_dir
-            self.outputBox.appendPlainText(print_string)
-            self.listWidgetItem = QtWidgets.QListWidgetItem(file_title)
-            self.listWidgetItem.setData(QtCore.Qt.UserRole, data)
-            self.listWidget.addItem(self.listWidgetItem)
-            self.project_numbers.append(project_number)
-            self.project_numbers_short.append(project_number_short)
-            cur.execute("DELETE From files")
+            self.analyzeWorker = WorkerAnalyzeThread(f, debug, self.analyzed)
+            self.analyzeWorker.analyze_complete.connect(self.evt_analyze_complete)
+            self.analyzeWorker.analyze_progress.connect(self.evt_analyze_progress)
+            self.analyzeWorker.start()
 
 
 if __name__ == "__main__":
