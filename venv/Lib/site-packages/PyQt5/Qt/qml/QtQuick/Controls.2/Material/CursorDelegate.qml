@@ -46,7 +46,7 @@ Rectangle {
 
     Connections {
         target: cursor.parent
-        onCursorPositionChanged: {
+        function onCursorPositionChanged() {
             // keep a moving cursor visible
             cursor.opacity = 1
             timer.restart()
@@ -55,7 +55,7 @@ Rectangle {
 
     Timer {
         id: timer
-        running: cursor.parent.activeFocus && !cursor.parent.readOnly
+        running: cursor.parent.activeFocus && !cursor.parent.readOnly && interval != 0
         repeat: true
         interval: Qt.styleHints.cursorFlashTime / 2
         onTriggered: cursor.opacity = !cursor.opacity ? 1 : 0
