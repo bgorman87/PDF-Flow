@@ -1,5 +1,6 @@
 import os
 import shutil
+import ctypes
 
 import regex as re
 import win32com.client as win32
@@ -312,6 +313,21 @@ class UiMainwindow(object):
             updated_package = detect_package_number(file_path_project_src, debug)[0]
             updated_file_details = updated_file_details.replace(old_package, updated_package)
             updated_file_details = updated_file_details.replace(old_project_number, project_number_short)
+            rename_transit_len = 260 - len(
+                str(file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), "")))
+            rename_project_length = 260 - len(str(file_path_project_src))
+            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
+                updated_file_details = updated_file_details.replace("Concrete", "Conc")
+            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
+                updated_file_details = updated_file_details.replace("-2020", "")
+                updated_file_details = updated_file_details.replace("-2021", "")
+            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
+                if rename_project_length > rename_transit_len:
+                    cut = rename_project_length + 4
+                else:
+                    cut = rename_transit_len + 4
+                updated_file_details = updated_file_details.replace(".pdf", "")
+                updated_file_details = updated_file_details[:-cut] + "LONG.pdf"
             rename_path_transit = os.path.abspath(os.path.join(
                 file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
                 updated_file_details + ".pdf"))
@@ -329,20 +345,31 @@ class UiMainwindow(object):
             self.project_numbers_short[self.listWidget.currentRow()] = project_number_short
             self.project_numbers[self.listWidget.currentRow()] = project_number
         else:
-            rename_path_transit = os.path.abspath(os.path.join(
-                file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
-                str(self.fileRename.text()) + ".pdf"))
-            rename_path_project = os.path.abspath(os.path.join(
-                file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
-                str(self.fileRename.text()) + ".pdf"))
-            os.rename(file_path_transit_src, rename_path_transit)
-            if file_path_project_src != file_path_transit_src:  # If project and transit aren't the same, rename
-                os.rename(file_path_project_src, rename_path_project)
-            self.listWidget.currentItem().setText(self.fileRename.text())
-        if debug:
-            print('Renamed File Path: \n{0}\n{1}'.format(file_path_transit_src, file_path_project_src))
-        data = rename_path_transit + "%%" + rename_path_project
-        self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
+            # 254 to accommodate the .pdf
+            rename_transit_len = 254 - len(file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""))
+            rename_project_len = 254 - len(file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""))
+            if len(self.fileRename.text()) > rename_transit_len or len(self.fileRename.text()) > rename_project_len:
+                print("Filename too long")
+                if rename_transit_len > rename_project_len:
+                    msgString = f"Filename too long. Reduce by {len(self.fileRename.text())-rename_transit_len}"
+                else:
+                    msgString = f"Filename too long. Reduce by {len(self.fileRename.text()) - rename_project_len}"
+                ctypes.windll.user32.MessageBoxW(0, msgString, "Filename Too Long", 1)
+            else:
+                rename_path_transit = os.path.abspath(os.path.join(
+                    file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), ""),
+                    str(self.fileRename.text()) + ".pdf"))
+                rename_path_project = os.path.abspath(os.path.join(
+                    file_path_project_src.replace(file_path_project_src.split("\\").pop(), ""),
+                    str(self.fileRename.text()) + ".pdf"))
+                os.rename(file_path_transit_src, rename_path_transit)
+                if file_path_project_src != file_path_transit_src:  # If project and transit aren't the same, rename
+                    os.rename(file_path_project_src, rename_path_project)
+                self.listWidget.currentItem().setText(self.fileRename.text())
+                if debug:
+                    print('Renamed File Path: \n{0}\n{1}'.format(file_path_transit_src, file_path_project_src))
+                data = rename_path_transit + "%%" + rename_path_project
+                self.listWidget.currentItem().setData(QtCore.Qt.UserRole, data)
 
     def evt_analyze_complete(self, results):
         print_string = results[0]
@@ -359,7 +386,7 @@ class UiMainwindow(object):
 
     def evt_analyze_progress(self, val):
         self.progress += val
-        self.progressBar.setValue(int(self.progress/len(self.fileNames)))
+        self.progressBar.setValue(int(self.progress / len(self.fileNames)))
 
     def analyze_button_handler(self):
         if self.fileNames is not None:

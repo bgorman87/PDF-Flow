@@ -602,6 +602,27 @@ class WorkerAnalyzeThread(QThread):
         os.chdir(file_path)
         rename_path = os.path.abspath(os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
         rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
+        if len(str(rename_path)) > 260 or len(str(rename_path_project_dir)) > 260:
+            file_title = file_title.replace("Concrete", "Conc")
+            rename_path = os.path.abspath(
+                os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
+            rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
+        if len(str(rename_path)) > 260 or len(str(rename_path_project_dir)) > 260:
+            file_title = file_title.replace("-2020", "")
+            file_title = file_title.replace("-2021", "")
+            rename_path = os.path.abspath(
+                os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
+            rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
+        if len(str(rename_path)) > 260 or len(str(rename_path_project_dir)) > 260:
+            cut1 = len(str(rename_path)) - 256
+            cut2 = len(str(rename_path_project_dir)) - 256
+            if cut1 > cut2:
+                file_title = file_title[:-cut1] + "LONG"
+            else:
+                file_title = file_title[:-cut2] + "LONG"
+            rename_path = os.path.abspath(
+                os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
+            rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
         if os.path.isfile(rename_path) or os.path.isfile(rename_path_project_dir):
             file_title = file_title + str(random.randint(1, 999))
             rename_path = os.path.abspath(
