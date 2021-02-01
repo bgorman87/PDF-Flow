@@ -30,6 +30,7 @@ def output(self):
     self.outputBox.appendPlainText("Analyzing...\n")
 
 
+# noinspection PyTypeChecker
 class UiMainwindow(object):
 
     def __init__(self):
@@ -267,10 +268,11 @@ class UiMainwindow(object):
                     mail.Attachments.Add(attachment)
                     mail.Save()
                     e = "Drafted email for: {0}".format(all_list_titles[i])
+                    self.outputBox.appendPlainText(e)
                 except Exception as e:
                     print(e)
+                    self.outputBox.appendPlainText(str(e))
                     pass
-                self.outputBox.appendPlainText(e)
 
     def debug_check(self):
         global debug
