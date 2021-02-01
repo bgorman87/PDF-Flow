@@ -13,13 +13,9 @@ from project_info import project_info, json_setup
 
 debug = False
 
-# todo:- For dexter number rerun dexter number analysis
+# todo:     - For dexter number rerun dexter number analysis
 #           - asphalt sheets
-#           - Make saving like e-mail, done after analyzing and editing the filename so that I wont have to deal
-#               with crash issues
-#           - Handle name too long errors PRIORITY
-#           - Email button maybe looks at project number and creates email off that if previous analysis was done
-#               this way I can load already named/analyzed files, and create emails
+#           - Improve project number renaming
 
 
 # set current working directory to variable to save files to
@@ -199,14 +195,50 @@ class UiMainwindow(object):
         self.listWidget.itemDoubleClicked.connect(self.rename_file_handler)
 
     def email_button_handler(self):
-        if self.analyzed:
-            signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
+        signature_path = os.path.abspath(os.path.join(home_dir + r"\\Signature\\CONCRETE.htm"))
+        if not self.analyzed and self.fileNames:
             if os.path.isfile(signature_path):
                 with open(signature_path, "r") as file:
                     body_text = file.read()
             else:
                 print("Signature File Not Found")
                 pass
+            msg = QtWidgets.QMessageBox()
+            buttonReply = msg.question(msg, "", "Do you want to create e-mails for non-analyzed files?",
+                                       QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if buttonReply == QtWidgets.QMessageBox.No:
+                self.outputBox.appendPlainText("E-Mails not generated\n")
+            elif buttonReply == QtWidgets.QMessageBox.Yes:
+                json_setup(self.testBox.currentText())
+                for file in self.fileNames:
+                    description = file.split("_")
+                    description = description[1]
+                    project_number, project_number_short, email_recipient_to, email_recipient_cc, \
+                    email_recipient_subject = project_info(f=file, analyzed=self.analyzed, description=description)
+                    title = file.split("/").pop()
+                    attachment = file
+                    if "Dexter" in email_recipient_subject:
+                        dexter_number = "NA"
+                        if re.search(r"Dexter_([\d-]*)[_\dA-z]", email_recipient_subject, re.I) is not None:
+                            dexter_number = re.search(r"Dexter_([\d-]*)[_\dA-z]", email_recipient_subject,
+                                                      re.I).groups()
+                            dexter_number = dexter_number[-1]
+                        email_recipient_subject = email_recipient_subject.replace("%%", dexter_number)
+                    try:
+                        outlook = win32.Dispatch('outlook.application')
+                        mail = outlook.CreateItem(0)
+                        mail.To = email_recipient_to
+                        mail.CC = email_recipient_cc
+                        mail.Subject = email_recipient_subject
+                        mail.HtmlBody = body_text
+                        mail.Attachments.Add(attachment)
+                        mail.Save()
+                        e = "Drafted email for: {0}".format(title)
+                    except Exception as e:
+                        print(e)
+                        pass
+                    self.outputBox.appendPlainText(e)
+        if self.analyzed:
             all_list_titles = []
             all_list_data = []
             for i in range(self.listWidget.count()):
@@ -239,8 +271,6 @@ class UiMainwindow(object):
                     print(e)
                     pass
                 self.outputBox.appendPlainText(e)
-        else:
-            self.outputBox.appendPlainText("There aren't any analyzed files to e-mail.")
 
     def debug_check(self):
         global debug
@@ -351,7 +381,7 @@ class UiMainwindow(object):
             if len(self.fileRename.text()) > rename_transit_len or len(self.fileRename.text()) > rename_project_len:
                 print("Filename too long")
                 if rename_transit_len > rename_project_len:
-                    msgString = f"Filename too long. Reduce by {len(self.fileRename.text())-rename_transit_len}"
+                    msgString = f"Filename too long. Reduce by {len(self.fileRename.text()) - rename_transit_len}"
                 else:
                     msgString = f"Filename too long. Reduce by {len(self.fileRename.text()) - rename_project_len}"
                 ctypes.windll.user32.MessageBoxW(0, msgString, "Filename Too Long", 1)

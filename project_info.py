@@ -34,7 +34,7 @@ def json_setup(state):
 # project info function
 # By inputting the project number and detected variables, the function looks through the json data file, and returns
 # the desired project info such as where to save files to, who to send e-mail too and what the project description is
-def project_info(project_number, project_number_short, f, sheet_type, analyzed):
+def project_info(project_number="", project_number_short="", f="", sheet_type=1, analyzed=False, description=""):
     # file path isn't really used for anything here anymore as far as i can tell
     file_path = f.replace(f.split("/").pop(), "")
     if file_path == "":
@@ -57,113 +57,114 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
         # detection, this first option compares the short project numbers, and if they match, then looks at the last
         # integer of the long project number, if those match as well, then the long project number is assumed to be
         # correct.
-        for temp_count in [1, 2, 3]:
-            if temp_count == 1:
-                for project_data in data_store:
-                    if project_number.replace(".", "") == project_data["project_number"].replace(".", "") or \
-                            project_number.replace("-", "") == project_data["project_number"].replace("-", ""):
-                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
-                        # sheet_type == 7 then use the asphalt directory
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        # If the sheet_type is not a single compaction or asphalt sheet then use the
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-            if temp_count == 2:
-                for project_data in data_store:
-                    if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                         project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
-                            project_number[-1] == project_data["project_number"][-1]):
-                        # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
-                        # sheet_type == 7 then use the asphalt directory
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        # If the sheet_type is not a single compaction or asphalt sheet then use the
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-            if temp_count == 3:
-                for project_data in data_store:
-                    if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                            project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
-                        if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
-                                (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
-                        elif sheet_type != "5" and sheet_type != "7":
-                            project_description = project_data["project_description"]
-                            if mode != "Test":
-                                file_path = project_data["project_directory"]
-                                email_recipient_to = project_data["project_email_to"]
-                                email_recipient_cc = project_data["project_email_cc"]
-                            else:
-                                file_path = default_directory
-                                email_recipient_to = default_email_to
-                                email_recipient_cc = default_email_cc
-                            email_recipient_subject = project_data["project_email_subject"]
-                            project_number = project_data["project_number"]
-                            project_number_short = project_data["project_number_short"]
-                            raise ProjectFound
+        if description == "":
+            for temp_count in [1, 2, 3]:
+                if temp_count == 1:
+                    for project_data in data_store:
+                        if project_number.replace(".", "") == project_data["project_number"].replace(".", "") or \
+                                project_number.replace("-", "") == project_data["project_number"].replace("-", ""):
+                            # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
+                            # sheet_type == 7 then use the asphalt directory
+                            if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                    (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
+                            # If the sheet_type is not a single compaction or asphalt sheet then use the
+                            elif sheet_type != "5" and sheet_type != "7":
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
+                if temp_count == 2:
+                    for project_data in data_store:
+                        if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                             project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                                project_number[-1] == project_data["project_number"][-1]):
+                            # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
+                            # sheet_type == 7 then use the asphalt directory
+                            if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                    (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
+                            # If the sheet_type is not a single compaction or asphalt sheet then use the
+                            elif sheet_type != "5" and sheet_type != "7":
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
+                if temp_count == 3:
+                    for project_data in data_store:
+                        if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
+                                project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
+                            if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
+                                    (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
+                            elif sheet_type != "5" and sheet_type != "7":
+                                project_description = project_data["project_description"]
+                                if mode != "Test":
+                                    file_path = project_data["project_directory"]
+                                    email_recipient_to = project_data["project_email_to"]
+                                    email_recipient_cc = project_data["project_email_cc"]
+                                else:
+                                    file_path = default_directory
+                                    email_recipient_to = default_email_to
+                                    email_recipient_cc = default_email_cc
+                                email_recipient_subject = project_data["project_email_subject"]
+                                project_number = project_data["project_number"]
+                                project_number_short = project_data["project_number_short"]
+                                raise ProjectFound
     except ProjectFound:
         pass
 
@@ -171,4 +172,26 @@ def project_info(project_number, project_number_short, f, sheet_type, analyzed):
         return project_number, project_number_short, email_recipient_to, email_recipient_cc, \
                email_recipient_subject
     else:
-        return project_number, project_number_short, project_description, file_path
+        if description != "":
+            for project_data in data_store:
+                if description == project_data["project_description"]:
+                    if mode != "Test":
+                        file_path = project_data["project_directory"]
+                        email_recipient_to = project_data["project_email_to"]
+                        email_recipient_cc = project_data["project_email_cc"]
+                        email_recipient_subject = project_data["project_email_subject"]
+                        project_number = project_data["project_number"]
+                        project_number_short = project_data["project_number_short"]
+                        break
+                    else:
+                        file_path = default_directory
+                        email_recipient_to = default_email_to
+                        email_recipient_cc = default_email_cc
+                        email_recipient_subject = ""
+                        project_number = project_data["project_number"]
+                        project_number_short = project_data["project_number_short"]
+                        break
+            return project_number, project_number_short, email_recipient_to, email_recipient_cc, \
+                   email_recipient_subject
+        else:
+            return project_number, project_number_short, project_description, file_path
