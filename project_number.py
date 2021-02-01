@@ -31,7 +31,7 @@ def detect_projectnumber(text):
     project_number = "NA"
     project_number_short = "NA"
     for i in range(6):
-        if i == 1:
+        if i == 0:
             if re.search(expressions[i], text, re.M) is not None:
                 try:
                     project_number = re.search(expressions[i], text, re.M).groups()
@@ -41,7 +41,8 @@ def detect_projectnumber(text):
                 project_number = project_number[-1]
                 project_number = project_number.replace(" ", "")
                 project_number_short = project_number
-        elif i in [2, 4, 5, 6, 7]:
+                break
+        elif i in [1, 3, 4, 5, 6]:
             if re.search(expressions[i], text, re.M) is not None:
                 project_number = re.search(expressions[i], text, re.M).groups()
                 project_number = project_number[-1]
@@ -51,12 +52,14 @@ def detect_projectnumber(text):
                     project_number_short = project_number_short[-1]
                 else:
                     project_number_short = project_number
-        elif i == 3:
+                break
+        elif i == 2:
             if re.search(expressions[i], text, re.M) is not None:
                 project_number = re.search(expressions[i], text, re.M).groups()
                 project_number = project_number[-1]
                 project_number = project_number.replace(" ", "")
                 project_number_short = project_number
+                break
     project_number_short = project_number_short.replace(" ", "")
     if project_number_short[0] == "0":
         project_number_short = project_number_short[1:]

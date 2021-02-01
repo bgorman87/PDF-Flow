@@ -21,8 +21,8 @@ def json_setup(state):
     #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
     # else:
     #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
-    # json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-    json_filename = r"C:\Users\bgorm\Downloads\sorter_data.json"
+    json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+    # json_filename = r"C:\Users\bgorm\Downloads\sorter_data.json"
     # Read JSON data into the data_store variable
     if json_filename:
         with open(json_filename, 'r') as f:
@@ -46,8 +46,8 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
     email_recipient_subject = ""
     default_email_to = "brandon.gorman@englobecorp.com; bgorman@live.ca"
     default_email_cc = "bgorman@live.com"
-    # default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
-    default_directory = r"C:\Users\bgorm\Downloads\Reports"
+    default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
+    # default_directory = r"C:\Users\bgorm\Downloads\Reports"
 
     try:
         # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire

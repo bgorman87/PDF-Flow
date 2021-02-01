@@ -30,6 +30,11 @@ def integer_test(s):
 break_strengths = []
 
 
+# Exception rule to break out of multi-level for loops when trying to identify project numbers
+class ItemFound(Exception):
+    pass
+
+
 class WorkerAnalyzeThread(QThread):
     analyze_complete = pyqtSignal(list)
     analyze_progress = pyqtSignal(int)
@@ -116,117 +121,119 @@ class WorkerAnalyzeThread(QThread):
                 coordinates = [[300, 360, 1100, 1550], [635, 675, 260, 320], [635, 675, 1270, 1450],
                                [770, 1100, 1210, 1290], [770, 1100, 510, 555]]
                 names = ["project number", "set number", "date cast", "break_strengths", "break ages"]
-                for i in range(4):
-                    for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
-                        y1 = int(coordinates[i][0] / scale)
-                        y2 = int(coordinates[i][1] * scale)
-                        x1 = int(coordinates[i][2] / scale)
-                        x2 = int(coordinates[i][3] * scale)
-                        if self.debug:
-                            print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
-                        if y2 > 2200:
-                            y2 = 2150
-                        if x2 > 1700:
-                            x2 = 1650
-                        # crop image to project number location
-                        cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
-                        # debug, show what project number image looks like to be analyzed
-                        if self.debug:
-                            cv2.imshow(names[i], image[y1:y2, x1:x2])
-                            cv2.waitKey(0)
-                        result = self.analyze_image(f_jpg)
+                for i in range(5):
+                    try:
+                        for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
+                            y1 = int(coordinates[i][0] / scale)
+                            y2 = int(coordinates[i][1] * scale)
+                            x1 = int(coordinates[i][2] / scale)
+                            x2 = int(coordinates[i][3] * scale)
+                            if self.debug:
+                                print('y1: {0}\ny2: {1}\nx1: {2}\nx2: {3}'.format(y1, y2, x1, x2))
+                            if y2 > 2200:
+                                y2 = 2150
+                            if x2 > 1700:
+                                x2 = 1650
+                            # crop image to project number location
+                            cv2.imwrite(f_jpg, image[y1:y2, x1:x2])
+                            # debug, show what project number image looks like to be analyzed
+                            if self.debug:
+                                cv2.imshow(names[i], image[y1:y2, x1:x2])
+                                cv2.waitKey(0)
+                            result = self.analyze_image(f_jpg)
 
-                        if i == 0:
-                            if not project_number_found:
-                                # analyze project number image for project number
-                                project_number, project_number_short = detect_projectnumber(result)
-                                for json_project in json_projects:
-                                    if project_number != "NA" and (project_number_short in json_project or
-                                                                   project_number in json_project):
-                                        if project_number[0] == "0":
-                                            project_number = project_number[1:]
-                                            project_number_short = project_number_short[1:]
-                                        project_number_found = True
-                                        break
-                                        # debug, print the project number
-                                if self.debug:
-                                    print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                                  project_number_short))
-                        elif i == 1:
-                            if re.search(r"(\d+)", result, re.M + re.I) is not None:
-                                set_number = re.search(r"(\d+)", result, re.M + re.I).groups()
-                                set_number = set_number[-1]
-                                break
-                            elif re.search(r"(\d+)", result, re.M + re.I) is not None:
-                                set_number = re.search(r"(\d+)", result, re.M + re.I).groups()
-                                set_number = set_number[-1]
-                                break
-                            else:
-                                set_number = "NA"
-                                # for consistency, add 0 in front of single digit set numbers
-                                # print('Length set_no: {0}'.format(len(set_number)))
-                            if len(set_number) < 2:
-                                set_number = "0" + str(set_number)
-                                # debug, print the set number
-                            if self.debug:
-                                print('Set Number: {0}'.format(set_number))
-                        elif i == 2:
-                            if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M | re.I) is not None:
-                                date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M + re.I) \
-                                    .groups()
-                                date_cast = date_cast[-1].replace("\n", "")
-                                break
-                            else:
-                                date_cast = "NA"
-                            # debug, print the date cast
-                            if self.debug:
-                                print('Date Cast: {0}'.format(date_cast))
-                        elif i == 3:
-                            break_strengths = result.split("\n")
-                            if break_strengths != "NA":
-                                break
-                            # debug, print the break strengths
-                            if self.debug:
-                                print('Break Strengths: {0}'.format(break_strengths))
-                        elif i == 4:
-                            if not break_strengths_bool:
-                                for num, character in enumerate(result):
-                                    if integer_test(character):
-                                        result = result[num:]
-                                        break
-                                break_ages = result.split("\n")
-                                break_strengths_bool = False
-                                if integer_test(break_ages[0]) or break_ages[0] == "AP":
-                                    # debug, print the latest break age
+                            if i == 0:
+                                if not project_number_found:
+                                    # analyze project number image for project number
+                                    project_number, project_number_short = detect_projectnumber(result)
+                                    for json_project in json_projects:
+                                        project_no_json_spaceless = json_project.replace(".", "").replace(" ", "")
+                                        project_no_spaceless = project_number.replace(".", "").replace(" ", "")
+                                        if project_number != "NA" and (project_number_short in json_project or
+                                                                       project_number in json_project or
+                                                                       project_no_json_spaceless == project_no_spaceless):
+                                            if project_number[0] == "0":
+                                                project_number = project_number[1:]
+                                                project_number_short = project_number_short[1:]
+                                            project_number_found = True
+                                            raise ItemFound
+                                            # debug, print the project number
                                     if self.debug:
-                                        print('All Break Ages: {0}'.format(break_ages))
-                                    if len(break_strengths) > 0:
-                                        try:
-                                            break_ages = break_ages[len(break_strengths) - 1]
-                                            break_strengths_bool = True
-                                        except Exception as e:
-                                            print(e)
-                                            break_strengths_bool = False
-                                        if not break_strengths_bool:
+                                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
+                                                                                                      project_number_short))
+                            elif i == 1:
+                                if re.search(r"(\d+)", result, re.M + re.I) is not None:
+                                    set_number = re.search(r"(\d+)", result, re.M + re.I).groups()
+                                    set_number = set_number[-1]
+                                    break
+                                else:
+                                    set_number = "NA"
+                                    # for consistency, add 0 in front of single digit set numbers
+                                    # print('Length set_no: {0}'.format(len(set_number)))
+                                if len(set_number) < 2:
+                                    set_number = "0" + str(set_number)
+                                    # debug, print the set number
+                                if self.debug:
+                                    print('Set Number: {0}'.format(set_number))
+                            elif i == 2:
+                                if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M | re.I) is not None:
+                                    date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M + re.I) \
+                                        .groups()
+                                    date_cast = date_cast[-1].replace("\n", "")
+                                    break
+                                else:
+                                    date_cast = "NA"
+                                # debug, print the date cast
+                                if self.debug:
+                                    print('Date Cast: {0}'.format(date_cast))
+                            elif i == 3:
+                                break_strengths = result.split("\n")
+                                if break_strengths != "NA":
+                                    break
+                                # debug, print the break strengths
+                                if self.debug:
+                                    print('Break Strengths: {0}'.format(break_strengths))
+                            elif i == 4:
+                                if not break_strengths_bool:
+                                    for num, character in enumerate(result):
+                                        if integer_test(character):
+                                            result = result[num:]
+                                            break
+                                    break_ages = result.split("\n")
+                                    break_strengths_bool = False
+                                    if integer_test(break_ages[0]) or break_ages[0] == "AP":
+                                        # debug, print the latest break age
+                                        if self.debug:
+                                            print('All Break Ages: {0}'.format(break_ages))
+                                        if len(break_strengths) > 0:
                                             try:
-                                                break_ages = break_ages[-1]
+                                                break_ages = break_ages[len(break_strengths) - 1]
+                                                break_strengths_bool = True
                                             except Exception as e:
                                                 print(e)
-                                                break_ages = '999'
-                                    else:
-                                        break_ages = break_ages[0]
-                                    if break_ages != "NA" and (integer_test(break_ages) or break_ages == "AP"):
-                                        if break_ages.upper() == "AP":
-                                            break_ages = "56"
-                                        break
-                            if not break_strengths_bool:
-                                try:
-                                    break_ages = break_ages[-1]
-                                except Exception as e:
-                                    print(e)
-                                    break_ages = '999'
-                            if self.debug:
-                                print('Latest Break Age: {0}'.format(break_ages))
+                                                break_strengths_bool = False
+                                            if not break_strengths_bool:
+                                                try:
+                                                    break_ages = break_ages[-1]
+                                                except Exception as e:
+                                                    print(e)
+                                                    break_ages = '999'
+                                        else:
+                                            break_ages = break_ages[0]
+                                        if break_ages != "NA" and (integer_test(break_ages) or break_ages == "AP"):
+                                            if break_ages.upper() == "AP":
+                                                break_ages = "56"
+                                            break
+                                if not break_strengths_bool:
+                                    try:
+                                        break_ages = break_ages[-1]
+                                    except Exception as e:
+                                        print(e)
+                                        break_ages = '999'
+                                if self.debug:
+                                    print('Latest Break Age: {0}'.format(break_ages))
+                    except ItemFound:
+                        pass
             elif text.lower().find("placement") > 0:
                 coordinates = [[290, 350, 1050, 1550], [635, 675, 260, 320]]
                 names = ["project number", "date placed"]
@@ -533,7 +540,10 @@ class WorkerAnalyzeThread(QThread):
         for i, result in enumerate(break_age_array):
             if result is None:
                 break_age_array[i] = 999
-        break_age_array.sort(key=int, reverse=True)
+        try:
+            break_age_array.sort(key=int, reverse=True)
+        except ValueError:
+            pass
         for age in break_age_array:
             break_set_no = []
             break_set_string = ""
