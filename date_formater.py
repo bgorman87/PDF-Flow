@@ -1,6 +1,6 @@
 import regex as re
 
-# months dictionary used to correct mis-detected months (ex. its used to transform detected Jen to Jan)
+# months dictionary used to correct mis-detected months (ex. it's used to transform detected Jen to Jan)
 months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9,
           "Nov": 10, "Dec": 11}
 
@@ -10,7 +10,7 @@ def month_value(month):
 
 
 def month_closest(found_month):
-    # If detected month is not found in the months dictionary, it is obviously a bad detected letter
+    # If detected month is not found in the month's dictionary, it is obviously a bad detected letter
     # To ease file renaming (not perfect), find month closest in similarity and assume that was the one detected.
     closest_month = found_month
     if found_month not in months:
@@ -67,7 +67,7 @@ def date_formatter(date_array):
         for i in range(0, len(date_year)):
             if len(date_year[i]) <= 2:
                 date_year[i] = "20" + date_year[i]
-            # To reduce misdetected years, if month is Feb to Nov assume year is current year.
+            # To reduce mis-detected years, if month is Feb to Nov assume year is current year.
             # if months[date_month[i]] != 0 or months[date_month[i]] != 11:
             #     now = datetime.datetime.now()
             #     date_year[i] = str(now.year)
