@@ -1,7 +1,7 @@
 import regex as re
 
 
-def detect_projectnumber(text):
+def detect_project_number(text):
     # Regex expressions for job numbers
     # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
     # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
