@@ -10,7 +10,7 @@ import regex as re
 from PyQt5.QtCore import *
 from pdf2image import convert_from_path
 
-from date_formater import date_formatter
+from date_formater import date_formatter, months
 from project_info import json_projects, project_info
 from project_number import detect_projectnumber
 
@@ -40,7 +40,7 @@ class WorkerAnalyzeThread(QThread):
     analyze_progress = pyqtSignal(int)
 
     def __init__(self, fileName, debug, analyzed):
-        super().__init__()
+        super(WorkerAnalyzeThread, self).__init__()
         self.f = fileName
         self.debug = debug
         self.analyzed = analyzed
@@ -60,12 +60,13 @@ class WorkerAnalyzeThread(QThread):
         project_number_short = "NA"
         sheet_type = "NA"
         project_number_found = False
-        break_strengths_bool = False
         # need to iterate through the image info array to analyze each individual image.
         for image in images_jpeg:
             # Set / reset count to 0 for appending file names
             count = 0
             # reset variables in case some do not get detected
+            set_number_found = False
+            break_strengths_bool = False
             set_number = "NA"
             sheet_type = "NA"
             date_cast = "NA"
@@ -78,6 +79,7 @@ class WorkerAnalyzeThread(QThread):
             jpg_replace_string = str(count) + ".jpg"
             # Get path variable to save pdf files as same name but as .jpg
             f_jpg = self.f.replace(".pdf", jpg_replace_string)
+            f_placement_jpg = self.f.replace(".pdf", jpg_replace_string.replace(".jpg", "placement.jpg"))
             # Get path variable to save entire sheet separately
             jpg_full_replace_string = "-full" + str(count) + ".jpg"
             full_jpg = self.f.replace(".pdf", jpg_full_replace_string)
@@ -90,36 +92,42 @@ class WorkerAnalyzeThread(QThread):
             if self.debug:
                 print('Image size (w, h): ({0}, {1})'.format(w, h))
             # save top right corner image as jpg
-            image.crop((1300, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
+            image.crop((1200, 0, 1700, h / 8)).save(f_jpg, 'JPEG')
+            image.crop((550, 175, 1150, 225)).save(f_placement_jpg, "JPEG")
             # save full image as .jpg
             image.save(full_jpg, 'JPEG')
 
             self.pre_process_image(f_jpg)
+            self.pre_process_image(f_placement_jpg)
 
             if self.debug:
-                image_test = cv2.imread(f_jpg)
+                image_test = cv2.imread(f_placement_jpg)
                 cv2.imshow("Top Corner", image_test)
                 cv2.waitKey(0)
             # Using tesseract on top right corner image, try and detect what type of sheet it is
             text = self.analyze_image(f_jpg)
 
+            text2 = self.analyze_image(f_placement_jpg)
+
             # once analyzed, top right corner image is not required anymore, so delete
             os.remove(f_jpg)
+            os.remove(f_placement_jpg)
 
             # Preprocess full image saved previously and analyze specific sections for remaining data
             self.pre_process_image(full_jpg)
             image = cv2.imread(full_jpg)
 
             # if top right image analysis yields "test" it is a concrete break sheet
-            if text.lower().find("test") > 0 & text.lower().find("placement") <= 0:
+            if (text.lower().find("test report") > 0 or "grout" in text.lower()) and\
+                    text.lower().find("lacement") <= 0:
                 sheet_type = "3"  # 3 = break
                 # debug, print sheet type to screen
                 if self.debug:
                     print('Sheet Type: {0}'.format(sheet_type))
 
                 # Once a project number is found in a package, it stops looking, which speeds up analysis
-                coordinates = [[300, 360, 1100, 1550], [635, 675, 260, 320], [635, 675, 1270, 1450],
-                               [770, 1100, 1210, 1290], [770, 1100, 510, 555]]
+                coordinates = [[315, 350, 1150, 1475], [630, 670, 250, 350], [630, 670, 1270, 1450],
+                               [760, 1200, 1200, 1320], [760, 1200, 400, 475]]
                 names = ["project number", "set number", "date cast", "break_strengths", "break ages"]
                 for i in range(5):
                     try:
@@ -158,23 +166,25 @@ class WorkerAnalyzeThread(QThread):
                                             project_number_found = True
                                             raise ItemFound
                                             # debug, print the project number
-                                    if self.debug:
-                                        print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
-                                                                                                      project_number_short))
-                            elif i == 1:
-                                if re.search(r"(\d+)", result, re.M + re.I) is not None:
-                                    set_number = re.search(r"(\d+)", result, re.M + re.I).groups()
-                                    set_number = set_number[-1]
-                                    break
-                                else:
-                                    set_number = "NA"
-                                    # for consistency, add 0 in front of single digit set numbers
-                                    # print('Length set_no: {0}'.format(len(set_number)))
-                                if len(set_number) < 2:
-                                    set_number = "0" + str(set_number)
-                                    # debug, print the set number
                                 if self.debug:
-                                    print('Set Number: {0}'.format(set_number))
+                                    print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
+                                                                                                  project_number_short))
+                            elif i == 1:
+                                if not set_number_found:
+                                    if re.search(r"(\d+)", result, re.M + re.I) is not None:
+                                        set_number = re.search(r"(\d+)", result, re.M + re.I).groups()
+                                        set_number = set_number[-1]
+                                        set_number_found = True
+                                    else:
+                                        set_number = "NA"
+                                        # for consistency, add 0 in front of single digit set numbers
+                                        # print('Length set_no: {0}'.format(len(set_number)))
+                                    if len(set_number) < 2:
+                                        set_number = "0" + str(set_number)
+                                        # debug, print the set number
+                                    if self.debug:
+                                        print('Set Number: {0}'.format(set_number))
+                                    if set_number_found: break
                             elif i == 2:
                                 if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M | re.I) is not None:
                                     date_cast = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{4})", result, re.M + re.I) \
@@ -189,6 +199,11 @@ class WorkerAnalyzeThread(QThread):
                             elif i == 3:
                                 break_strengths = result.split("\n")
                                 if break_strengths != "NA":
+                                    try:
+                                        break_strengths = [break_strength for break_strength in break_strengths if
+                                                       integer_test(break_strength[0])]
+                                    except:
+                                        break_strengths = "NA"
                                     break
                                 # debug, print the break strengths
                                 if self.debug:
@@ -199,7 +214,9 @@ class WorkerAnalyzeThread(QThread):
                                         if integer_test(character):
                                             result = result[num:]
                                             break
+                                    result = result.replace("\f", "")
                                     break_ages = result.split("\n")
+                                    break_ages = [break_age for break_age in break_ages if break_age != ""]
                                     break_strengths_bool = False
                                     if integer_test(break_ages[0]) or break_ages[0] == "AP":
                                         # debug, print the latest break age
@@ -209,6 +226,7 @@ class WorkerAnalyzeThread(QThread):
                                             try:
                                                 break_ages = break_ages[len(break_strengths) - 1]
                                                 break_strengths_bool = True
+                                                break
                                             except Exception as e:
                                                 print(e)
                                                 break_strengths_bool = False
@@ -234,14 +252,14 @@ class WorkerAnalyzeThread(QThread):
                                     print('Latest Break Age: {0}'.format(break_ages))
                     except ItemFound:
                         pass
-            elif text.lower().find("placement") > 0:
-                coordinates = [[290, 350, 1050, 1550], [635, 675, 260, 320]]
+            elif text.lower().find("placement") > 0 or text2.lower().find("lacement") > 0:
+                coordinates = [[310, 340, 380, 660], [645, 680, 1280, 1420]]
                 names = ["project number", "date placed"]
                 sheet_type = "1"  # 1 = "placement"
                 # debug, print sheet type to screen
                 if self.debug:
                     print('Sheet Type: {0}'.format(sheet_type))
-                for i in range(1):
+                for i in range(2):
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
                         y1 = int(coordinates[i][0] / scale)
                         y2 = int(coordinates[i][1] * scale)
@@ -260,7 +278,7 @@ class WorkerAnalyzeThread(QThread):
                             cv2.imshow(names[i], image[y1:y2, x1:x2])
                             cv2.waitKey(0)
                         results = self.analyze_image(f_jpg)
-                        if i == 1:
+                        if i == 0:
                             if not project_number_found:
                                 # analyze project number image for project number
                                 project_number, project_number_short = detect_projectnumber(results)
@@ -278,18 +296,30 @@ class WorkerAnalyzeThread(QThread):
                             if self.debug:
                                 print('Project Number: {0}\nProject Number Short: {1}'.format(project_number,
                                                                                               project_number_short))
-                        elif i == 2:
+                        elif i == 1:
                             # analyze date placed image for date placed
                             if re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", results, re.M | re.I) is not None:
                                 date_placed = re.search(r"(\d{2}[\s-]+[A-z]{3}[\s-]\d{2})", results,
                                                         re.M + re.I).groups()
                                 date_placed = date_placed[-1].replace("\n", "")
                                 break
+                            elif re.search(r"(\d{4}-\d{2}-\d{2})", results, re.M | re.I) is not None:
+                                date_placed = re.search(r"(\d{4}-\d{2}-\d{2})", results, re.M + re.I) \
+                                    .groups()
+                                date_placed_list = date_placed[-1].split("-")
+                                placed_month = ""
+                                for (month, month_int) in months.items():
+                                    if month_int == int(date_placed_list[1])-1:
+                                        placed_month = month
+                                        break
+                                date_placed = f"{date_placed_list[2]}-{placed_month}-{date_placed_list[0]}"
+                                date_placed = date_placed.replace("\n", "")
+                                break
                             else:
                                 date_placed = "NA"
                             # debug, print the date cast
-                        if self.debug:
-                            print('Date Placed: {0}'.format(date_placed))
+                            if self.debug:
+                                print('Date Placed: {0}'.format(date_placed))
             elif text.lower().find("density") > 0:
                 sheet_type = "5"  # 5 = "field density"
                 coordinates = [[290, 350, 1050, 1550], [660, 725, 300, 475]]
@@ -297,7 +327,7 @@ class WorkerAnalyzeThread(QThread):
                 # debug, print sheet type to screen
                 if self.debug:
                     print('Sheet Type: {0}'.format(sheet_type))
-                for i in range(1):
+                for i in range(2):
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
                         y1 = int(coordinates[i][0] / scale)
                         y2 = int(coordinates[i][1] * scale)
@@ -352,7 +382,7 @@ class WorkerAnalyzeThread(QThread):
                 # debug, print sheet type to screen
                 if self.debug:
                     print('Sheet Type: {0}'.format(sheet_type))
-                for i in range(1):
+                for i in range(2):
                     for scale in [1.0, 1.02, 1.04, 1.06, 1.08, 1.1]:
                         y1 = int(coordinates[i][0] / scale)
                         y2 = int(coordinates[i][1] * scale)
@@ -430,7 +460,7 @@ class WorkerAnalyzeThread(QThread):
             self.db.commit()
             count += 1
 
-            if "2000746" in project_number_short:  # Dexter Project
+            if "2102060" in project_number_short:  # Dexter Project
                 if sheet_type == "3":  # == break
                     coordinates = [1600, 1850, 610, 1550]
                 else:
@@ -563,11 +593,12 @@ class WorkerAnalyzeThread(QThread):
                     if k == 0:
                         break_set_string = str(temp_set)
                     else:
-                        if int(temp_set) == int(current_set) + 1:
-                            replace_string = "-" + current_set
-                            break_set_string = break_set_string.replace(replace_string, "") + "-" + str(temp_set)
-                        else:
-                            break_set_string = break_set_string + "," + str(temp_set)
+                        if temp_set is not None and temp_set != "None":
+                            if int(temp_set) == int(current_set) + 1:
+                                replace_string = "-" + current_set
+                                break_set_string = break_set_string.replace(replace_string, "") + "-" + str(temp_set)
+                            else:
+                                break_set_string = break_set_string + "," + str(temp_set)
                     current_set = temp_set
             if break_date_array:
                 break_date = date_formatter(break_date_array)
@@ -605,7 +636,10 @@ class WorkerAnalyzeThread(QThread):
             file_title = file_title + sieve_string
         if placement_string == "" and break_string == "" and \
                 density_string == "" and asphalt_string == "" and sieve_string == "":
-            file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
+            if "Sheet_Type_Not_Found" not in split_name:
+                file_title = "Sheet_Type_Not_Found_(" + split_name + ")"
+            else:
+                file_title = split_name
 
         # Wont happen much in full use but may encounter same file names during testing
         # Just add a random integer at end of file for now
@@ -618,8 +652,8 @@ class WorkerAnalyzeThread(QThread):
                 os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
             rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
         if len(str(rename_path)) > 260 or len(str(rename_path_project_dir)) > 260:
-            file_title = file_title.replace("-2020", "")
             file_title = file_title.replace("-2021", "")
+            file_title = file_title.replace("-2022", "")
             rename_path = os.path.abspath(
                 os.path.join(self.f.replace(self.f.split("/").pop(), ""), file_title + ".pdf"))
             rename_path_project_dir = os.path.abspath(os.path.join(file_path, file_title + ".pdf"))
@@ -653,7 +687,7 @@ class WorkerAnalyzeThread(QThread):
         data = rename_path + "%%" + rename_path_project_dir
         returns = [print_string, file_title, data, project_number, project_number_short]
         self.cur.execute("DELETE From files")
-        self.analyze_progress.emit(50)
+        self.analyze_progress.emit(100)
         self.analyze_complete.emit(returns)
 
     def analyze_image(self, img_path):
@@ -662,10 +696,9 @@ class WorkerAnalyzeThread(QThread):
         # "0123456789 --psm " + str(psm_arg)
         config_str = "--psm " + str(6)
         text = pytesseract.image_to_string(img_path, config=config_str)
-        self.analyze_progress.emit(25)
         # If debug enabled, print all detected text
         if self.debug:
-            print(text)
+            print(f"Text Found: {text}")
         return text
 
     def pre_process_image(self, path, age_detect=None):
@@ -702,7 +735,6 @@ class WorkerAnalyzeThread(QThread):
         # perform canny edge detection
         elif args["preprocess"] == "canny":
             gray = cv2.Canny(gray, 100, 200)
-        self.analyze_progress.emit(25)
         # write the grayscale image to disk as a temporary file so we can
         # apply OCR to it
         # filename = "{}.png".format(os.getpid())
