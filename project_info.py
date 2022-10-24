@@ -63,7 +63,7 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
                     for project_data in data_store:
                         if project_number.replace(".", "") == project_data["project_number"].replace(".", "") or \
                                 project_number.replace("-", "") == project_data["project_number"].replace("-", ""):
-                            # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
+                            # If sheet_type == 5 then it's a compaction sheet so use the compaction directory. Or if the
                             # sheet_type == 7 then use the asphalt directory
                             if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                     (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
