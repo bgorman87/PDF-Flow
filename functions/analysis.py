@@ -10,9 +10,9 @@ import regex as re
 from PyQt5.QtCore import *
 from pdf2image import convert_from_path
 
-from date_formater import date_formatter, months
-from project_info import json_projects, project_info
-from project_number import detect_projectnumber
+from functions.date_formater import date_formatter, months
+from functions.project_info import json_projects, project_info
+from functions.project_number import detect_project_number
 
 # hard coded tesseract and poppler path from current working directory
 tesseract_path = str(os.path.abspath(os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
@@ -153,7 +153,7 @@ class WorkerAnalyzeThread(QThread):
                             if i == 0:
                                 if not project_number_found:
                                     # analyze project number image for project number
-                                    project_number, project_number_short = detect_projectnumber(result)
+                                    project_number, project_number_short = detect_project_number(result)
                                     for json_project in json_projects:
                                         project_no_json_spaceless = json_project.replace(".", "").replace(" ", "")
                                         project_no_spaceless = project_number.replace(".", "").replace(" ", "")
@@ -281,7 +281,7 @@ class WorkerAnalyzeThread(QThread):
                         if i == 0:
                             if not project_number_found:
                                 # analyze project number image for project number
-                                project_number, project_number_short = detect_projectnumber(results)
+                                project_number, project_number_short = detect_project_number(results)
                                 for json_project in json_projects:
                                     if project_number != "NA" and (project_number_short in json_project or
                                                                    project_number in json_project):
@@ -349,7 +349,7 @@ class WorkerAnalyzeThread(QThread):
                         if i == 0:
                             if not project_number_found:
                                 # analyze project number image for project number
-                                project_number, project_number_short = detect_projectnumber(results)
+                                project_number, project_number_short = detect_project_number(results)
                                 for json_project in json_projects:
                                     if project_number != "NA" and (project_number_short in json_project or
                                                                    project_number in json_project):
@@ -404,7 +404,7 @@ class WorkerAnalyzeThread(QThread):
                         if i == 0:
                             if not project_number_found:
                                 # analyze project number image for project number
-                                project_number, project_number_short = detect_projectnumber(results)
+                                project_number, project_number_short = detect_project_number(results)
                                 for json_project in json_projects:
                                     if project_number != "NA" and (project_number_short in json_project or
                                                                    project_number in json_project):
