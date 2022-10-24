@@ -1,5 +1,5 @@
 # Report Sorter
-This program has funtionality to:
+This program has multi-threaded functionality to:
 - Analyze PDF document contents
   - Use OCR results to retrieve project data
   - Use project data to format filename
