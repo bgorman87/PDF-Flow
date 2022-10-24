@@ -17,12 +17,21 @@ def json_setup(state):
     global mode
 
     mode = state
-    # if self.testBox.currentText() != "Test":
-    #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-    # else:
-    #     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_test.json"
+
+    # JSON data stored as following structure (values here are example data):
+    # [{
+    #     "project_number": "2200000.059.1000.0293",
+    #     "project_number_short": "2200000.059",
+    #     "contract_number": "D302-572",
+    #     "project_description": "ExampleProjectDescription",
+    #     "project_directory": "C:\\PathToServerFolder",
+    #     "project_email_to": "email@testexample.com; email2@testexample.com",
+    #     "project_email_cc": "email3@testexample.com; email4@testexample.com",
+    #     "project_email_subject": "Company - D302-572 - Example Project Description Expanded - Report Results"
+    # }]
+
     json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
-    # json_filename = r"C:\Users\bgorm\Downloads\sorter_data.json"
+
     # Read JSON data into the data_store variable
     if json_filename:
         with open(json_filename, 'r') as f:
@@ -44,10 +53,9 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
     email_recipient_to = ""
     email_recipient_cc = ""
     email_recipient_subject = ""
-    default_email_to = "brandon.gorman@englobecorp.com; bgorman@live.ca"
+    default_email_to = "bgorman@live.ca"
     default_email_cc = "bgorman@live.com"
     default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
-    # default_directory = r"C:\Users\bgorm\Downloads\Reports"
 
     try:
         # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire
@@ -98,7 +106,8 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
                 if temp_count == 2:
                     for project_data in data_store:
                         if ((project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                             project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")) and
+                             project_number_short.replace("-", "") in project_data["project_number"].replace("-",
+                                                                                                             "")) and
                                 project_number[-1] == project_data["project_number"][-1]):
                             # If sheet_type == 5 then its a compaction sheet so use the compaction directory. Or if the
                             # sheet_type == 7 then use the asphalt directory
@@ -135,7 +144,8 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
                 if temp_count == 3:
                     for project_data in data_store:
                         if (project_number_short.replace(".", "") in project_data["project_number"].replace(".", "") or
-                                project_number_short.replace("-", "") in project_data["project_number"].replace("-", "")):
+                                project_number_short.replace("-", "") in project_data["project_number"].replace("-",
+                                                                                                                "")):
                             if (sheet_type == "5" and project_data["contract_number"] == "NOTNSTIR-Gravels") or \
                                     (sheet_type == "7" and project_data["contract_number"] == "NOTNSTIR-Asphalt"):
                                 project_description = project_data["project_description"]
