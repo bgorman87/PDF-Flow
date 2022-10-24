@@ -8,8 +8,8 @@ from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pdf2image import convert_from_path
 
-from analysis import WorkerAnalyzeThread, detect_package_number
-from project_info import project_info, json_setup
+from functions.analysis import WorkerAnalyzeThread, detect_package_number
+from functions.project_info import project_info, json_setup
 
 debug = False
 
