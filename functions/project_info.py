@@ -1,4 +1,5 @@
 import json
+import os
 
 
 # Exception rule to break out of multi-level for loops when trying to identify project numbers
@@ -29,8 +30,9 @@ def json_setup(state):
     #     "project_email_cc": "email3@testexample.com; email4@testexample.com",
     #     "project_email_subject": "Company - D302-572 - Example Project Description Expanded - Report Results"
     # }]
-
-    json_filename = r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Desktop\sorter_data.json"
+    cwd = os.getcwd()
+    json_filename = os.path.join(cwd, "sorter_data.json")
+    print(json_filename)
 
     # Read JSON data into the data_store variable
     if json_filename:
@@ -55,7 +57,7 @@ def project_info(project_number="", project_number_short="", f="", sheet_type=1,
     email_recipient_subject = ""
     default_email_to = "bgorman@live.ca"
     default_email_cc = "bgorman@live.com"
-    default_directory = r"C:\\Users\\gormbr\\OneDrive - EnGlobe Corp\\Desktop\\reports"
+    default_directory = r"B:\Documents\Programming\GitHub\modular_report_sorter\test_files"
 
     try:
         # There are two ways to compare project numbers here. The first attempt tries to exactly match the entire

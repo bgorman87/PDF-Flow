@@ -34,17 +34,24 @@ break_strengths = []
 class ItemFound(Exception):
     pass
 
+class WorkerSignals(QObject):
+    
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(list)
+    progress = pyqtSignal(int)
 
-class WorkerAnalyzeThread(QThread):
-    analyze_complete = pyqtSignal(list)
-    analyze_progress = pyqtSignal(int)
 
-    def __init__(self, fileName, debug, analyzed):
+class WorkerAnalyzeThread(QRunnable):
+
+    def __init__(self, file_name, debug, analyzed):
         super(WorkerAnalyzeThread, self).__init__()
-        self.f = fileName
+        self.f = file_name
         self.debug = debug
         self.analyzed = analyzed
+        self.signals = WorkerSignals()
 
+    @pyqtSlot()
     def run(self):
         # create a sqlite3 table in memory in order to easily sort and manipulate the analyzed results
         self.db = sqlite3.connect(':memory:')
@@ -687,8 +694,8 @@ class WorkerAnalyzeThread(QThread):
         data = rename_path + "%%" + rename_path_project_dir
         returns = [print_string, file_title, data, project_number, project_number_short]
         self.cur.execute("DELETE From files")
-        self.analyze_progress.emit(100)
-        self.analyze_complete.emit(returns)
+        self.signals.progress.emit(100)
+        self.signals.result.emit(returns)
 
     def analyze_image(self, img_path):
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
@@ -748,17 +755,14 @@ class WorkerAnalyzeThread(QThread):
 
 
 def detect_package_number(file_path, debug):
-    only_files = [f_local[0:6] for f_local in os.listdir(file_path) if
-                  os.path.isfile(os.path.join(file_path, f_local))
-                  and f_local[-4:] == ".pdf"]
-    if debug:
-        print(only_files)
+    only_files = [f_local[0:6] for f_local in os.listdir(file_path) if "pdf" in f_local[-4:].lower()]
+
     package_number_highest_str = "01"
     package_numbers = []
     if only_files:
         for file in only_files:
-            if re.search(r"(\d+)-[\dA-z]", file, re.I) is not None:
-                package_number = re.search(r"(\d+)-[\dA-z]", file, re.I).groups()
+            if re.search(r"(\d+)[-.][\dA-z]", file, re.I) is not None:
+                package_number = re.search(r"(\d+)[-.][\dA-z]", file, re.I).groups()
                 if debug:
                     print("package_number: {0}\npackage_number[-1]: {1}".format(package_number,
                                                                                 package_number[-1]))
