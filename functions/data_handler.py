@@ -3,16 +3,34 @@ import sqlite3
 import errno
 from PyQt5.QtCore import *
 import time
-from psycopg2 import sql
 
-from functions.analysis import WorkerSignals
+db_file_path = os.path.join(os.getcwd(), "database", "db.sqlite3")
 
-db = os.path.join(os.getcwd(), "database", "db.sqlite3")
+class WorkerSignals(QObject):
+    """Class of signals to be used from threaded processes"""
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(list)
+    progress = pyqtSignal(int)
 
 def scrub(string_item):
-    return ''.join((chr for chr in string_item if chr.isalnum() or chr == "_"))
+    """Prevents SQL injection by only allowing alpha-numeric, "_", "-", ".", and " " characters
 
-def connect(db_path):
+    Args:
+        string_item (str): string used in sql query
+
+    Returns:
+        str: scrubbed string
+    """
+    try:
+        scrubbed = ''.join((chr for chr in string_item if chr.isalnum() or chr in ["_", "-", ".", " "]))
+        return  scrubbed
+    except TypeError:
+        print(f"Scrub Error: Text does not need scrubbing - {string_item}")
+        return string_item
+    
+
+def db_connect(db_path):
     """Connects to SQLITE3 database
 
     Args:
@@ -25,6 +43,8 @@ def connect(db_path):
         connection: database connection
         cur: connection cursor
     """
+
+    # Check if database exists at path
     try:
         if not os.path.exists(db_path):
             raise FileNotFoundError
@@ -33,16 +53,20 @@ def connect(db_path):
         print("Empty database will be created in the noted location.")
         pass
 
+    # try to connect
     try:
         conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
 
+        # Necessary to allow for foriegn keys so upon deletion, children get deleted as well
+        conn.execute("PRAGMA foreign_keys = 1")
+
+        cur = conn.cursor()
         return [conn, cur]
     except ConnectionError:
         print("Cannot Connect to the database file")
 
 
-def disconnect(conn, cur):
+def db_disconnect(conn, cur):
     """Disconnects an existing database connection
 
     Args:
@@ -56,18 +80,22 @@ def disconnect(conn, cur):
     try:
         cur.close()
         conn.close()
-        print("Database succesfully disconnected")
-
+        # print("Database succesfully disconnected")
     except ConnectionError:
         print("Cannot Connect to the database file")
 
 def initialize_database():
+    """Checks if the database and tables exists and if not will create the database and intialize the necessary tables."""
+
+
+    try:
+        connection, cursor = db_connect(db_file_path)
+
         try:
-            connection, cursor = connect(db)
-            database_file_table_check = "SELECT * FROM file_profiles;"
-            database_info_table_check = "SELECT * FROM file_profile_info_locations;"
-            _ = cursor.execute(database_file_table_check)
-            _ = cursor.execute(database_info_table_check)
+            database_profile_table_check = """SELECT * FROM profiles;"""
+            database_paramater_table_check = """SELECT * FROM profile_paramaters;"""
+            _ = cursor.execute(database_profile_table_check)
+            _ = cursor.execute(database_paramater_table_check)
             print("Database found with proper tables.")
             tables_initialized = True
         except sqlite3.DatabaseError as e:
@@ -76,59 +104,145 @@ def initialize_database():
             tables_initialized = False
             pass
         finally:
-            disconnect(connection, cursor)
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+        print(e)
 
-        if not tables_initialized:
+    if not tables_initialized:
+        try:
+            connection, cursor = db_connect(db_file_path)
             try:
-                connection, cursor = connect(db)
-                database_initialization = """CREATE TABLE IF NOT EXISTS file_profiles (
-                    unique_file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    unique_file_itentifier_text TEXT NOT NULL UNIQUE,
-                    unique_id_x1 REAL,
-                    unique_id_x2 REAL,
-                    unique_id_y1 REAL,
-                    unique_id_y2 REAL
+                database_initialization = """CREATE TABLE IF NOT EXISTS profiles (
+                    profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    profile_identifier_text TEXT NOT NULL,
+                    unique_profile_name TEXT NOT NULL UNIQUE,
+                    x_1 REAL,
+                    x_2 REAL,
+                    y_1 REAL,
+                    y_2 REAL,
+                    file_naming_format TEXT
                     );"""
                 cursor.execute(database_initialization)
 
-                _ = cursor.execute(database_file_table_check)
-                print("file_profiles table successfully created")
+                _ = cursor.execute(database_profile_table_check)
+                print("profiles table successfully created")
 
-                database_initialization = """CREATE TABLE IF NOT EXISTS file_profile_info_locations (
-                    info_unique_id INTEGER PRIMARY KEY,
-                    file_unique_id INTEGER,
+                database_initialization = """CREATE TABLE IF NOT EXISTS profile_paramaters (
+                    paramater_id INTEGER PRIMARY KEY,
+                    profile_id INTEGER,
                     description TEXT,
                     regex TEXT,
-                    info_location_x1 REAL,
-                    info_location_x2 REAL,
-                    info_location_y1 REAL,
-                    info_location_y2 REAL,
-                    FOREIGN KEY(file_unique_id) REFERENCES file_profiles(unique_file_id)
+                    x_1 REAL,
+                    x_2 REAL,
+                    y_1 REAL,
+                    y_2 REAL,
+                    example_text TEXT,
+                    FOREIGN KEY(profile_id) REFERENCES profiles(profile_id) ON DELETE CASCADE
                     );"""
                 cursor.execute(database_initialization)
 
-                _ = cursor.execute(database_info_table_check)
-                print("file_profile_info_locations table successfully created")
+                _ = cursor.execute(database_paramater_table_check)
+                print("profile_paramaters table successfully created")
                 print("Database and all tables are successfully initialized.")
 
             except sqlite3.DatabaseError as e:
                 print(f"DB Initialization error: {e}")
+                raise
             finally:
-                disconnect(connection, cursor)
+                db_disconnect(connection, cursor)
+        except ConnectionError as e:
+            print(e)
+            raise
+
+
+def fetch_active_params(file_profile_name):
+    """Get active paramaters for a file_profile
+
+    Args:
+        file_profile_name (str): unique file profile name
+
+    Returns:
+        list: Format [(paramater_id, description, example_text)]
+    """    
+    try:
+        connection, cursor = db_connect(db_file_path)
+        try:
+            file_profile_id_query = """SELECT profile_id FROM profiles WHERE unique_profile_name=?"""
+            file_profile_id = cursor.execute(file_profile_id_query, (file_profile_name,)).fetchone()[0]
+            active_params_query = """SELECT paramater_id, description, example_text FROM profile_paramaters WHERE profile_id=?"""
+            active_params = cursor.execute(active_params_query, (file_profile_id,)).fetchall()
+            return [("-1", "doc_num", "01")] + active_params
+        except (TypeError, sqlite3.DatabaseError) as e:
+            return []
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+        print(e)
+
+def fetch_file_profiles():
+    """Fetces the file_profile data to display to user in dropdowns
+
+    Returns:
+        list: Format [[file_profile_name, identifier_text]]
+    """    
+    try:
+        connection, cursor = db_connect(db_file_path)
+        try:
+            file_profiles_query = """SELECT unique_profile_name, profile_identifier_text FROM profiles"""
+            profiles = cursor.execute(file_profiles_query).fetchall()
+            if not profiles:
+                return [["No Profiles Found",""],]
+            return [["Choose File Profile",""]] + profiles
+        except sqlite3.DatabaseError as e:
+            return [["Database Error",""],]
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+        print(e)
+
+def update_file_profile_file_name_pattern(file_profile_name, pattern, conn, cur):
+    """Updates the file naming scheme in the database for a file_profile
+
+    Args:
+        file_profile_name (str): Unique profile name to update
+        pattern (str): File naming pattern for analyzed files
+        conn (SQLite3 Connection): Open connection to SQLite3 database
+        cur (SQLite3 Connection Cursor): Open Cursor to SQLite3 Connection
+    """    
+    try:
+        file_profiles_query = """UPDATE profiles SET file_naming_format=? WHERE profile_identifier_text=?"""
+        cur.execute(file_profiles_query, (pattern, file_profile_name,)).fetchall()
+        # Conn gets closed after where function is initially called
+        conn.commit()
+    except sqlite3.DatabaseError as e:
+        print(e)
 
 
 def fetch_table_names():
-    connection, cursor = connect(db)
-    table_names_sql = "SELECT name FROM sqlite_master WHERE type='table'"
-    table_names = cursor.execute(table_names_sql).fetchall()
-    table_names = [table_name[0] for table_name in table_names if "sqlite_sequence" not in table_name[0]]
-    print(table_names)
-    return table_names
+    """Fetches table names in database for users to choose in dorpdown list
+
+    Returns:
+        List: List of table names
+    """    
+    try:
+        connection, cursor = db_connect(db_file_path)
+        try:
+            table_names_sql = """SELECT name FROM sqlite_master WHERE type='table'"""
+            table_names = cursor.execute(table_names_sql).fetchall()
+            table_names = [table_name[0] for table_name in table_names if "sqlite_sequence" not in table_name[0]]
+            if not table_names:
+                return ["No Tables Found",]
+            return ["Choose Table"] + table_names
+        except sqlite3.DatabaseError as e:
+            return ["No Tables Found",]
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+        print(e)
 
 
 class fetch_data(QRunnable):
-    
-
+    """Class used to thread the data fetching of database results"""
     def __init__(self, database_table):
         super(fetch_data, self).__init__()
         self.database_fetch_results = []
@@ -137,67 +251,20 @@ class fetch_data(QRunnable):
     
     @pyqtSlot()
     def run(self):
-        connection, cursor = connect(db)
+        """Fetcehs all database results from a database table"""
 
-        query = f"SELECT * FROM {scrub(self.database_table)}"
-        print(query)
         try:
-            self.database_fetch_results = cursor.execute(query).fetchall()
-            print(self.database_fetch_results)
-            self.signals.result.emit(self.database_fetch_results)
-        except sqlite3.DatabaseError as e:
+            connection, cursor = db_connect(db_file_path)
+            # Probably not proper way to mitigate SQL injections but good enough since table name string is not user supplied
+            query = f"""SELECT * FROM {scrub(self.database_table)}"""
+            try:
+                self.database_fetch_results = cursor.execute(query).fetchall()
+                names = list(map(lambda x: x[0], cursor.description))
+                self.signals.result.emit([self.database_fetch_results, names])
+            except sqlite3.DatabaseError as e:
+                print(e)
+                self.signals.result.emit([])
+            finally:
+                db_disconnect(connection, cursor)
+        except ConnectionError as e:
             print(e)
-            self.signals.result.emit([])
-        finally:
-            disconnect(connection, cursor)
-
-    
-
-        
-
-
-
-# add_data = """INSERT INTO file_profiles(unique_file_itentifier_text, unique_id_x1, unique_id_x2, unique_id_y1, unique_id_y2) VALUES(?,?,?,?,?)"""
-# data = [("test report", 1200, 1700, 0, 150),
-# ("lacement", 1200, 1700, 0, 150),
-# ("density", 1200, 1700, 0, 150)]
-
-# for data_entry in data:
-#     try:
-#         cursor.execute(add_data, data_entry)
-#         connection.commit()
-#     except sqlite3.IntegrityError as e:
-#         print(f"Error inserting data: {e}")
-#         pass
-
-
-# add_data = """INSERT INTO file_profile_info_locations(file_unique_id,
-#             description,
-#             info_location_x1,
-#             info_location_x2,
-#             info_location_y1,
-#             info_location_y2)
-#             VALUES(?,?,?,?,?,?);"""
-
-# data = [["lacement", "project number", 380, 660, 310, 340],
-#         ["lacement", "date placed", 1280, 1420, 645, 680],
-#         ["test report", "project number", 1150, 1475, 315, 350],
-#         ["test report", "set number", 250, 350, 630, 670],
-#         ["test report", "date cast", 1270, 1450, 630, 670],
-#         ["test report", "break strengths", 1200, 1320, 760, 1200],
-#         ["test report", "break ages", 400, 475, 760, 1200],
-#         ["density", "project number", 1050, 1550, 290, 350],
-#         ["density", "date placed", 300, 475, 660, 725]
-#         ]
-
-
-# for i, data_entry in enumerate(data):
-#     file_id_select = "SELECT unique_file_id FROM file_profiles WHERE unique_file_itentifier_text = ?;"
-#     file_id = cursor.execute(file_id_select, (data_entry[0],))
-#     data[i][0] = file_id.fetchone()[0]
-
-
-# cursor.executemany(add_data, data)
-# connection.commit()
-
-

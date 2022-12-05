@@ -3,3 +3,12 @@
 sorter_data.json
 test_files
 .vscode
+intersection_test.py
+test_file_renamer.py
+paint_test.py
+manual_db_entry.py
+paint_test_copy.py
+analysis_old.py
+project_info*
+project_number*
+db.sqlite3
