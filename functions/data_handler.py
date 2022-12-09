@@ -14,7 +14,7 @@ class WorkerSignals(QObject):
     progress = pyqtSignal(int)
 
 def scrub(string_item):
-    """Prevents SQL injection by only allowing alpha-numeric, "_", "-", ".", and " " characters
+    """Helps prevent SQL injection by only allowing alpha-numeric, "_", "-", ".", and " " characters
 
     Args:
         string_item (str): string used in sql query
@@ -94,10 +94,12 @@ def initialize_database():
         try:
             database_profile_table_check = """SELECT * FROM profiles;"""
             database_paramater_table_check = """SELECT * FROM profile_paramaters;"""
+            project_data_check = """SELECT * FROM project_data;"""
             _ = cursor.execute(database_profile_table_check)
             _ = cursor.execute(database_paramater_table_check)
-            print("Database found with proper tables.")
+            _ = cursor.execute(project_data_check)
             tables_initialized = True
+            print("Database found with proper tables.")
         except sqlite3.DatabaseError as e:
             print(f"DB Initialization error: {e}")
             print("Initializing database tables...")
@@ -143,6 +145,21 @@ def initialize_database():
 
                 _ = cursor.execute(database_paramater_table_check)
                 print("profile_paramaters table successfully created")
+
+                database_initialization = """CREATE TABLE IF NOT EXISTS project_data (
+                        id INTEGER PRIMARY KEY,
+                        project_number TEXT UNIQUE NOT NULL,
+                        directory TEXT NOT NULL,
+                        email_to TEXT NOT NULL,
+                        email_cc TEXT,
+                        email_bcc TEXT,
+                        email_subject TEXT NOT NULL
+                        );"""
+                cursor.execute(database_initialization)
+
+                _ = cursor.execute(project_data_check)
+                print("project_data table successfully created")
+                    
                 print("Database and all tables are successfully initialized.")
 
             except sqlite3.DatabaseError as e:
