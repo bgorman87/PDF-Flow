@@ -1,26 +1,29 @@
 import os
 import sqlite3
 import errno
-from PyQt5.QtCore import *
+from PySide6.QtCore import *
 import time
+import csv
+
+import debugpy
 
 db_file_path = os.path.join(os.getcwd(), "database", "db.sqlite3")
 
 class WorkerSignals(QObject):
     """Class of signals to be used from threaded processes"""
-    finished = pyqtSignal()
-    error = pyqtSignal(tuple)
-    result = pyqtSignal(list)
-    progress = pyqtSignal(int)
+    finished = Signal()
+    error = Signal(tuple)
+    result = Signal(list)
+    progress = Signal(int)
 
 def scrub(string_item):
-    """Helps prevent SQL injection by only allowing alpha-numeric, "_", "-", ".", and " " characters
+    """Used to clean up OCR results as well as help prevent SQL injection/errors.
 
     Args:
-        string_item (str): string used in sql query
+        string_item (str): string to be cleaned
 
     Returns:
-        str: scrubbed string
+        str: Initial string with only alpha-numeric, "_", "-", ".", and " " characters remaining
     """
     try:
         scrubbed = ''.join((chr for chr in string_item if chr.isalnum() or chr in ["_", "-", ".", " "]))
@@ -93,10 +96,10 @@ def initialize_database():
 
         try:
             database_profile_table_check = """SELECT * FROM profiles;"""
-            database_paramater_table_check = """SELECT * FROM profile_paramaters;"""
+            database_parameter_table_check = """SELECT * FROM profile_parameters;"""
             project_data_check = """SELECT * FROM project_data;"""
             _ = cursor.execute(database_profile_table_check)
-            _ = cursor.execute(database_paramater_table_check)
+            _ = cursor.execute(database_parameter_table_check)
             _ = cursor.execute(project_data_check)
             tables_initialized = True
             print("Database found with proper tables.")
@@ -129,8 +132,8 @@ def initialize_database():
                 _ = cursor.execute(database_profile_table_check)
                 print("profiles table successfully created")
 
-                database_initialization = """CREATE TABLE IF NOT EXISTS profile_paramaters (
-                    paramater_id INTEGER PRIMARY KEY,
+                database_initialization = """CREATE TABLE IF NOT EXISTS profile_parameters (
+                    parameter_id INTEGER PRIMARY KEY,
                     profile_id INTEGER,
                     description TEXT,
                     regex TEXT,
@@ -143,8 +146,8 @@ def initialize_database():
                     );"""
                 cursor.execute(database_initialization)
 
-                _ = cursor.execute(database_paramater_table_check)
-                print("profile_paramaters table successfully created")
+                _ = cursor.execute(database_parameter_table_check)
+                print("profile_parameters table successfully created")
 
                 database_initialization = """CREATE TABLE IF NOT EXISTS project_data (
                         id INTEGER PRIMARY KEY,
@@ -171,26 +174,26 @@ def initialize_database():
             print(e)
             raise
 
-
 def fetch_active_params(file_profile_name):
-    """Get active paramaters for a file_profile
+    """Get active parameters for a file_profile
 
     Args:
         file_profile_name (str): unique file profile name
 
     Returns:
-        list: Format [(paramater_id, description, example_text)]
+        list: Format [(parameter_id, description, example_text)]
     """    
     try:
         connection, cursor = db_connect(db_file_path)
         try:
-            file_profile_id_query = """SELECT profile_id FROM profiles WHERE unique_profile_name=?"""
-            file_profile_id = cursor.execute(file_profile_id_query, (file_profile_name,)).fetchone()[0]
-            active_params_query = """SELECT paramater_id, description, example_text FROM profile_paramaters WHERE profile_id=?"""
+            file_profile_id_query = """SELECT profile_id, file_naming_format FROM profiles WHERE unique_profile_name=?"""
+            file_profile_data = cursor.execute(file_profile_id_query, (file_profile_name,)).fetchone()
+            file_profile_id, file_naming_scheme = file_profile_data[0], file_profile_data[1]
+            active_params_query = """SELECT parameter_id, description, example_text FROM profile_parameters WHERE profile_id=?"""
             active_params = cursor.execute(active_params_query, (file_profile_id,)).fetchall()
-            return [("-1", "doc_num", "01")] + active_params
+            return [("-1", "doc_num", "01")] + active_params, file_naming_scheme
         except (TypeError, sqlite3.DatabaseError) as e:
-            return []
+            return [], []
         finally:
             db_disconnect(connection, cursor)
     except ConnectionError as e:
@@ -227,8 +230,8 @@ def update_file_profile_file_name_pattern(file_profile_name, pattern, conn, cur)
         cur (SQLite3 Connection Cursor): Open Cursor to SQLite3 Connection
     """    
     try:
-        file_profiles_query = """UPDATE profiles SET file_naming_format=? WHERE profile_identifier_text=?"""
-        cur.execute(file_profiles_query, (pattern, file_profile_name,)).fetchall()
+        file_profiles_query = """UPDATE profiles SET file_naming_format=? WHERE unique_profile_name=?"""
+        cur.execute(file_profiles_query, (pattern, file_profile_name,))
         # Conn gets closed after where function is initially called
         conn.commit()
     except sqlite3.DatabaseError as e:
@@ -258,30 +261,123 @@ def fetch_table_names():
         print(e)
 
 
-class fetch_data(QRunnable):
-    """Class used to thread the data fetching of database results"""
-    def __init__(self, database_table):
-        super(fetch_data, self).__init__()
-        self.database_fetch_results = []
-        self.signals = WorkerSignals()
-        self.database_table = database_table
-    
-    @pyqtSlot()
-    def run(self):
-        """Fetcehs all database results from a database table"""
+def fetch_data(database_table):
 
+    """Fetcehs all database results from a database table"""
+    results = None
+    try:
+        connection, cursor = db_connect(db_file_path)
+        # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
+        query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM {scrub(database_table)}"""
+        try:
+            database_fetch_results = cursor.execute(query).fetchall()
+            names = list(map(lambda x: x[0], cursor.description))
+            results = [database_fetch_results, names]
+        except sqlite3.DatabaseError as e:
+            print(e)
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+        print(e)
+    
+    return results
+
+class ImportProjectDataThread(QRunnable):
+    def __init__(self, project_data):
+        super(ImportProjectDataThread, self).__init__()
+        self.signals = WorkerSignals()
+        self.import_project_data = project_data
+
+    @Slot()
+    def run(self):
+        # debugpy.debug_this_thread()
         try:
             connection, cursor = db_connect(db_file_path)
-            # Probably not proper way to mitigate SQL injections but good enough since table name string is not user supplied
-            query = f"""SELECT * FROM {scrub(self.database_table)}"""
+            msg = None
             try:
-                self.database_fetch_results = cursor.execute(query).fetchall()
-                names = list(map(lambda x: x[0], cursor.description))
-                self.signals.result.emit([self.database_fetch_results, names])
-            except sqlite3.DatabaseError as e:
-                print(e)
-                self.signals.result.emit([])
+                progress = 33       
+                results = cursor.execute("""SELECT project_number FROM project_data;""").fetchall()
+                result_list = []
+                for i, result in enumerate(results):
+                    result_list.append(result[0])
+                    self.signals.progress.emit(int((1+i)/len(results)*progress))
+                
+                
+                # Remove non-unique project numbers before importing
+                # Removing them now and using executemany was WAY faster than not removing duplicates and using execute to insert rows individually 
+                # and letting unique constraint just go to exception
+                temp_project_data = []
+                for i, project in enumerate(self.import_project_data):
+                    self.signals.progress.emit(progress + int((1+i)/len(self.import_project_data)*progress))
+                    if project[0] not in result_list:
+                        temp_project_data.append(project)
+                self.import_project_data = temp_project_data     
+                
+                cursor.executemany("""INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject) VALUES(?,?,?,?,?,?);""", self.import_project_data)
+                connection.commit()
+                self.signals.progress.emit(99)
+            except Exception as e:
+                msg = f'Error: {e}'
             finally:
                 db_disconnect(connection, cursor)
+                self.signals.result.emit([msg])
         except ConnectionError as e:
-            print(e)
+            msg = f'Error: {e}'
+            self.signals.result.emit([msg])
+
+
+class ExportProjectDataThread(QRunnable):
+    def __init__(self, export_location):
+        super(ExportProjectDataThread, self).__init__()
+        self.signals = WorkerSignals()
+        self.export_location = export_location
+
+    @Slot()
+    def run(self):
+        # debugpy.debug_this_thread()
+        try:
+            msg = None
+            connection, cursor = db_connect(db_file_path)
+            try:
+
+                results = cursor.execute("""SELECT * FROM project_data;""").fetchall()
+                
+                # revove id col
+                results = [result[1:] for result in results]
+                headers = [i[0] for i in cursor.description]
+                headers = headers[1:]
+
+                self.signals.progress.emit(25)
+                with open(os.path.abspath(os.path.join(self.export_location,"exported.csv")), "w", newline="") as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(headers) # write headers
+                    self.signals.progress.emit(50)
+                    csv_writer.writerows(results)
+                    self.signals.progress.emit(100)
+            except Exception as e:
+                msg = f'Error: {e}'
+            finally:
+                db_disconnect(connection, cursor)
+                self.signals.result.emit([msg])
+        except ConnectionError as e:
+            msg = f'Error: {e}'
+            self.signals.result.emit([msg])
+
+def update_project_data(old_data, new_data):
+    try:
+        msg = None
+        connection, cursor = db_connect(db_file_path)
+        try:
+            update_statement = """UPDATE project_data SET project_number=?, directory=?, email_to=?, email_cc=?, email_bcc=?, email_subject=? WHERE project_number=?;"""
+            data = [new_data[key] for key in ["project_number", "directory", "email_to", "email_cc", "email_bcc", "email_subject"]]
+            data.append(old_data["project_number"])
+            cursor.execute(update_statement, data)
+            connection.commit()
+        except Exception as e:
+            msg = f"Error updating Project Data: {e}"
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+            msg = f'Error: {e}'
+
+    return msg

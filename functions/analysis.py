@@ -1,23 +1,20 @@
-import argparse
 import os
 import io
 import random
-import shutil
-import sqlite3
 import datetime
+import shutil
 
 import debugpy
 
-import cv2
 import pytesseract
 import regex as re
-from PyQt5.QtCore import *
+from PySide6.QtCore import *
 from pdf2image import convert_from_path
 from functions.data_handler import db_connect, db_file_path, db_disconnect, scrub, WorkerSignals
 
-from functions.date_formater import date_formatter, months
-from functions.project_info import project_info
-from functions.project_number import detect_project_number
+# from functions.date_formater import date_formatter, months
+# from functions.project_info import project_info
+# from functions.project_number import detect_project_number
 
 
 # hard coded tesseract and poppler path from current working directory
@@ -52,17 +49,18 @@ class ItemFound(Exception):
 
 class WorkerAnalyzeThread(QRunnable):
 
-    def __init__(self, file_name, test, analyzed):
+    def __init__(self, file_name, test, analyzed, template=False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
         self.test = test
         self.analyzed = analyzed
         self.signals = WorkerSignals()
+        self.template = template
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
-        debugpy.debug_this_thread()
+        # debugpy.debug_this_thread()
         
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
@@ -97,14 +95,15 @@ class WorkerAnalyzeThread(QRunnable):
         # Checking each unique id area for the unique identifier text
         # If identifier text found, the sheet is that type (return profile_id)
         file_type = 0
-        for file_profile in profiles:
-            
+        for i, file_profile in enumerate(profiles):
+            if self.template:
+                self.signals.progress.emit(int(i+1/len(profiles))*100)
             file_identifier_text = file_profile[1]
-            file_id_x1 = file_profile[2]
-            file_id_x2 = file_profile[3]
-            file_id_y1 = file_profile[4]
-            file_id_y2 = file_profile[5]
-            description = file_profile[6]
+            active_profile_name = file_profile[2]
+            file_id_x1 = file_profile[3]
+            file_id_x2 = file_profile[4]
+            file_id_y1 = file_profile[5]
+            file_id_y2 = file_profile[6]
             file_pattern = file_profile[7]
 
             # crop image to file_profile location
@@ -113,20 +112,31 @@ class WorkerAnalyzeThread(QRunnable):
 
             # Using tesseract on cropped image, check if its equal to the unique_text
             text = self.analyze_image(cropped_image)
-            if file_identifier_text.strip().lower() in scrub(text).strip().lower():
+            if file_identifier_text.strip().lower() in scrub(text.replace("\n", " ")).strip().lower():
                 file_type = file_profile[0]
+                if self.template:
+                    self.signals.progress.emit(100)
+                    self.signals.result.emit([self.template, active_profile_name, file_type])
+                    return
                 break
 
         # If no file_profile set default values or return
         if file_type == 0:
             new_file_name = "No Profile - " + self.file.split("/").pop()[:-4]
+            rename_path = os.path.abspath(os.path.join(self.file_dir_path, new_file_name + ".pdf"))
+            rename_path_project_dir = rename_path
+            active_profile_name = ""
+            if self.template:
+                self.signals.progress.emit(100)
+                self.signals.result.emit([self.template, active_profile_name, None])
+                return
             pass
         else:
             try:
                 connection, cursor = db_connect(db_file_path)
                 try:
-                    file_type_select_query = """SELECT * FROM profile_paramaters WHERE profile_id=?;"""
-                    file_profile_data_pieces = cursor.execute(
+                    file_type_select_query = """SELECT * FROM profile_parameters WHERE profile_id=?;"""
+                    file_profile_parameters = cursor.execute(
                         file_type_select_query, (file_type,)).fetchall()
                 except Exception as e:
                     print(e)
@@ -136,63 +146,67 @@ class WorkerAnalyzeThread(QRunnable):
                 print(e)
 
 
-            # Iterate through each location that desired data is expected
+            # Iterate through each location of each paramater
             data = {}
-            for file_profile_data_piece in file_profile_data_pieces:
+            for file_profile_paramater in file_profile_parameters:
                 for scale in [1.0, 1.01, 1.02, 1.03, 1.04, 1.05]:
-                    x1 = int(file_profile_data_piece[4] / scale)
-                    x2 = int(file_profile_data_piece[5] * scale)
-                    y1 = int(file_profile_data_piece[6] / scale)
-                    y2 = int(file_profile_data_piece[7] * scale)
+                    x1 = int(file_profile_paramater[4] / scale)
+                    x2 = int(file_profile_paramater[5] * scale)
+                    y1 = int(file_profile_paramater[6] / scale)
+                    y2 = int(file_profile_paramater[7] * scale)
 
                     # crop image to desired location
                     cropped_image = image.crop((x1, y1, x2, y2))
                     
                     result = self.analyze_image(cropped_image)
                     
-                    if file_profile_data_piece[3] is None:
-                        data[file_profile_data_piece[2]] = result
+                    if file_profile_paramater[3] is None:
+                        data[file_profile_paramater[2]] = scrub(result.replace("\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
                         break
-                    print(f"regex: {file_profile_data_piece[3]}")
+                    print(f"regex: {file_profile_paramater[3]}")
                     data_point = re.search(
-                        rf"{file_profile_data_piece[3]}", result, re.M + re.I)
-                    data[file_profile_data_piece[2]] = data_point
+                        rf"{file_profile_paramater[3]}", result, re.M + re.I)
+                    data[file_profile_paramater[2]] = data_point
                     if data_point is not None:
                         data_point = data_point.groups()
-                        data_point = data_point[-1].replace("\n", "")
-                        data[file_profile_data_piece[2]] = data_point
+                        # Get rid of any extra hyphens, random spaces, new line characters, and then feed it into scrub to get rid of non alpha-numeric
+                        data_point = scrub(data_point[-1].replace("\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
+                        data[file_profile_paramater[2]] = data_point
                         break
 
-                    # TODO: Check which is faster: Detecting project number every time or selecting from Files DB first and chekcing if Project number already found
-                    # if "project number" in file_profile[2]:
-                    #     project_number, project_number_short = detect_project_number(
-                    #         result)
-                    #     try:
-                    #         connection, cursor = db_connect(db_file_path)
-                    #         try:
-                    #             data_point = cursor.execute(
-                    #                 f"SELECT project_number FROM project_data WHERE project_number='{scrub(project_number)}';").fetchone()
-                    #             if result:
-                    #                 data_point = data_point[0]
-                    #                 raise ItemFound
-                    #         except (TypeError, AttributeError) as e:
-                    #             print(f"Project Detection Error: {e}")
-                    #         finally:
-                    #             db_disconnect(connection, cursor)
-                    #     except ConnectionError as e:
-                    #         print(
-                    #             f"Project Detection DB Connection Error: {e}")
-                    # # file_profile[3] = regex search string
-                    # elif file_profile[3] is not None:
-                    #     data_point = re.search(
-                    #         rf"{file_profile[3]}", result, re.M + re.I)
-                    #     if data_point is not None:
-                    #         data_point = data_point.groups()
-                    #         # print(data_point)
-                    #         data_point = data_point[-1].replace("\n", "")
-                    #         raise ItemFound
+            project_number = data.get("project_number")
+            # If project_number specified in database, try to get directory info
+            if project_number is not None:
+                
+                try:
+                    connection, cursor = db_connect(db_file_path)
+                    try:
+                        directory_select_query = """SELECT directory FROM project_data WHERE project_number=?;"""
+                        rename_path_project_dir = cursor.execute(
+                            directory_select_query, (project_number,)).fetchone()
+                        rename_path_project_dir = rename_path_project_dir[0]
+                        # print(f"Directory for {project_number} is {rename_path_project_dir[:7]}")
+                    # If OCR project_number not in database, get all project data and check if project number and a DB project contain eachother.
+                    # OCR can produce random characters at beginning/end of detection so may be useful to do this check
+                    except Exception as e:
+                        try:
+                            directory_select_query = """SELECT directory, project_number FROM project_data;"""
+                            project_dir_data = cursor.execute(
+                                directory_select_query, (project_number,)).fetchall()
+                            for project_dir, temp_project_number in project_dir_data:
+                                if project_number in temp_project_number or temp_project_number in project_number:
+                                    rename_path_project_dir = project_dir
+                            # print(f"Directory for {project_number} is {rename_path_project_dir[:7]}")
+                        except Exception as e:
+                            print(e)
+                            rename_path_project_dir = None
+                            pass
+                    finally:
+                        db_disconnect(connection, cursor)
+                except ConnectionError as e:
+                    print(e)
 
-            doc_number = detect_package_number(self.file_dir_path)
+            doc_number = detect_package_number(self.file_dir_path, rename_path_project_dir)
             if file_pattern is None:
                 new_file_name = f"{doc_number}"
                 for key in data.keys():
@@ -202,11 +216,9 @@ class WorkerAnalyzeThread(QRunnable):
                 new_file_name = new_file_name.replace("{doc_num}", doc_number)
                 for key in data.keys():
                     new_file_name = new_file_name.replace("".join(["{", key, "}"]), data[key])
+            
+            rename_path = os.path.abspath(os.path.join(self.file_dir_path, new_file_name + ".pdf"))
 
-
-        os.chdir(self.file_dir_path)
-        rename_path = os.path.abspath(os.path.join(self.file_dir_path, new_file_name + ".pdf"))
-        
         if len(str(rename_path)) > 260:
             cut = len(str(rename_path)) - 256
             new_file_name = new_file_name[:-cut] + "LONG"
@@ -219,16 +231,17 @@ class WorkerAnalyzeThread(QRunnable):
         try:
             os.rename(self.file, rename_path)
         except Exception as e:
-            print(e)
+            print(f"Error saving file into original location: e")
 
-        # if rename_path != rename_path_project_dir:
-        #     try:
-        #         shutil.copy(rename_path, rename_path_project_dir)
-        #     except Exception as e:
-        #         print(e)
+        if rename_path_project_dir is not None:
+            try:
+                shutil.copy(rename_path, rename_path_project_dir)
+            except Exception as e:
+                print(e)
+
         prev_file_name = self.file.split("/")[-1]
         print_string = f"{prev_file_name} renamed to {new_file_name}\n"
-        returns = [print_string, new_file_name, rename_path]
+        returns = [self.template, print_string, new_file_name, rename_path, active_profile_name]
         self.signals.progress.emit(100)
         self.signals.result.emit(returns)
 
@@ -283,32 +296,36 @@ class WorkerAnalyzeThread(QRunnable):
     #     return gray
 
 # TODO : Look at speeding this up. Big time sink when folders have hundreds of files and analyzing multiple files at once. 
-def detect_package_number(file_path):
-    """Checks file_path directory for all pdf files to determine the current document number
+def detect_package_number(file_path, project_file_path):
+    """Checks project_file_path directory for all pdf files to determine the current document number. If unable it'll resort to checking file_path.
 
     Args:
-        file_path (str): Patch to project files directory
+        file_path (str): Path to original files directory
+        project_file_path (str): Path to project files directory
 
     Returns:
         str: Document number for current file being analyzed
     """
-    only_files = [f_local[0:6] for f_local in os.listdir(
-        file_path) if "pdf" in f_local[-4:].lower()]
+    try:
+        only_files = [f_local[0:6] for f_local in os.listdir(
+            project_file_path) if "pdf" in f_local[-4:].lower()]
+    except:
+        only_files = [f_local[0:6] for f_local in os.listdir(
+            file_path) if "pdf" in f_local[-4:].lower()]
+        pass
 
     package_number_highest_str = "01"
     package_numbers = []
     if only_files:
         for file in only_files:
-            if re.search(r"(\d+)[-.][\dA-z]", file, re.I) is not None:
+            try:
                 package_number = re.search(
                     r"(\d+)[-.][\dA-z]", file, re.I).groups()
                 package_numbers.append(int(package_number[-1]))
+            except re.error as e:
+                print(f"Doc Num Regex Error: {e}")
     if package_numbers:
         package_number_highest_str = str(max(package_numbers) + 1)
         if len(package_number_highest_str) < 2:
             package_number_highest_str = "0" + package_number_highest_str
     return package_number_highest_str
-
-
-if __name__ == "__main__":
-    print("This file is not meant to be run directly.")

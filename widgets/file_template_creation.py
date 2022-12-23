@@ -2,9 +2,9 @@ import sys
 import os
 import io
 
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSlot, QRectF
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QTextOption
+from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QPoint, QRect, Slot, QRectF
+from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QTextOption
 import pytesseract
 
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
@@ -12,7 +12,7 @@ tesseract_path = str(os.path.abspath(
     os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 
 class TemplateWidget(QWidget):
-    """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing paramaters bounding boxes"""
+    """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
 
     def __init__(self, image_data, pil_image, parent=None):
         super(TemplateWidget, self).__init__(parent)
@@ -26,18 +26,25 @@ class TemplateWidget(QWidget):
         self.width_ratio = self.after_width / self.initial_width
         self.height_ratio = self.afterHeight / self.initialHeight
         self.data_info = None
+        self.profile_rect_info = None
         self.image_area_too_small = False
 
         self.begin, self.end = QPoint(), QPoint()
         self.last_point = QPoint()
         self.drawing = False
     
-    def set_data_info(self, data_info):
+    def set_data_info(self, data_info, profile_rect_info):
         """Used to externally set class variable for use in paint event"""
         self.data_info = data_info
+        self.profile_rect_info = profile_rect_info
+
+    def reset_rect(self):
+        """After creating new paramater or identifer, called to reset the curreently drawn rect"""
+        self.begin, self.end = QPoint(), QPoint()
+        self.update()
 
     def paintEvent(self, event):
-        """Handles all of the painting for the existing paramater locations and names, as well as the drawing of a new bounding box"""
+        """Handles all of the painting for the existing parameter locations and names, as well as the drawing of a new bounding box"""
         painter = QPainter(self)
         painter.drawPixmap(QPoint(), self.pix)
         if self.data_info != None:
@@ -50,6 +57,21 @@ class TemplateWidget(QWidget):
                 text_option = QTextOption(Qt.AlignLeft | Qt.AlignVCenter)
                 text_option.setWrapMode(QTextOption.NoWrap)
                 painter.drawText(text_rect, data[-1], text_option)
+        if self.profile_rect_info != None:
+            data_rect = QRect(
+                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)), 
+                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[3]*self.width_ratio))
+                )
+            text_rect = QRectF(
+                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)-20), 
+                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio))
+                )
+            data_pen = QPen(QColor(255,125,125), 3, Qt.DashLine)
+            painter.setPen(data_pen)
+            painter.drawRect(data_rect)
+            text_option = QTextOption(Qt.AlignLeft | Qt.AlignVCenter)
+            text_option.setWrapMode(QTextOption.NoWrap)
+            painter.drawText(text_rect, f"Profile: " + self.profile_rect_info[-1], text_option)
         if not self.begin.isNull() and not self.end.isNull():
             rect = QRect(self.begin, self.end)
             pen = QPen(Qt.red, 3, Qt.SolidLine)
@@ -131,8 +153,6 @@ class TemplateWidget(QWidget):
                 self.image_area_too_small = True
             self.analyze_area(cropped_pil_image)
 
-    
-    @pyqtSlot()
     def analyze_area(self, cropped_pil_image):
         """Uses Tesseract to process cropped image and save to class variable found_text
 
