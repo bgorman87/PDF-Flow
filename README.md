@@ -1,4 +1,4 @@
-# Report Sorter
+# Report Processor
 This program has multi-threaded functionality to:
 - Analyze PDF document contents
   - Uses Poppler to transform PDF to Image
