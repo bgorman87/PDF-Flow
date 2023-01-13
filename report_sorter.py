@@ -14,7 +14,6 @@ from functions.analysis import WorkerAnalyzeThread, detect_package_number
 from functions.data_handler import *
 from widgets.file_template_creation import TemplateWidget
 from widgets.apply_data_type_dialog import ApplyFoundData
-from widgets.email_list_widget import EmailListWidget
 from widgets.loading_widget import LoadingWidget
 from widgets.email_widget import EmailSignatureEditor
 
