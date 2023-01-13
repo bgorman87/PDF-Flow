@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QComboBox, QFontComboBox, QDialog, QFrame,
     QCheckBox, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QColorDialog)
 
 
-class EmailSignatureEditor(QWidget):
+class EmailWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 

@@ -14,8 +14,9 @@ from functions.analysis import WorkerAnalyzeThread, detect_package_number
 from functions.data_handler import *
 from widgets.file_template_creation import TemplateWidget
 from widgets.apply_data_type_dialog import ApplyFoundData
+from widgets.email_list_widget import EmailListWidget
 from widgets.loading_widget import LoadingWidget
-from widgets.email_widget import EmailSignatureEditor
+from widgets.email_widget import EmailWidget
 
 # set current working directory to variable to save files to
 home_dir = os.getcwd()
@@ -772,7 +773,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setting_tab_layout.addWidget(self.settings_tab_line_4)
 
         # signature text edit
-        self.settings_email_text_edit = EmailSignatureEditor()
+        self.settings_email_text_edit = EmailWidget()
         self.settings_email_text_edit.setObjectName("settings_email_text_edit")
         self.setting_tab_layout.addWidget(self.settings_email_text_edit)
         self.setting_tab_layout.setStretch(self.setting_tab_layout.indexOf(self.settings_email_text_edit), 1)
