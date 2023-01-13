@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="50mm"
+   height="50mm"
+   viewBox="0 0 50 50"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   sodipodi:docname="underline_new.svg"
+   inkscape:export-filename="bold.png"
+   inkscape:export-xdpi="25.4"
+   inkscape:export-ydpi="25.4"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="2.3786088"
+     inkscape:cx="41.200554"
+     inkscape:cy="93.331867"
+     inkscape:window-width="1680"
+     inkscape:window-height="987"
+     inkscape:window-x="1912"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid273"
+       enabled="true"
+       visible="false"
+       dotted="false"
+       snapvisiblegridlinesonly="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g442"
+       transform="matrix(1.1109634,0,0,1.1193038,-2.7740846,-1.0994134)">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;stroke-width:3.8854"
+         x="7.957633"
+         y="34.97504"
+         id="text113"
+         transform="scale(0.99916729,1.0008334)"><tspan
+           sodipodi:role="line"
+           id="tspan111"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:3.8854"
+           x="7.957633"
+           y="34.97504">U</tspan></text>
+      <rect
+         style="fill:#000000;stroke-width:0.261101"
+         id="rect341"
+         width="31.504189"
+         height="3.1833501"
+         x="9.2479057"
+         y="42.564468" />
+    </g>
+  </g>
+</svg>
