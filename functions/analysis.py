@@ -74,9 +74,10 @@ class WorkerAnalyzeThread(QRunnable):
         try:
             connection, cursor = db_connect(db_file_path)
             try:
-                file_type_select_query = """SELECT * FROM profiles;"""
+                file_type_select_query = """SELECT * FROM profiles ORDER BY count DESC;"""
                 profiles = cursor.execute(
                     file_type_select_query).fetchall()
+                print(profiles)
             except Exception as e:
                 print(e)
             finally:
@@ -105,6 +106,7 @@ class WorkerAnalyzeThread(QRunnable):
             file_id_y1 = file_profile[5]
             file_id_y2 = file_profile[6]
             file_pattern = file_profile[7]
+            profile_count = file_profile[8]
 
             # crop image to file_profile location
             cropped_image = image.crop((file_id_x1, file_id_y1, file_id_x2,
@@ -138,6 +140,9 @@ class WorkerAnalyzeThread(QRunnable):
                     file_type_select_query = """SELECT * FROM profile_parameters WHERE profile_id=?;"""
                     file_profile_parameters = cursor.execute(
                         file_type_select_query, (file_type,)).fetchall()
+                    profile_count_query = """UPDATE profiles SET count=? WHERE profile_id=?;"""
+                    cursor.execute(profile_count_query, (profile_count+1, file_type,))
+                    connection.commit()
                 except Exception as e:
                     print(e)
                 finally:
@@ -239,9 +244,10 @@ class WorkerAnalyzeThread(QRunnable):
             except Exception as e:
                 print(e)
 
+        rename_project_data_path = os.path.abspath(os.path.join(rename_path_project_dir, new_file_name + ".pdf"))
         prev_file_name = self.file.split("/")[-1]
-        print_string = f"{prev_file_name} renamed to {new_file_name}\n"
-        returns = [self.template, print_string, new_file_name, rename_path, active_profile_name]
+        print_string = f"{prev_file_name} renamed to {new_file_name}"
+        returns = [self.template, print_string, new_file_name, rename_path, active_profile_name, rename_project_data_path]
         self.signals.progress.emit(100)
         self.signals.result.emit(returns)
 
@@ -322,8 +328,9 @@ def detect_package_number(file_path, project_file_path):
                 package_number = re.search(
                     r"(\d+)[-.][\dA-z]", file, re.I).groups()
                 package_numbers.append(int(package_number[-1]))
-            except re.error as e:
-                print(f"Doc Num Regex Error: {e}")
+            except (re.error, AttributeError) as e:
+                # print(f"Doc Num Regex Error: {e}")
+                pass
     if package_numbers:
         package_number_highest_str = str(max(package_numbers) + 1)
         if len(package_number_highest_str) < 2:

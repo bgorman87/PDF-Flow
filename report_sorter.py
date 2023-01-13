@@ -12,11 +12,11 @@ from collections import namedtuple
 
 from functions.analysis import WorkerAnalyzeThread, detect_package_number
 from functions.data_handler import *
-from functions.project_info import project_info
 from widgets.file_template_creation import TemplateWidget
 from widgets.apply_data_type_dialog import ApplyFoundData
 from widgets.email_list_widget import EmailListWidget
 from widgets.loading_widget import LoadingWidget
+from widgets.email_widget import EmailSignatureEditor
 
 # set current working directory to variable to save files to
 home_dir = os.getcwd()
@@ -25,16 +25,12 @@ home_dir = os.getcwd()
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 
 
-def output(self):
-    self.outputBox.appendPlainText("Analyzing...\n")
-
-
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.image = None
-        # self.showFullScreen()
+        self.screen()
         self.start_position = None
         self.rect = QtCore.QRect()
         self.drawing = False
@@ -48,9 +44,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.project_data_loaded_data = {'project_number': None, 'directory': None,
                                          'email_to': None, 'email_cc': None, 'email_bcc': None, 'email_subject': None}
         self.project_data_loaded_id = None
-        self.resize(850, 850)
+        screen = QtGui.QGuiApplication.primaryScreen().size()
+        self.resize(screen.width()//2, screen.height())
+        self.center_application(screen)
         self.importing = False
         self.test = False
+        self.unseen_console_alerts = 0
         self.current_file_profile = 0
         self.analyze_worker = None  # Worker
         self.thread = None  # Thread
@@ -61,6 +60,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.analyzed = False  # Stores analyzed state.
         self.progress = 0  # Initilize progress bar at 0
         self.project_numbers = []
+        self.adding_new = True
         self.project_numbers_short = []
         # Displays how many threads can be utilized
         self.thread_pool = QtCore.QThreadPool()
@@ -100,95 +100,78 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.file_input_tab, "")
 
         # Layout for file_input_tab_layout
-        self.file_input_tab_layout = QtWidgets.QGridLayout(self.file_input_tab)
-        self.file_input_tab_layout.setObjectName("grid_layout")
+        self.file_input_tab_layout = QtWidgets.QVBoxLayout(self.file_input_tab)
+        self.file_input_tab_layout.setObjectName("processing_layout")
 
         # Line above action buttons
         self.input_tab_line_1 = QtWidgets.QFrame(self.file_input_tab)
         self.input_tab_line_1.setFrameShape(QtWidgets.QFrame.HLine)
         self.input_tab_line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.input_tab_line_1.setObjectName("line")
-        self.file_input_tab_layout.addWidget(self.input_tab_line_1, 2, 0, 1, 8)
+        self.input_tab_line_1_qh = QtWidgets.QHBoxLayout()
+        self.input_tab_line_1_qh.addWidget(self.input_tab_line_1)
 
+        self.file_input_tab_layout.addLayout(self.input_tab_line_1_qh)
+
+        self.input_tab_action_buttons = QtWidgets.QHBoxLayout()
         # Action buttons on Input tab
         self.select_files = QtWidgets.QPushButton(self.file_input_tab)
         self.select_files.clicked.connect(self.open_file_dialog)
         self.select_files.setObjectName("Select_files")
         self.dialog = QtWidgets.QFileDialog()  # Used for file dialog popup
-        self.file_input_tab_layout.addWidget(self.select_files, 3, 0, 1, 2)
+        self.input_tab_action_buttons.addWidget(self.select_files)
 
         # Action button to start file analysis
         self.process_button = QtWidgets.QPushButton(self.file_input_tab)
         self.process_button.clicked.connect(self.analyze_button_handler)
         self.process_button.setObjectName("analyze_button")
         self.process_button.setEnabled(False)
-        self.file_input_tab_layout.addWidget(self.process_button, 3, 2, 1, 2)
+        self.input_tab_action_buttons.addWidget(self.process_button)
 
         # Action button to start email process
         self.email_button = QtWidgets.QPushButton(self.file_input_tab)
         self.email_button.clicked.connect(self.email_button_handler)
         self.email_button.setObjectName("email_button")
         self.email_button.setEnabled(False)
-        self.file_input_tab_layout.addWidget(self.email_button, 3, 4, 1, 2)
+        self.input_tab_action_buttons.addWidget(self.email_button)
 
         # Drop list box to choose analysis type (Live/Test)
         # Live uses real client info, test uses dummy/local info
         self.test_box = QtWidgets.QComboBox(self.file_input_tab)
         self.test_box.setObjectName("test_box")
-        self.file_input_tab_layout.addWidget(self.test_box, 3, 6, 1, 1)
         self.test_box.setEditable(True)
         self.test_box.lineEdit().setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.test_box.addItems(["Test", "Live"])
         self.test_box.setEditable(False)
+        self.input_tab_action_buttons.addWidget(self.test_box)
 
+        self.file_input_tab_layout.addLayout(self.input_tab_action_buttons)
+
+        self.line_below_action_buttons_layout = QtWidgets.QHBoxLayout()
         # Line below action buttons
         self.input_tab_line_2 = QtWidgets.QFrame(self.file_input_tab)
         self.input_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.input_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.input_tab_line_2.setObjectName("input_tab_line_2")
-        self.file_input_tab_layout.addWidget(self.input_tab_line_2, 4, 0, 1, 8)
-
-        # Output box to display info to user
-        self.status_output_box = QtWidgets.QPlainTextEdit(self.file_input_tab)
-        self.status_output_box.setObjectName("status_output_box")
-        self.status_output_box.setReadOnly(True)
-        self.file_input_tab_layout.addWidget(
-            self.status_output_box, 5, 0, 1, 8)
-
-        # Progress bar to show analyze progress
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.progress_bar.setObjectName("progressBar")
-        self.progress_bar.setStyle(QtWidgets.QStyleFactory.create("GTK"))
-        self.progress_bar.setTextVisible(False)
-        self.file_input_tab_layout.addWidget(self.progress_bar, 6, 0, 1, 8)
-
-        # Output Tab (processed_files_tab)
-        self.processed_files_tab = QtWidgets.QWidget()
-        self.processed_files_tab.setObjectName("tab_2")
-        self.tab_widget.addTab(self.processed_files_tab, "")
-
-        # Layout for processed_files_tab
-        self.processed_files_tab_layout = QtWidgets.QGridLayout(
-            self.processed_files_tab)
-        self.processed_files_tab_layout.setObjectName(
-            "processed_files_tab_layout")
+        self.line_below_action_buttons_layout.addWidget(self.input_tab_line_2)
+        self.file_input_tab_layout.addLayout(
+            self.line_below_action_buttons_layout)
 
         # Label for list widget below
-        self.processed_files_label = QtWidgets.QLabel(self.processed_files_tab)
+        self.processed_files_label = QtWidgets.QLabel()
         self.processed_files_label.setGeometry(QtCore.QRect(10, 10, 81, 16))
         self.processed_files_label.setObjectName("processed_files_label")
-        self.processed_files_tab_layout.addWidget(
-            self.processed_files_label, 0, 0, 1, 2)
+        self.file_input_tab_layout.addWidget(self.processed_files_label)
 
         # Widget to hold analyzed files
-        self.processed_files_list_widget = QtWidgets.QListWidget(
-            self.processed_files_tab)
+        self.processed_files_list_widget = QtWidgets.QListWidget()
         self.processed_files_list_widget.setGeometry(
             QtCore.QRect(10, 30, 320, 100))
         self.processed_files_list_widget.setObjectName(
             "processed_files_list_widget")
-        self.processed_files_tab_layout.addWidget(
-            self.processed_files_list_widget, 1, 0, 5, 5)
+        self.file_input_tab_layout.addWidget(self.processed_files_list_widget)
+        self.file_input_tab_layout.setStretch(
+            self.file_input_tab_layout.indexOf(self.processed_files_list_widget), 2)
 
         # Lines within the analyzed files widget above
         self.processed_files_list_item = QtWidgets.QListWidgetItem()
@@ -197,36 +180,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.processed_files_list_widget.itemDoubleClicked.connect(
             self.rename_file_handler)
 
+        self.file_rename_layout = QtWidgets.QHBoxLayout()
         # Text editor line to edit file names
-        self.file_rename_line_edit = QtWidgets.QLineEdit(
-            self.processed_files_tab)
+        self.file_rename_line_edit = QtWidgets.QLineEdit()
         self.file_rename_line_edit.setObjectName("file_rename_line_edit")
-        self.processed_files_tab_layout.addWidget(
-            self.file_rename_line_edit, 6, 0, 1, 4)
+        self.file_rename_layout.addWidget(self.file_rename_line_edit)
+        self.file_rename_layout.setStretch(self.file_rename_layout.indexOf(self.file_rename_line_edit), 5)
 
         # Action button to call rename function
-        self.file_rename_button = QtWidgets.QPushButton(
-            self.processed_files_tab)
+        self.file_rename_button = QtWidgets.QPushButton()
         self.file_rename_button.clicked.connect(
             self.file_rename_button_handler)
         self.file_rename_button.setObjectName("file_rename_button")
-        self.processed_files_tab_layout.addWidget(
-            self.file_rename_button, 6, 4, 1, 1)
+        self.file_rename_layout.addWidget(self.file_rename_button)
+        self.file_rename_layout.setStretch(self.file_rename_layout.indexOf(self.file_rename_button), 1)
+
+        self.file_input_tab_layout.addLayout(self.file_rename_layout)
 
         # Title for JPG/PDF preview below
-        self.file_preview_label = QtWidgets.QLabel(self.processed_files_tab)
+        self.file_preview_label = QtWidgets.QLabel()
         self.file_preview_label.setGeometry(QtCore.QRect(10, 140, 100, 16))
         self.file_preview_label.setObjectName("file_preview_label")
-        self.processed_files_tab_layout.addWidget(
-            self.file_preview_label, 7, 0, 1, 2)
-
-        # Displays JPG of entire PDF
-        # self.graphicsView = QtWidgets.QGraphicsView(self.tab_2)
-        # self.graphicsView.setGeometry(QtCore.QRect(10, 160, 320, 400))
-        # self.graphicsView.setObjectName("graphicsView")
-        # self.gridLayout_2.addWidget(self.graphicsView, 8, 0, 20, 5)
-        # self.graphicsView.setViewportUpdateMode(
-        #     QtWidgets.QGraphicsView.FullViewportUpdate)
+        self.file_input_tab_layout.addWidget(self.file_preview_label)
 
         # Displays PDF
         self.file_preview = QtWebEngineWidgets.QWebEngineView()
@@ -237,12 +212,39 @@ class MainWindow(QtWidgets.QMainWindow):
             _qtweb_settings.PdfViewerEnabled, True)
         self.file_preview.settings().setAttribute(
             _qtweb_settings.SpatialNavigationEnabled, True)
-        self.processed_files_tab_layout.addWidget(
-            self.file_preview, 8, 0, 20, 5)
+        self.file_input_tab_layout.addWidget(self.file_preview)
+        self.file_input_tab_layout.setStretch(
+            self.file_input_tab_layout.indexOf(self.file_preview), 8)
 
         # Initialize a blank entry, otherwise GUI will reload upon choosing tab
-        self.file_preview.load(QtCore.QUrl(""))
+        # initialized_pdf = "B:/Documents/Programming/GitHub/modular_report_sorter/assets/pdf/blank.pdf"
+        initialized_pdf = ""
+        self.file_preview.load(QtCore.QUrl(initialized_pdf))
         self.file_preview.show()
+
+        # Progress bar to show analyze progress
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setObjectName("progressBar")
+        self.progress_bar.setStyle(QtWidgets.QStyleFactory.create("GTK"))
+        self.progress_bar.setTextVisible(False)
+        self.file_input_tab_layout.addWidget(self.progress_bar)
+
+        # Output Tab (processed_files_tab)
+        self.processed_files_tab = QtWidgets.QWidget()
+        self.processed_files_tab.setObjectName("tab_2")
+        self.tab_widget.addTab(self.processed_files_tab, "")
+
+        # Layout for processed_files_tab
+        self.processed_files_tab_layout = QtWidgets.QVBoxLayout(
+            self.processed_files_tab)
+        self.processed_files_tab_layout.setObjectName(
+            "processed_files_tab_layout")
+
+        # Output box to display info to user
+        self.status_output_box = QtWidgets.QPlainTextEdit(self.file_input_tab)
+        self.status_output_box.setObjectName("status_output_box")
+        self.status_output_box.setReadOnly(True)
+        self.processed_files_tab_layout.addWidget(self.status_output_box)
 
         # Database Tab (database_viewer_tab)
         self.database_viewer_tab = QtWidgets.QWidget()
@@ -250,54 +252,90 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.database_viewer_tab, "")
 
         # Layout for database_viewer_tab
-        self.database_viewer_tab_layout = QtWidgets.QGridLayout(
+        self.database_viewer_tab_layout = QtWidgets.QVBoxLayout(
             self.database_viewer_tab)
         self.database_viewer_tab_layout.setObjectName(
             "database_viewer_tab_layout")
 
         # Line above action buttons
+        self.project_data_line_above_cta_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_1 = QtWidgets.QFrame(self.database_viewer_tab)
         self.database_tab_line_1.setFrameShape(QtWidgets.QFrame.HLine)
         self.database_tab_line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.database_tab_line_1.setObjectName("database_tab_line_1")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_tab_line_1, 0, 0, 1, 18)
+        self.project_data_line_above_cta_layout.addWidget(
+            self.database_tab_line_1)
+
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_line_above_cta_layout)
+
+        self.project_data_cta_layout = QtWidgets.QHBoxLayout()
+
+        # Add new data button
+        self.project_data_add_new_button = QtWidgets.QPushButton()
+        self.project_data_add_new_button.clicked.connect(
+            self.project_data_add_new)
+        self.project_data_cta_layout.addWidget(
+            self.project_data_add_new_button)
 
         # Import project data button
-        self.import_project_data_button = QtWidgets.QPushButton(
-            self.database_viewer_tab)
+        self.import_project_data_button = QtWidgets.QPushButton()
         self.import_project_data_button.clicked.connect(
             self.import_project_data)
-        self.database_viewer_tab_layout.addWidget(
-            self.import_project_data_button, 1, 0, 1, 4)
+        self.project_data_cta_layout.addWidget(self.import_project_data_button)
 
         # Export project data button
-        self.export_project_data_button = QtWidgets.QPushButton(
-            self.database_viewer_tab)
+        self.export_project_data_button = QtWidgets.QPushButton()
         self.export_project_data_button.clicked.connect(
             self.export_project_data)
-        self.database_viewer_tab_layout.addWidget(
-            self.export_project_data_button, 1, 4, 1, 4)
+        self.project_data_cta_layout.addWidget(self.export_project_data_button)
 
-        # # Progress bar to show database progress
-        # self.database_progress_bar = QtWidgets.QProgressBar()
-        # self.database_progress_bar.setObjectName("database_progress_bar")
-        # self.database_progress_bar.setStyle(
-        #     QtWidgets.QStyleFactory.create("GTK"))
-        # self.database_progress_bar.setTextVisible(False)
-        # self.database_viewer_tab_layout.addWidget(
-        #     self.database_progress_bar, 1, 8, 1, 10)
+        # Delete all project data button
+        self.delete_all_project_data_button = QtWidgets.QPushButton()
+        self.delete_all_project_data_button.setStyleSheet(
+            "background-color:rgb(255, 204, 204)")
+        self.delete_all_project_data_button.clicked.connect(
+            self.delete_all_project_data)
+        self.project_data_cta_layout.addWidget(
+            self.delete_all_project_data_button)
+
+        self.database_viewer_tab_layout.addLayout(self.project_data_cta_layout)
 
         # Line below action buttons
+        self.project_data_line_below_cta_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_2 = QtWidgets.QFrame(self.database_viewer_tab)
         self.database_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.database_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.database_tab_line_2.setObjectName("database_tab_line_2")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_tab_line_2, 2, 0, 1, 18)
+        self.project_data_line_below_cta_layout.addWidget(
+            self.database_tab_line_2)
+
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_line_below_cta_layout)
+
+        self.database_search_layout = QtWidgets.QHBoxLayout()
+        self.database_search_layout.addStretch(2)
+
+        self.database_search_icon = QtWidgets.QLabel()
+        self.database_search_icon.setPixmap(
+            QtGui.QPixmap('assets/icons/search.svg'))
+        self.database_search_icon.setScaledContents(True)
+
+        self.database_search_bar = QtWidgets.QLineEdit()
+        self.database_search_bar.textChanged.connect(self.filter_table)
+        self.database_search_bar.setPlaceholderText("Filter...")
+
+        self.database_search_icon.setFixedSize(20, 20)
+        self.database_search_layout.addWidget(self.database_search_icon)
+        self.database_search_layout.addWidget(self.database_search_bar)
+        self.database_search_layout.setStretch(
+            self.database_search_layout.indexOf(self.database_search_bar), 1)
+        self.database_viewer_tab_layout.addLayout(self.database_search_layout)
 
         # Table widget to display DB results
         self.database_viewer_table = QtWidgets.QTableWidget()
+        # Enable sorting for table widget
+        # self.database_viewer_table.setSortingEnabled(True)
         self.database_viewer_table.setSelectionMode(
             QtWidgets.QTableWidget.SingleSelection)
         self.database_viewer_table.setEditTriggers(
@@ -305,93 +343,115 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.database_viewer_table.setModel(QtCore.QSortFilterProxyModel())
         self.database_viewer_table.currentItemChanged.connect(
             self.database_populate_project_edit_fields)
-        self.database_fetch("project_data")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_viewer_table, 3, 0, 6, 18)
+            
+        
+        self.database_viewer_tab_layout.addWidget(self.database_viewer_table)
 
         # Line below table
+        self.project_data_line_below_table_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_3 = QtWidgets.QFrame(self.database_viewer_tab)
         self.database_tab_line_3.setFrameShape(QtWidgets.QFrame.HLine)
         self.database_tab_line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.database_tab_line_3.setObjectName("database_tab_line_3")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_tab_line_3, 10, 0, 1, 18)
+        self.project_data_line_below_table_layout.addWidget(
+            self.database_tab_line_3)
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_line_below_table_layout)
 
         # Line below table
+        self.project_data_line_below_table_2_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_4 = QtWidgets.QFrame(self.database_viewer_tab)
         self.database_tab_line_4.setFrameShape(QtWidgets.QFrame.HLine)
         self.database_tab_line_4.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.database_tab_line_4.setObjectName("database_tab_line_4")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_tab_line_4, 11, 0, 1, 18)
+        self.project_data_line_below_table_2_layout.addWidget(
+            self.database_tab_line_4)
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_line_below_table_2_layout)
+
+        self.project_data_project_number_line_layout = QtWidgets.QHBoxLayout()
 
         # Label for project number line edit
         self.database_project_number_label = QtWidgets.QLabel()
         self.database_project_number_label.setObjectName(
             "database_project_number_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_project_number_label, 12, 0, 1, 2)
+        self.project_data_project_number_line_layout.addWidget(
+            self.database_project_number_label)
 
         # Project number line edit
-        self.database_project_number_line_edit = QtWidgets.QLineEdit(
-            self.database_viewer_tab)
+        self.database_project_number_line_edit = QtWidgets.QLineEdit()
         self.database_project_number_line_edit.setObjectName(
             "database_project_number_line_edit")
         self.database_project_number_line_edit.editingFinished.connect(
             lambda: self.project_data_change_check(self.database_project_number_line_edit, 'project_number'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_project_number_line_edit, 12, 2, 1, 16)
+        self.project_data_project_number_line_layout.addWidget(
+            self.database_project_number_line_edit)
+
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_project_number_line_layout)
+
+        self.project_data_directory_layout = QtWidgets.QHBoxLayout()
 
         # Label for directory line edit
         self.database_directory_label = QtWidgets.QLabel()
         self.database_directory_label.setObjectName(
             "database_directory_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_directory_label, 13, 0, 1, 2)
+        self.project_data_directory_layout.addWidget(
+            self.database_directory_label)
 
         # Project directory line edit
-        self.database_project_directory_line_edit = QtWidgets.QLineEdit(
-            self.database_viewer_tab)
+        self.database_project_directory_line_edit = QtWidgets.QLineEdit()
         self.database_project_directory_line_edit.setObjectName(
             "database_project_directory_line_edit")
         self.database_project_directory_line_edit.editingFinished.connect(
             lambda: self.project_data_change_check(self.database_project_directory_line_edit, 'directory'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_project_directory_line_edit, 13, 2, 1, 12)
+        self.project_data_directory_layout.addWidget(
+            self.database_project_directory_line_edit)
 
         # Action button to call rename function
-        self.database_project_directory_button = QtWidgets.QPushButton(
-            self.database_viewer_tab)
+        self.database_project_directory_button = QtWidgets.QPushButton()
         self.database_project_directory_button.clicked.connect(
             self.database_project_directory)
         self.database_project_directory_button.setObjectName(
-            "file_rename_button")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_project_directory_button, 13, 14, 1, 4)
+            "database_project_directory_button")
+        self.project_data_directory_layout.addWidget(
+            self.database_project_directory_button)
+
+        self.project_data_directory_layout.setStretch(0, 1)
+        self.project_data_directory_layout.setStretch(1, 10)
+        self.project_data_directory_layout.setStretch(2, 2)
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_directory_layout)
+
+        self.project_data_email_subject_layout = QtWidgets.QHBoxLayout()
 
         # Label for email subject line edit
         self.database_email_subject_label = QtWidgets.QLabel()
         self.database_email_subject_label.setObjectName(
             "database_email_subject_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_subject_label, 14, 0, 1, 6)
+        self.project_data_email_subject_layout.addWidget(
+            self.database_email_subject_label)
 
         # Project email subject line edit
-        self.database_project_email_subject_line_edit = QtWidgets.QLineEdit(
-            self.database_viewer_tab)
+        self.database_project_email_subject_line_edit = QtWidgets.QLineEdit()
         self.database_project_email_subject_line_edit.setObjectName(
             "database_project_email_subject_line_edit")
         self.database_project_email_subject_line_edit.editingFinished.connect(
             lambda: self.project_data_change_check(self.database_project_email_subject_line_edit, 'email_subject'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_project_email_subject_line_edit, 14, 2, 1, 16)
+        self.project_data_email_subject_layout.addWidget(
+            self.database_project_email_subject_line_edit)
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_email_subject_layout)
+
+        self.project_data_email_lists_layout = QtWidgets.QHBoxLayout()
+        self.project_data_email_to_layout = QtWidgets.QVBoxLayout()
 
         # Label for email to list widget
         self.database_email_to_label = QtWidgets.QLabel()
         self.database_email_to_label.setObjectName(
             "database_email_to_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_to_label, 15, 0, 1, 6)
+        self.project_data_email_to_layout.addWidget(
+            self.database_email_to_label)
 
         # Email to list widget
         self.database_email_to_list_widget = EmailListWidget()
@@ -403,15 +463,19 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda: self.database_list_widget_add_blank(self.database_email_to_list_widget))
         self.database_email_to_list_widget.itemChanged.connect(
             lambda: self.project_data_change_check(self.database_email_to_list_widget, 'email_to'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_to_list_widget, 16, 0, 3, 6)
+        self.project_data_email_to_layout.addWidget(
+            self.database_email_to_list_widget)
 
+        self.project_data_email_lists_layout.addLayout(
+            self.project_data_email_to_layout)
+
+        self.project_data_email_cc_layout = QtWidgets.QVBoxLayout()
         # Label for email cc list widget
         self.database_email_cc_label = QtWidgets.QLabel()
         self.database_email_cc_label.setObjectName(
             "database_email_tcc_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_cc_label, 15, 6, 1, 6)
+        self.project_data_email_cc_layout.addWidget(
+            self.database_email_cc_label)
 
         # Email cc list widget
         self.database_email_cc_list_widget = EmailListWidget()
@@ -423,15 +487,19 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QListWidget.DoubleClicked)
         self.database_email_cc_list_widget.itemChanged.connect(
             lambda: self.project_data_change_check(self.database_email_cc_list_widget, 'email_cc'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_cc_list_widget, 16, 6, 3, 6)
+        self.project_data_email_cc_layout.addWidget(
+            self.database_email_cc_list_widget)
 
+        self.project_data_email_lists_layout.addLayout(
+            self.project_data_email_cc_layout)
+
+        self.project_data_email_bcc_layout = QtWidgets.QVBoxLayout()
         # Label for email bcc list widget
         self.database_email_bcc_label = QtWidgets.QLabel()
         self.database_email_bcc_label.setObjectName(
             "database_email_bcc_label")
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_bcc_label, 15, 12, 1, 6)
+        self.project_data_email_bcc_layout.addWidget(
+            self.database_email_bcc_label)
 
         # Email bcc list widget
         self.database_email_bcc_list_widget = EmailListWidget()
@@ -443,30 +511,52 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QListWidget.DoubleClicked)
         self.database_email_bcc_list_widget.itemChanged.connect(
             lambda: self.project_data_change_check(self.database_email_bcc_list_widget, 'email_bcc'))
-        self.database_viewer_tab_layout.addWidget(
-            self.database_email_bcc_list_widget, 16, 12, 3, 6)
+        self.project_data_email_bcc_layout.addWidget(
+            self.database_email_bcc_list_widget)
+
+        self.project_data_email_lists_layout.addLayout(
+            self.project_data_email_bcc_layout)
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_email_lists_layout)
+
+        self.project_data_bottom_cta_layout = QtWidgets.QHBoxLayout()
 
         # Action button to save manual changes
-        self.database_discard_edited_project_data_button = QtWidgets.QPushButton(
-            self.database_viewer_tab)
-        self.database_discard_edited_project_data_button.clicked.connect(
-            self.database_discard_edited_project_data)
-        self.database_discard_edited_project_data_button.setObjectName(
-            "database_save_edited_project_data_button")
-        self.database_discard_edited_project_data_button.setEnabled(False)
-        self.database_viewer_tab_layout.addWidget(
-            self.database_discard_edited_project_data_button, 20, 9, 1, 9)
-
-        # Action button to save manual changes
-        self.database_save_edited_project_data_button = QtWidgets.QPushButton(
-            self.database_viewer_tab)
+        self.database_save_edited_project_data_button = QtWidgets.QPushButton()
         self.database_save_edited_project_data_button.clicked.connect(
-            self.database_save_edited_project_data)
+            self.project_data_save_new)
         self.database_save_edited_project_data_button.setObjectName(
             "database_save_edited_project_data_button")
         self.database_save_edited_project_data_button.setEnabled(False)
-        self.database_viewer_tab_layout.addWidget(
-            self.database_save_edited_project_data_button, 20, 0, 1, 9)
+        self.project_data_bottom_cta_layout.addWidget(
+            self.database_save_edited_project_data_button)
+
+        # Action button to discard manual changes
+        self.database_discard_edited_project_data_button = QtWidgets.QPushButton()
+        self.database_discard_edited_project_data_button.clicked.connect(
+            self.database_populate_project_edit_fields)
+        self.database_discard_edited_project_data_button.setObjectName(
+            "database_discard_edited_project_data_button")
+        self.database_discard_edited_project_data_button.setEnabled(False)
+        self.project_data_bottom_cta_layout.addWidget(
+            self.database_discard_edited_project_data_button)
+
+        # Action button to delete database entry
+        self.database_delete_project_data_button = QtWidgets.QPushButton()
+        self.database_delete_project_data_button.clicked.connect(
+            self.database_delete_project_data)
+        self.database_delete_project_data_button.setObjectName(
+            "database_delete_project_data_button")
+        self.database_delete_project_data_button.setStyleSheet(
+            "background-color:rgb(255, 204, 204)")
+        self.database_delete_project_data_button.setEnabled(False)
+        self.project_data_bottom_cta_layout.addWidget(
+            self.database_delete_project_data_button)
+
+        self.database_viewer_tab_layout.addLayout(
+            self.project_data_bottom_cta_layout)
+
+        self.database_fetch("project_data")
 
         # Profile/Data Section Tab (file_template_tab)
         self.file_template_tab = QtWidgets.QWidget()
@@ -474,17 +564,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.file_template_tab, "")
 
         # Layout for file_template_tab
-        self.file_template_tab_layout = QtWidgets.QGridLayout(
+        self.file_template_tab_layout = QtWidgets.QVBoxLayout(
             self.file_template_tab)
         self.file_template_tab_layout.setObjectName("file_template_tab_layout")
 
+        self.file_template_tab_line_above_cta_layout = QtWidgets.QHBoxLayout()
         # Line above action buttons
         self.file_template_tab_line_1 = QtWidgets.QFrame(self.file_input_tab)
         self.file_template_tab_line_1.setFrameShape(QtWidgets.QFrame.HLine)
         self.file_template_tab_line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.file_template_tab_line_1.setObjectName("file_template_tab_line_1")
-        self.file_template_tab_layout.addWidget(
-            self.file_template_tab_line_1, 0, 0, 1, 10)
+        self.file_template_tab_line_above_cta_layout.addWidget(
+            self.file_template_tab_line_1)
+
+        self.file_template_tab_layout.addLayout(
+            self.file_template_tab_line_above_cta_layout)
+
+        self.file_template_tab_cta_button_layout = QtWidgets.QHBoxLayout()
 
         # Button to load template file
         self.select_template_file = QtWidgets.QPushButton()
@@ -492,12 +588,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_template_file.clicked.connect(
             self.file_profile_template_dialog)
         self.select_template_file_dialog = QtWidgets.QFileDialog()
-        self.file_template_tab_layout.addWidget(
-            self.select_template_file, 1, 0, 1, 2)
+        self.file_template_tab_cta_button_layout.addWidget(
+            self.select_template_file)
 
         # Label for profile name
         self.file_template_profile_name_label = QtWidgets.QLabel()
-        self.file_template_tab_layout.addWidget(self.file_template_profile_name_label, 1, 2, 1, 2)
+        self.file_template_tab_cta_button_layout.addWidget(
+            self.file_template_profile_name_label)
 
         # Button to apply selection as co-ords for unique file identifier
         self.apply_unique_file_identifier_button = QtWidgets.QPushButton()
@@ -507,8 +604,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.apply_unique_file_indentifier)
         self.apply_unique_file_identifier_button.setEnabled(False)
         self.apply_unique_file_identifier_dialog = QtWidgets.QFileDialog()
-        self.file_template_tab_layout.addWidget(
-            self.apply_unique_file_identifier_button, 1, 4, 1, 2)
+        self.file_template_tab_cta_button_layout.addWidget(
+            self.apply_unique_file_identifier_button)
 
         # Button to apply selection as co-ords for project number
         self.apply_unique_profile_project_number_button = QtWidgets.QPushButton()
@@ -518,8 +615,8 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda: self.apply_unique_profile_parameter(project_number=True))
         self.apply_unique_profile_project_number_button.setEnabled(False)
         self.apply_unique_profile_project_number_dialog = QtWidgets.QFileDialog()
-        self.file_template_tab_layout.addWidget(
-            self.apply_unique_profile_project_number_button, 1, 6, 1, 2)
+        self.file_template_tab_cta_button_layout.addWidget(
+            self.apply_unique_profile_project_number_button)
 
         # Button to apply selection as co-ords for unique data information
         self.apply_unique_profile_parameter_button = QtWidgets.QPushButton()
@@ -529,21 +626,27 @@ class MainWindow(QtWidgets.QMainWindow):
             self.apply_unique_profile_parameter)
         self.apply_unique_profile_parameter_button.setEnabled(False)
         self.apply_unique_profile_parameter_dialog = QtWidgets.QFileDialog()
-        self.file_template_tab_layout.addWidget(
-            self.apply_unique_profile_parameter_button, 1, 8, 1, 2)
+        self.file_template_tab_cta_button_layout.addWidget(
+            self.apply_unique_profile_parameter_button)
+
+        self.file_template_tab_layout.addLayout(
+            self.file_template_tab_cta_button_layout)
 
         # Line below action buttons
+        self.file_template_tab_line_below_cta_layout = QtWidgets.QHBoxLayout()
         self.file_template_tab_line_2 = QtWidgets.QFrame(self.file_input_tab)
         self.file_template_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.file_template_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.file_template_tab_line_2.setObjectName("file_template_tab_line_2")
-        self.file_template_tab_layout.addWidget(
-            self.file_template_tab_line_2, 2, 0, 1, 10)
+        self.file_template_tab_line_below_cta_layout.addWidget(
+            self.file_template_tab_line_2)
+
+        self.file_template_tab_layout.addLayout(
+            self.file_template_tab_line_below_cta_layout)
 
         # Custom template display widget
-        self.template_display = QtWidgets.QLabel()
-        self.file_template_tab_layout.addWidget(
-            self.template_display, 3, 0, 20, 10)
+        self.template_display = TemplateWidget()
+        self.file_template_tab_layout.addWidget(self.template_display)
 
         # Settings Tab (settings_tab)
         self.settings_tab = QtWidgets.QWidget()
@@ -551,72 +654,73 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.settings_tab, "")
 
         # Layout for settings_tab
-        self.setting_tab_layout = QtWidgets.QGridLayout(self.settings_tab)
+        self.setting_tab_layout = QtWidgets.QVBoxLayout(self.settings_tab)
         self.setting_tab_layout.setObjectName("setting_tab_layout")
 
         # Line above action buttons
-        self.settings_tab_line_1 = QtWidgets.QFrame(self.settings_tab)
+        self.settings_tab_line_1 = QtWidgets.QFrame()
         self.settings_tab_line_1.setFrameShape(QtWidgets.QFrame.HLine)
         self.settings_tab_line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.settings_tab_line_1.setObjectName("settings_tab_line_1")
-        self.setting_tab_layout.addWidget(
-            self.settings_tab_line_1, 0, 0, 1, 10)
+        self.setting_tab_layout.addWidget(self.settings_tab_line_1)
 
-        # Label to choose file profile
-        self.settings_file_profile_names_label = QtWidgets.QLabel()
-        self.settings_file_profile_names_label.setObjectName(
-            "settings_file_profile_names_label")
-        self.setting_tab_layout.addWidget(
-            self.settings_file_profile_names_label, 1, 0, 1, 1)
-
-        # dropdown of all profiles
-        self.settings_file_profile_names_combo_box = QtWidgets.QComboBox(
-            self.settings_tab)
-        self.settings_file_profile_names_combo_box.setObjectName(
-            "settings_file_profile_names_combo_box")
-        self.setting_tab_layout.addWidget(
-            self.settings_file_profile_names_combo_box, 1, 2, 1, 4)
-        self.settings_file_profile_names_combo_box.setEditable(True)
-        self.settings_file_profile_names_combo_box.lineEdit(
-        ).setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.settings_file_profile_names_combo_box.addItems(
-            self.format_file_profile_dropdown())
-        self.settings_file_profile_names_combo_box.setEditable(False)
-        self.settings_file_profile_names_combo_box.currentTextChanged.connect(
-            self.display_active_parameters)
+        self.settings_profile_choices_label_layout = QtWidgets.QHBoxLayout()
+        
+        # Label to display active parameters
+        self.settings_profile_template_label = QtWidgets.QLabel()
+        self.settings_profile_template_label.setObjectName(
+            "settings_profile_template_label")
+        self.settings_profile_choices_label_layout.addWidget(
+            self.settings_profile_template_label)
 
         # Label to display active parameters
         self.settings_profile_parameters_label = QtWidgets.QLabel()
         self.settings_profile_parameters_label.setObjectName(
             "settings_profile_parameters_label")
-        self.setting_tab_layout.addWidget(
-            self.settings_profile_parameters_label, 2, 0, 1, 4)
+        self.settings_profile_choices_label_layout.addWidget(
+            self.settings_profile_parameters_label)
+        
+        self.setting_tab_layout.addLayout(self.settings_profile_choices_label_layout)
+
+        self.settings_profile_choices_layout = QtWidgets.QHBoxLayout()
+
+        # List widget to display profiles
+        self.settings_profile_templates_list_widget = QtWidgets.QListWidget()
+        self.settings_profile_templates_list_widget.setObjectName(
+            "settings_profile_templates_list_widget")
+        self.settings_profile_templates_list_widget.addItems(
+            self.format_file_profile_dropdown())
+        self.settings_profile_templates_list_widget.itemClicked.connect(
+            self.display_active_parameters)
+        self.settings_profile_choices_layout.addWidget(
+            self.settings_profile_templates_list_widget)
 
         # List widget to display active parameters
-        self.settings_profile_parameters_list_widget = QtWidgets.QListWidget(
-            self.settings_tab)
+        self.settings_profile_parameters_list_widget = QtWidgets.QListWidget()
         self.settings_profile_parameters_list_widget.setObjectName(
             "settings_profile_parameters_list_widget")
         self.settings_profile_parameters_list_widget.itemClicked.connect(
             self.add_active_param_line_edit)
-        self.setting_tab_layout.addWidget(
-            self.settings_profile_parameters_list_widget, 3, 0, 2, 10)
+        self.settings_profile_choices_layout.addWidget(
+            self.settings_profile_parameters_list_widget)
+
+        self.setting_tab_layout.addLayout(self.settings_profile_choices_layout)
 
         # Line below action buttons
-        self.settings_tab_line_2 = QtWidgets.QFrame(self.settings_tab)
+        self.settings_tab_line_2 = QtWidgets.QFrame()
         self.settings_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.settings_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.settings_tab_line_2.setObjectName("settings_tab_line_2")
-        self.setting_tab_layout.addWidget(
-            self.settings_tab_line_2, 14, 0, 1, 10)
+        self.setting_tab_layout.addWidget(self.settings_tab_line_2)
 
         # Label for file rename parameter input
         self.settings_profile_naming_scheme_label = QtWidgets.QLabel()
         self.settings_profile_naming_scheme_label.setObjectName(
             "settings_profile_naming_scheme_label")
         self.setting_tab_layout.addWidget(
-            self.settings_profile_naming_scheme_label, 15, 0, 1, 4)
+            self.settings_profile_naming_scheme_label)
 
+        self.settings_file_name_pattern_layout = QtWidgets.QHBoxLayout()
         # Line edit for user to type in format with parameters
         self.settings_profile_naming_scheme_line_edit = QtWidgets.QLineEdit(
             self.settings_tab)
@@ -624,8 +728,8 @@ class MainWindow(QtWidgets.QMainWindow):
             "settings_profile_naming_scheme_line_edit")
         self.settings_profile_naming_scheme_line_edit.textChanged.connect(
             self.display_example_file_name)
-        self.setting_tab_layout.addWidget(
-            self.settings_profile_naming_scheme_line_edit, 16, 0, 1, 8)
+        self.settings_file_name_pattern_layout.addWidget(
+            self.settings_profile_naming_scheme_line_edit)
 
         # Button to apply selection as co-ords for unique data information
         self.settings_profile_naming_scheme_button = QtWidgets.QPushButton()
@@ -633,30 +737,46 @@ class MainWindow(QtWidgets.QMainWindow):
             "settings_profile_naming_scheme_button")
         self.settings_profile_naming_scheme_button.clicked.connect(
             self.apply_file_name_pattern)
-        self.setting_tab_layout.addWidget(
-            self.settings_profile_naming_scheme_button, 16, 8, 1, 2)
+        self.settings_file_name_pattern_layout.addWidget(
+            self.settings_profile_naming_scheme_button)
+
+        self.setting_tab_layout.addLayout(
+            self.settings_file_name_pattern_layout)
 
         # Label for file rename example output
         self.settings_profile_naming_scheme_example_label = QtWidgets.QLabel()
         self.settings_profile_naming_scheme_example_label.setObjectName(
             "settings_profile_naming_scheme_example_label")
         self.setting_tab_layout.addWidget(
-            self.settings_profile_naming_scheme_example_label, 17, 0, 1, 4)
+            self.settings_profile_naming_scheme_example_label)
 
         # Line edit to display an example of data shown
-        self.settings_profile_naming_scheme_example_line_edit = QtWidgets.QLineEdit(
-            self.settings_tab)
+        self.settings_profile_naming_scheme_example_line_edit = QtWidgets.QLineEdit()
         self.settings_profile_naming_scheme_example_line_edit.setEnabled(False)
         self.settings_profile_naming_scheme_example_line_edit.setObjectName(
             "settings_profile_naming_scheme_example_line_edit")
         self.setting_tab_layout.addWidget(
-            self.settings_profile_naming_scheme_example_line_edit, 18, 0, 1, 10)
+            self.settings_profile_naming_scheme_example_line_edit)
 
-        # Label for empty space
-        self.settings_empty_label = QtWidgets.QLabel()
-        self.settings_empty_label.setObjectName("tab_5_empty_space_label")
-        self.setting_tab_layout.addWidget(
-            self.settings_empty_label, 19, 0, 10, 10)
+        # Line to split sections
+        self.settings_tab_line_3 = QtWidgets.QFrame()
+        self.settings_tab_line_3.setFrameShape(QtWidgets.QFrame.HLine)
+        self.settings_tab_line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.settings_tab_line_3.setObjectName("settings_tab_line_3")
+        self.setting_tab_layout.addWidget(self.settings_tab_line_3)
+
+        # Line to split sections
+        self.settings_tab_line_4 = QtWidgets.QFrame()
+        self.settings_tab_line_4.setFrameShape(QtWidgets.QFrame.HLine)
+        self.settings_tab_line_4.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.settings_tab_line_4.setObjectName("settings_tab_line_4")
+        self.setting_tab_layout.addWidget(self.settings_tab_line_4)
+
+        # signature text edit
+        self.settings_email_text_edit = EmailSignatureEditor()
+        self.settings_email_text_edit.setObjectName("settings_email_text_edit")
+        self.setting_tab_layout.addWidget(self.settings_email_text_edit)
+        self.setting_tab_layout.setStretch(self.setting_tab_layout.indexOf(self.settings_email_text_edit), 1)
 
         # Translate UI if in another language
         self.translate_ui()
@@ -670,6 +790,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setTabOrder(self.database_viewer_tab, self.file_template_tab)
 
         # Once finished initializing, show
+        self.tab_widget.currentChanged.connect(self.tab_clicked_handler)
         self.show()
 
     progress_update = QtCore.Signal(int)
@@ -679,19 +800,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setWindowTitle(_translate("MainWindow", "Report Sorter"))
         self.settings_profile_naming_scheme_label.setText(
-            _translate("MainWindow", "Filename Template Creation:"))
+            _translate("MainWindow", "File Name Template:"))
         self.settings_profile_naming_scheme_example_label.setText(
-            _translate("MainWindow", "Filename Example:"))
+            _translate("MainWindow", "File Name Preview:"))
         self.label.setText(_translate(
-            "MainWindow", "© 2022 Brandon Gorman. All rights reserved."))
+            "MainWindow", "© 2023 Brandon Gorman. All rights reserved."))
         self.file_preview_label.setText(
             _translate("MainWindow", "File Output Viewer:"))
         self.processed_files_label.setText(
             _translate("MainWindow", "Processed Files:"))
-        self.settings_file_profile_names_label.setText(
-            _translate("MainWindow", "Choose File Profile:"))
         self.settings_profile_parameters_label.setText(_translate(
-            "MainWindow", "Available Parameters For Chosen File Profile:"))
+            "MainWindow", "Available Profile Parameters:"))
+        self.settings_profile_template_label.setText(_translate(
+            "MainWindow", "Choose Profile:"))
         self.database_email_to_label.setText(
             _translate("MainWindow", "Email TO List:"))
         self.database_email_cc_label.setText(
@@ -722,6 +843,10 @@ class MainWindow(QtWidgets.QMainWindow):
             _translate("MainWindow", "Import Project Data"))
         self.export_project_data_button.setText(
             _translate("MainWindow", "Export Project Data"))
+        self.project_data_add_new_button.setText(
+            _translate("MainWindow", "New Entry"))
+        self.delete_all_project_data_button.setText(
+            _translate("MainWindow", "Delete ALL Project Data"))
         self.file_rename_button.setText(_translate("MainWindow", "Rename"))
         self.process_button.setText(_translate("MainWindow", "Process"))
         self.email_button.setText(_translate("MainWindow", "E-Mail"))
@@ -730,12 +855,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.database_discard_edited_project_data_button.setText(
             _translate("MainWindow", "Discard Changes"))
         self.database_save_edited_project_data_button.setText(
-            _translate("MainWindow", "Save Changes"))
+            _translate("MainWindow", "Save New"))
+        self.database_delete_project_data_button.setText(
+            _translate("MainWindow", "Delete Entry"))
 
         self.tab_widget.setTabText(self.tab_widget.indexOf(
-            self.file_input_tab), _translate("MainWindow", "Input"))
+            self.file_input_tab), _translate("MainWindow", "Processing"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(
-            self.processed_files_tab), _translate("MainWindow", "Output"))
+            self.processed_files_tab), _translate("MainWindow", "Console"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(
             self.database_viewer_tab), _translate("MainWindow", "Project Data"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(
@@ -743,16 +870,164 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.setTabText(self.tab_widget.indexOf(
             self.settings_tab), _translate("MainWindow", "Settings"))
 
+    def center_application(self, screen):
+        # get the size of the main window
+        windowWidth = self.frameGeometry().width()
+        windowHeight = self.frameGeometry().height()
+
+        # calculate the top-left corner of the main window
+        x = screen.width() // 2 - windowWidth // 2
+        y = screen.height() // 2 - windowHeight // 2
+
+        # set the position of the main window
+        self.move(x, y)
+        self.resize(screen.width()//2, screen.height()/1.1)
+
+    def database_delete_project_data(self):
+        if self.project_data_loaded_id is None:
+            return
+        
+        delete_return = delete_project_data_entry(
+            self.project_data_loaded_data["project_number"])
+        
+        if delete_return == None:
+            # self.project_data_loaded_id = None
+            self.database_fetch("project_data")
+            self.clear_project_data_entry_fields()
+            row_count = 0
+            index_in_shown = False
+            first_index = None
+            item = self.database_viewer_table.item(self.project_data_loaded_id.row(), self.project_data_loaded_id.column())
+            for row in range(self.database_viewer_table.rowCount()):
+                if not self.database_viewer_table.isRowHidden(row):
+                    row_count += 1
+                    for col in range(self.database_viewer_table.columnCount()):
+                        shown_item = self.database_viewer_table.item(row, col)
+                        if first_index is None:
+                            first_index = self.database_viewer_table.indexFromItem(shown_item)
+                        if item.text() == shown_item.text():
+                            index_in_shown = True
+
+            if row_count > 0:
+                if index_in_shown:
+                    self.database_viewer_table.setCurrentIndex(
+                        self.project_data_loaded_id)
+                else:
+                    self.project_data_loaded_id = first_index
+                    self.database_viewer_table.setCurrentIndex(first_index)
+                self.database_populate_project_edit_fields()
+                return
+            self.database_delete_project_data_button.setEnabled(False)
+            self.project_data_loaded_id = None
+            return
+
+        # Return any errors and display to user, leaving data as is if any occurs
+        delete_error_dialog = QtWidgets.QMessageBox()
+        delete_error_dialog.setIcon(
+            QtWidgets.QMessageBox.Warning)
+        delete_error_dialog.setWindowTitle("Project Data Delete Error")
+        delete_error_dialog.setText(
+            f"Error occured delete project data\n\n \
+            {delete_return}")
+        delete_error_dialog.exec()
+
     def database_fetch(self, table_name):
         """Handles threading database fetching and passing results to display to user"""
 
         # Database may get large so start seperate thread to handle fetching
         self.database_table_data = fetch_data(table_name)
         self.database_viewer_table.currentItemChanged.disconnect()
+        self.database_viewer_table.clear()
         self.display_data_as_table()
         self.database_viewer_table.currentItemChanged.connect(
             self.database_populate_project_edit_fields)
         self.database_viewer_table.sortItems(0, QtCore.Qt.AscendingOrder)
+        self.update()
+
+        # If there is no project_data, dont let the user export nothing.
+        if not self.database_table_data[0]:
+            self.export_project_data_button.setEnabled(False)
+
+    def project_data_add_new(self):
+        self.project_data_loaded_data = {'project_number': None, 'directory': None,
+                                         'email_to': None, 'email_cc': None, 'email_bcc': None, 'email_subject': None}
+        self.adding_new = True
+        self.database_discard_edited_project_data()
+        self.clear_project_data_entry_fields()
+        self.database_save_edited_project_data_button.setText("Save New")
+        self.database_save_edited_project_data_button.clicked.disconnect()
+        self.database_save_edited_project_data_button.clicked.connect(
+            self.project_data_save_new)
+
+    def project_data_save_new(self):
+        new_project_data = {}
+
+        for col_name, widget in zip(["email_to", "email_cc", "email_bcc"], [self.database_email_to_list_widget, self.database_email_cc_list_widget, self.database_email_bcc_list_widget]):
+            item_texts = []
+            for i in range(widget.count()):
+                if widget.item(i).text():
+                    item_texts.append(widget.item(i).text())
+            new_text = "; ".join(item_texts)
+            new_project_data[col_name] = new_text
+
+        new_project_data["project_number"] = self.database_project_number_line_edit.text(
+        )
+        new_project_data["directory"] = self.database_project_directory_line_edit.text(
+        ).replace("\\", "/")
+        new_project_data["email_subject"] = self.database_project_email_subject_line_edit.text()
+
+        new_entry_return = add_new_project_data(new_project_data)
+
+        if new_entry_return is None:
+            self.database_fetch("project_data")
+            self.database_discard_edited_project_data()
+            self.adding_new = False
+            found_items = self.database_viewer_table.findItems(
+                new_project_data["project_number"], Qt.MatchExactly)
+            if found_items:
+                index_in_shown = None
+                found_item = found_items[0]
+                found_item_index = self.database_viewer_table.indexFromItem(
+                    found_item)
+                first_index = None
+                row_count = 0
+                for row in range(self.database_viewer_table.rowCount()):
+                    if not self.database_viewer_table.isRowHidden(row):
+                        row_count += 1
+                        for col in range(self.database_viewer_table.columnCount()):
+                            shown_item = self.database_viewer_table.item(row, col)
+                            index = self.database_viewer_table.indexFromItem(shown_item)
+                            if first_index is None:
+                                first_index = index
+                            if found_item.text() == shown_item.text():
+                                index_in_shown = True
+                                break
+                    if index_in_shown:
+                        break
+                if row_count == 0:
+                    # If user currently has a filter with no results, and they add a new entry, remove their filter and show new entry
+                    self.database_search_bar.setText("")
+                    self.database_viewer_table.setCurrentIndex(found_item_index)
+                elif index_in_shown is not None:
+                    self.database_viewer_table.setCurrentIndex(found_item_index)
+                else:
+                    self.database_viewer_table.setCurrentIndex(first_index)
+                self.database_save_edited_project_data_button.setText(
+                    "Save Changes")
+                self.database_save_edited_project_data_button.clicked.disconnect()
+                self.database_save_edited_project_data_button.clicked.connect(
+                    self.database_save_edited_project_data)
+                self.database_populate_project_edit_fields()
+            return
+
+        # Return any errors and display to user, leaving data as is if any occurs
+        add_new_error_dialog = QtWidgets.QMessageBox()
+        add_new_error_dialog.setIcon(
+            QtWidgets.QMessageBox.Warning)
+        add_new_error_dialog.setWindowTitle("Project Data Entry Error")
+        add_new_error_dialog.setText(
+            f"{new_entry_return}")
+        add_new_error_dialog.exec()
 
     def import_project_data(self):
 
@@ -800,7 +1075,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QtCore.QCoreApplication.translate("MainWindow", "Importing..."))
         self.process_button.setText(
             QtCore.QCoreApplication.translate("MainWindow", "Importing..."))
-        self.progress_popup = LoadingWidget(title="Importing", text="Importing Project Data...")
+        self.progress_popup = LoadingWidget(
+            title="Importing", text="Importing Project Data...")
         self.import_worker = ImportProjectDataThread(valid_data_to_import)
         self.import_worker.signals.progress.connect(
             self.evt_loading_widget_progress)
@@ -846,6 +1122,37 @@ class MainWindow(QtWidgets.QMainWindow):
                     [project_number, directory, email_to, email_cc, email_bcc, email_subject])
         return valid_data, invalid_data
 
+    def delete_all_project_data(self):
+
+        if self.database_viewer_table.rowCount() == 0:
+            return
+
+        delete_all_dialog = QtWidgets.QMessageBox()
+        delete_all_dialog.setIcon(QtWidgets.QMessageBox.Critical)
+        delete_all_dialog.setWindowTitle("Delete All Project Data?")
+        delete_all_dialog.setText(
+            f"Are you sure you want to delete all project data?.\
+                \n \
+                \nPress 'Proceed' to delete all\
+                \nPress 'Cancel' to go back")
+        delete_all_dialog.addButton("Proceed", QtWidgets.QMessageBox.YesRole)
+        delete_all_dialog.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
+        delete_all_reply = delete_all_dialog.exec()
+        if delete_all_reply != 0:
+            return
+
+        self.process_button.setEnabled(False)
+        self.import_project_data_button.setEnabled(False)
+        self.export_project_data_button.setEnabled(False)
+        self.progress_popup = LoadingWidget(
+            title="Deleting", text="Deleting Project Data...")
+        self.delete_worker = DeleteProjectDataThread()
+        self.delete_worker.signals.progress.connect(
+            self.evt_loading_widget_progress)
+        self.delete_worker.signals.result.connect(
+            self.evt_delete_all_complete)
+        self.thread_pool.start(self.delete_worker)
+
     def export_project_data(self):
 
         export_location = QtWidgets.QFileDialog.getExistingDirectory(
@@ -860,7 +1167,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QtCore.QCoreApplication.translate("MainWindow", "Exporting..."))
         self.process_button.setText(
             QtCore.QCoreApplication.translate("MainWindow", "Exporting..."))
-        self.progress_popup = LoadingWidget(title="Exporting", text="Exporting Project Data...")
+        self.progress_popup = LoadingWidget(
+            title="Exporting", text="Exporting Project Data...")
         self.export_worker = ExportProjectDataThread(export_location)
         self.export_worker.signals.progress.connect(
             self.evt_loading_widget_progress)
@@ -878,11 +1186,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.database_project_directory_line_edit.setText(
             project_directory_location)
 
+        self.project_data_change_check(
+            self.database_project_directory_line_edit, "directory")
+
     def database_discard_edited_project_data(self):
         self.project_data_changed = False
         self.database_discard_edited_project_data_button.setEnabled(False)
         self.database_save_edited_project_data_button.setEnabled(False)
-        self.database_viewer_table.setCurrentIndex(self.project_data_loaded_id)
+        if not self.adding_new:
+            self.database_viewer_table.setCurrentIndex(
+                self.project_data_loaded_id)
 
     def database_save_edited_project_data(self):
         # check each field to validate input data
@@ -928,6 +1241,9 @@ class MainWindow(QtWidgets.QMainWindow):
         update_error_dialog.exec()
 
     def project_data_change_check(self, widget, project_data_type):
+        # Multiple widgets need to be chacked so if the passed widget is a QtLineEdit then just get the text
+        # If it is a QtListWidget then it is the e-mail field, so join each list item together into a string
+        # to compare to the database/table result
         if isinstance(widget, QtWidgets.QLineEdit):
             new_text = widget.text()
         else:
@@ -937,15 +1253,44 @@ class MainWindow(QtWidgets.QMainWindow):
                     item_texts.append(widget.item(i).text())
             new_text = "; ".join(item_texts)
 
-        if self.project_data_loaded_data.get(project_data_type) != new_text:
+        # If there isnt any loaded data yet then user is entering new data. Check if field has any value as well.
+        # If they do, then dont set project_data_changed because no data has been changed, we are creating new data
+        # Check new_text first to short circuit check
+        if new_text and self.project_data_loaded_data.get(project_data_type) is None:
+            self.database_discard_edited_project_data_button.setEnabled(True)
+            self.database_save_edited_project_data_button.setEnabled(True)
+        elif self.project_data_loaded_data.get(project_data_type) != new_text:
             self.project_data_changed = True
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
 
+    def clear_project_data_entry_fields(self):
+        self.database_email_to_list_widget.clear()
+        self.database_email_cc_list_widget.clear()
+        self.database_email_bcc_list_widget.clear()
+        self.database_project_number_line_edit.clear()
+        self.database_project_directory_line_edit.clear()
+        self.database_project_email_subject_line_edit.clear()
+
     def database_populate_project_edit_fields(self):
 
-        if self.project_data_loaded_id == self.database_viewer_table.selectionModel().currentIndex():
-            return
+        self.database_save_edited_project_data_button.setText("Save Changes")
+        self.database_save_edited_project_data_button.clicked.disconnect()
+        self.database_save_edited_project_data_button.clicked.connect(
+            self.database_save_edited_project_data)
+        # If user is creating a new entry and they decide to clik away into the table.
+        # Just discard changes and load data from the table
+        if self.adding_new:
+            # If user clicks a new row, reset the save new/save changes button
+            self.project_data_changed = False
+            if self.project_data_loaded_id is not None:
+                self.database_viewer_table.setCurrentIndex(
+                    self.project_data_loaded_id)
+            self.adding_new = False
+
+        self.database_delete_project_data_button.setEnabled(True)
+        # if self.project_data_loaded_id == self.database_viewer_table.selectionModel().currentIndex():
+        #     return
 
         # If user edited the project data ask if they want to discard or cancel
         if self.project_data_changed:
@@ -965,53 +1310,80 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.project_data_loaded_id = self.database_viewer_table.selectionModel().currentIndex()
 
-        # If project data not changed then load data
+        # if project data not changed then load data
         self.database_discard_edited_project_data()
+        self.clear_project_data_entry_fields()
 
-        self.database_email_to_list_widget.clear()
-        self.database_email_cc_list_widget.clear()
-        self.database_email_bcc_list_widget.clear()
-        self.database_project_number_line_edit.clear()
-        self.database_project_directory_line_edit.clear()
-        self.database_project_email_subject_line_edit.clear()
+        if self.database_viewer_table.rowCount() > 0:
+            self.database_project_number_line_edit.setText(self.database_viewer_table.item(
+                self.database_viewer_table.currentRow(), 0).text())
+            self.database_project_directory_line_edit.setText(
+                self.database_viewer_table.item(self.database_viewer_table.currentRow(), 1).text())
+            self.database_project_email_subject_line_edit.setText(
+                self.database_viewer_table.item(self.database_viewer_table.currentRow(), 5).text())
 
-        self.database_project_number_line_edit.setText(self.database_viewer_table.item(
-            self.database_viewer_table.currentRow(), 0).text())
-        self.database_project_directory_line_edit.setText(
-            self.database_viewer_table.item(self.database_viewer_table.currentRow(), 1).text())
-        self.database_project_email_subject_line_edit.setText(
-            self.database_viewer_table.item(self.database_viewer_table.currentRow(), 5).text())
+            self.project_data_loaded_data = {
+                'project_number': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 0).text(),
+                'directory': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 1).text(),
+                'email_to': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 2).text(),
+                'email_cc': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 3).text(),
+                'email_bcc': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 4).text(),
+                'email_subject': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 5).text()
+            }
 
-        self.project_data_loaded_data = {
-            'project_number': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 0).text(),
-            'directory': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 1).text(),
-            'email_to': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 2).text(),
-            'email_cc': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 3).text(),
-            'email_bcc': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 4).text(),
-            'email_subject': self.database_viewer_table.item(self.database_viewer_table.currentRow(), 5).text()
-        }
+            for i in [2, 3, 4]:
+                email_addresses = self.database_viewer_table.item(
+                    self.database_viewer_table.currentRow(), i).text().split(";")
+                email_addresses = [address.strip()
+                                   for address in email_addresses]
 
-        for i in [2, 3, 4]:
-            email_addresses = self.database_viewer_table.item(
-                self.database_viewer_table.currentRow(), i).text().split(";")
-            email_addresses = [address.strip() for address in email_addresses]
+                for email_address in email_addresses:
+                    # Dont add blank emails to list (sometimes users add rogue ; to email list)
+                    if email_address is None or email_address == "":
+                        continue
+                    email_address_item = QtWidgets.QListWidgetItem(
+                        email_address)
+                    email_address_item.setFlags(
+                        email_address_item.flags() | Qt.ItemIsEditable)
+                    if i == 2:
+                        self.database_email_to_list_widget.addItem(
+                            email_address_item)
+                    elif i == 3:
+                        self.database_email_cc_list_widget.addItem(
+                            email_address_item)
+                    elif i == 4:
+                        self.database_email_bcc_list_widget.addItem(
+                            email_address_item)
 
-            for email_address in email_addresses:
-                # Dont add blank emails to list (sometimes users add rogue ; to email list)
-                if email_address is None or email_address == "":
-                    continue
-                email_address_item = QtWidgets.QListWidgetItem(email_address)
-                email_address_item.setFlags(
-                    email_address_item.flags() | Qt.ItemIsEditable)
-                if i == 2:
-                    self.database_email_to_list_widget.addItem(
-                        email_address_item)
-                elif i == 3:
-                    self.database_email_cc_list_widget.addItem(
-                        email_address_item)
-                elif i == 4:
-                    self.database_email_bcc_list_widget.addItem(
-                        email_address_item)
+    def filter_table(self):
+        # Get search term from search bar
+        search_term = self.database_search_bar.text()
+
+        # Hide all rows and columns in the table
+        for row in range(self.database_viewer_table.rowCount()):
+            self.database_viewer_table.setRowHidden(row, True)
+        for column in range(self.database_viewer_table.columnCount()):
+            self.database_viewer_table.setColumnHidden(column, True)
+        row_count = 0
+        # Show rows and columns that contain the search term
+        for row in range(self.database_viewer_table.rowCount()):
+            for column in range(self.database_viewer_table.columnCount()):
+                try:
+                    item_text = self.database_viewer_table.item(row, column).text()
+                    if search_term in item_text:
+                        # If the search term is found, show the entire row and break out of the loop
+                        self.database_viewer_table.setRowHidden(row, False)
+                        # Show all cells in the row
+                        for column in range(self.database_viewer_table.columnCount()):
+                            self.database_viewer_table.setColumnHidden(
+                                column, False)
+                        row_count += 1
+                        break
+                except AttributeError:
+                    pass
+
+        if row_count > 0 and self.project_data_loaded_id is not None:
+            self.database_delete_project_data_button.setEnabled(True)
 
     def display_data_as_table(self):
         """Displays the fetched data into a table format for users to see
@@ -1019,6 +1391,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Args:
             data (list): database/table data in format [[data], [headers]]
         """
+        self.database_viewer_table.setSortingEnabled(False)
         # self.database_viewer_table.clear()
         self.database_viewer_table.setRowCount(0)
         table_widget_item = QtWidgets.QTableWidgetItem
@@ -1026,6 +1399,7 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             [data, headers] = [self.database_table_data[0],
                                self.database_table_data[1]]
+            data = data[1:]
             _ = len(data)
         except (IndexError, ValueError):
             self.database_viewer_table.setColumnCount(1)
@@ -1033,11 +1407,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 0, 0, table_widget_item("No Data"))
             return
 
-        data = data[1:]
-
         self.database_viewer_table.setColumnCount(len(headers))
         self.database_viewer_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents)
+            QtWidgets.QHeaderView.Stretch)
+        # self.database_viewer_table.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.Interactive)
         # Add headers to table
         for col, header_text in enumerate(headers):
             self.database_viewer_table.setHorizontalHeaderItem(
@@ -1048,6 +1422,8 @@ class MainWindow(QtWidgets.QMainWindow):
             for column, item in enumerate(row_data):
                 self.database_viewer_table.setItem(
                     row, column, table_widget_item(str(item)))
+        self.filter_table()
+        self.database_viewer_table.setSortingEnabled(True)
 
     def format_file_profile_dropdown(self):
         """Transforms profiles into a list with profile name and identifier text. profiles list comes from fetch_file_profiles from data_handler.
@@ -1055,16 +1431,20 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             list: Items to display in profiles dropdown
         """
-        dropdown_items = ["".join([s[0], " - ", s[1]])
-                          for s in fetch_file_profiles()]
+        dropdown_items = []
+        results =  fetch_file_profiles()
+        if results:
+            dropdown_items = ["".join([s[0], " - ", s[1]])
+                            for s in results]
         return dropdown_items
 
-    def display_active_parameters(self, file_profile_text):
+    def display_active_parameters(self, file_profile_item):
         """Fills in active parameters list based off the currently chosen file_profile dropdown item.
 
         Args:
             file_profile_text (str): file_profile text as format "file_profile - example text"
         """
+        file_profile_text = file_profile_item.text()
         self.settings_profile_parameters_list_widget.clear()
         self.settings_profile_naming_scheme_line_edit.clear()
         if not file_profile_text.split(" - ")[-1]:
@@ -1085,13 +1465,13 @@ class MainWindow(QtWidgets.QMainWindow):
         connection, cursor = db_connect(db_file_path)
 
         try:
-            profile_name = self.settings_file_profile_names_combo_box.currentText().split(
+            profile_name = self.settings_profile_templates_list_widget.currentText().split(
                 " - ")[0]
             file_profile_filename_pattern = cursor.execute(
-                """SELECT file_naming_format FROM profiles WHERE unique_profile_name = ?""", (scrub(profile_name),)).fetchone()[0]
+                """SELECT file_naming_format FROM profiles WHERE unique_profile_name = ?""", (scrub(profile_name),)).fetchone()
 
             # If file_profile already has a naming pattern, ask if user wants ot overwrite
-            if file_profile_filename_pattern is not None:
+            if file_profile_filename_pattern[0] is not None:
                 overwrite = QtWidgets.QMessageBox()
                 overwrite.setIcon(QtWidgets.QMessageBox.Warning)
                 overwrite.setWindowTitle("Filename Pattern Already Found")
@@ -1102,7 +1482,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         \n ")
                 overwrite.addButton("Overwrite", QtWidgets.QMessageBox.YesRole)
                 overwrite.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
-                overwrite_reply = overwrite.exec_()
+                overwrite_reply = overwrite.exec()
                 if overwrite_reply == 0:
                     update_file_profile_file_name_pattern(
                         profile_name, self.settings_profile_naming_scheme_line_edit.text(), connection, cursor)
@@ -1206,7 +1586,7 @@ class MainWindow(QtWidgets.QMainWindow):
             no_file_profile.setWindowTitle("No Profile Loaded")
             no_file_profile.setText(
                 "You must first select a template file to open.")
-            no_file_profile.exec_()
+            no_file_profile.exec()
             return
 
         # Bounding box can be too small and cause issues when analyzing text
@@ -1217,7 +1597,7 @@ class MainWindow(QtWidgets.QMainWindow):
             no_file_profile.setWindowTitle("Area Too Small")
             no_file_profile.setText(
                 "Data area too small. Please choose a larger area.")
-            no_file_profile.exec_()
+            no_file_profile.exec()
             return
 
         # If there is no bounding box, let user know to draw one
@@ -1227,7 +1607,7 @@ class MainWindow(QtWidgets.QMainWindow):
             no_file_profile.setWindowTitle("Select Identifier")
             no_file_profile.setText(
                 "Use the mouse to click and drag a bounding box around the desired profile identifier.")
-            no_file_profile.exec_()
+            no_file_profile.exec()
             return
 
         requirements_met = False
@@ -1239,14 +1619,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.apply_unique_file_identifier_dialog = ApplyFoundData(
                 self.template_display.true_coords(), self.template_display.found_text, dialog_type={"file_profile": True})
             if self.apply_unique_file_identifier_dialog.exec():
-                
+
                 if self.apply_unique_file_identifier_dialog.description.text().strip().lower().replace(" ", "_") == "":
                     no_file_profile = QtWidgets.QMessageBox()
                     no_file_profile.setIcon(QtWidgets.QMessageBox.Critical)
                     no_file_profile.setWindowTitle("No Profile Name")
                     no_file_profile.setText(
                         "Please enter a profile name.")
-                    no_file_profile.exec_()
+                    no_file_profile.exec()
                 else:
                     requirements_met = True
             else:
@@ -1310,7 +1690,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     "Continue", QtWidgets.QMessageBox.YesRole)
                 profile_issue.addButton(
                     "Cancel", QtWidgets.QMessageBox.RejectRole)
-                profile_issue_reply = profile_issue.exec_()
+                profile_issue_reply = profile_issue.exec()
                 if profile_issue_reply != 0:
                     return
 
@@ -1344,7 +1724,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 overwrite.addButton(
                     "See Existing", QtWidgets.QMessageBox.NoRole)
                 overwrite.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
-                overwrite_reply = overwrite.exec_()
+                overwrite_reply = overwrite.exec()
                 if overwrite_reply == 0:
                     try:
                         file_profile_id = cursor.execute(
@@ -1370,7 +1750,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         overwrite_error.setWindowTitle("Overwrite Error")
                         overwrite_error.setText(
                             "Error overwriting existing entry. Please try again or submit an issue if problem persists.")
-                        overwrite_error.exec_()
+                        overwrite_error.exec()
                 elif overwrite_reply == 1:
                     file_profile_id = cursor.execute(
                         """SELECT profile_id FROM profiles WHERE unique_profile_name=?""", (file_profile_name,)).fetchone()[0]
@@ -1387,14 +1767,9 @@ class MainWindow(QtWidgets.QMainWindow):
                         pass
             finally:
                 db_disconnect(connection, cursor)
-                self.settings_file_profile_names_combo_box.setEditable(True)
-                self.settings_file_profile_names_combo_box.clear()
-                self.settings_file_profile_names_combo_box.lineEdit(
-                ).setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-                self.settings_file_profile_names_combo_box.addItems(
+                self.settings_profile_templates_list_widget.clear()
+                self.settings_profile_templates_list_widget.addItems(
                     self.format_file_profile_dropdown())
-                self.settings_file_profile_names_combo_box.setEditable(False)
-
             try:
                 self.template_display.reset_rect()
                 self.paint_existing_data_rects()
@@ -1438,7 +1813,7 @@ class MainWindow(QtWidgets.QMainWindow):
         while not unique_profile_parameter:
             self.apply_unique_profile_parameter_dialog = ApplyFoundData(self.template_display.true_coords(
             ), self.template_display.found_text, dialog_type={dialog: True})
-            if self.apply_unique_profile_parameter_dialog.exec():          
+            if self.apply_unique_profile_parameter_dialog.exec():
 
                 # If clicked confirm, then add project_number or parameter to database, if exists ask user to overwrite?
                 unique_file_data_information = self.apply_unique_profile_parameter_dialog.text_input.text()
@@ -1573,7 +1948,8 @@ class MainWindow(QtWidgets.QMainWindow):
             # print(rects_data)
             if rects_data or rects_profile_data:
                 try:
-                    self.template_display.set_data_info(rects_data, rects_profile_data)
+                    self.template_display.set_data_info(
+                        rects_data, rects_profile_data)
                     # TemplateWidget.coords = rects
                     # print(f"templatedisplay.coords = {self.template_display.data_info}")
                     self.template_display.update()
@@ -1598,8 +1974,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.file_template_profile_name_label.clear()
             self.analyze_worker = WorkerAnalyzeThread(
                 file_name=self.file_profile_path, test=self.test, analyzed=self.analyzed, template=True)
-            self.progress_popup = LoadingWidget(title="Template Check", text="Comparing file to existing profiles...")
-            self.analyze_worker.signals.progress.connect(self.evt_loading_widget_progress)
+            self.progress_popup = LoadingWidget(
+                title="Template Check", text="Comparing file to existing profiles...")
+            self.analyze_worker.signals.progress.connect(
+                self.evt_loading_widget_progress)
             self.analyze_worker.signals.result.connect(
                 self.evt_analyze_complete)
             self.thread_pool.start(self.analyze_worker)
@@ -1618,6 +1996,7 @@ class MainWindow(QtWidgets.QMainWindow):
             image_jpeg[0].save(img_byte_arr, format='jpeg')
             img_byte_arr = img_byte_arr.getvalue()
 
+            self.template_display.deleteLater()
             self.template_display = TemplateWidget(img_byte_arr, image_jpeg[0])
 
             updated_width = self.template_display.scaled_width() + 25
@@ -1625,8 +2004,8 @@ class MainWindow(QtWidgets.QMainWindow):
             ) + self.select_template_file.height() + self.file_template_tab_line_1.height() * 3 + 25
 
             self.resize(int(updated_width), int(updated_height))
-            self.file_template_tab_layout.addWidget(
-                self.template_display, 3, 0, 20, 10)
+
+            self.file_template_tab_layout.addWidget(self.template_display)
             self.update()
 
             self.profile_file_loaded = True
@@ -1635,95 +2014,96 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # TODO: Update this function
     def email_button_handler(self):
-        signature_path = os.path.abspath(os.path.join(
-            home_dir + r"\\Signature\\concrete.htm"))
-        signature_path_28 = os.path.abspath(os.path.join(
-            home_dir + r"\\Signature\\concrete28.htm"))
-        if not self.analyzed and self.file_names:
-            if os.path.isfile(signature_path):
-                with open(signature_path, "r") as file:
-                    body_text = file.read()
-                with open(signature_path_28, "r") as file:
-                    body_text_28 = file.read()
+        return
+        # signature_path = os.path.abspath(os.path.join(
+        #     home_dir + r"\\Signature\\concrete.htm"))
+        # signature_path_28 = os.path.abspath(os.path.join(
+        #     home_dir + r"\\Signature\\concrete28.htm"))
+        # if not self.analyzed and self.file_names:
+        #     if os.path.isfile(signature_path):
+        #         with open(signature_path, "r") as file:
+        #             body_text = file.read()
+        #         with open(signature_path_28, "r") as file:
+        #             body_text_28 = file.read()
 
-            else:
-                # print("Signature File Not Found")
-                body_text = ""
-                pass
-            msg = QtWidgets.QMessageBox()
-            button_reply = msg.question(msg, "", "Do you want to create e-mails for non-analyzed files?",
-                                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            if button_reply == QtWidgets.QMessageBox.No:
-                self.status_output_box.appendPlainText(
-                    "E-Mails not generated\n")
-            elif button_reply == QtWidgets.QMessageBox.Yes:
-                for file in self.file_names:
-                    description = file.split("_")
-                    description = description[1]
-                    project_number, _, _, _, _, email_recipient_to, email_recipient_cc, email_recipient_subject = project_info(
-                        test=self.test, description=description)
-                    title = file.split("/").pop()
-                    attachment = file
-                    try:
-                        outlook = win32.Dispatch('outlook.application')
-                        mail = outlook.CreateItem(0)
-                        mail.To = email_recipient_to
-                        mail.CC = email_recipient_cc
-                        mail.Subject = email_recipient_subject
-                        if "28d" in title:
-                            mail.HtmlBody = body_text_28
-                        else:
-                            mail.HtmlBody = body_text
-                        mail.Attachments.Add(attachment)
-                        mail.Save()
-                        e = "Drafted email for: {0}".format(title)
-                        self.status_output_box.appendPlainText(e)
-                    except Exception as e:
-                        print(e)
-                        self.status_output_box.appendPlainText(e)
-                        pass
-        if self.analyzed:
-            if os.path.isfile(signature_path):
-                with open(signature_path, "r") as file:
-                    body_text = file.read()
-                with open(signature_path_28, "r") as file:
-                    body_text_28 = file.read()
-            else:
-                # print("Signature File Not Found")
-                body_text = ""
-                pass
-            all_list_titles = []
-            all_list_data = []
-            for i in range(self.processed_files_list_widget.count()):
-                all_list_data.append(self.processed_files_list_widget.item(
-                    i).data(QtCore.Qt.UserRole).split("%%")[0])
-                all_list_titles.append(
-                    self.processed_files_list_widget.item(i).text())
-            for i, project_number in enumerate(self.project_numbers):
-                if self.project_numbers_short[i][0] == "P":
-                    self.project_numbers_short[i] = self.project_numbers_short[i].replace(
-                        "P-", "P-00")
-                project_number, _, _, _, _, email_recipient_to, email_recipient_cc, email_recipient_subject = project_info(project_number=project_number, project_number_short=self.project_numbers_short[i],
-                                                                                                                           test=self.test)
-                attachment = all_list_data[i]
-                try:
-                    outlook = win32.Dispatch('outlook.application')
-                    mail = outlook.CreateItem(0)
-                    mail.To = email_recipient_to
-                    mail.CC = email_recipient_cc
-                    mail.Subject = email_recipient_subject
-                    if "28d" in attachment:
-                        mail.HtmlBody = body_text_28
-                    else:
-                        mail.HtmlBody = body_text
-                    mail.Attachments.Add(attachment)
-                    mail.Save()
-                    e = "Drafted email for: {0}".format(all_list_titles[i])
-                    self.status_output_box.appendPlainText(e)
-                except Exception as e:
-                    print(e)
-                    self.status_output_box.appendPlainText(str(e))
-                    pass
+        #     else:
+        #         # print("Signature File Not Found")
+        #         body_text = ""
+        #         pass
+        #     msg = QtWidgets.QMessageBox()
+        #     button_reply = msg.question(msg, "", "Do you want to create e-mails for non-analyzed files?",
+        #                                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        #     if button_reply == QtWidgets.QMessageBox.No:
+        #         self.status_output_box.appendPlainText(
+        #             "E-Mails not generated\n")
+        #     elif button_reply == QtWidgets.QMessageBox.Yes:
+        #         for file in self.file_names:
+        #             description = file.split("_")
+        #             description = description[1]
+        #             project_number, _, _, _, _, email_recipient_to, email_recipient_cc, email_recipient_subject = project_info(
+        #                 test=self.test, description=description)
+        #             title = file.split("/").pop()
+        #             attachment = file
+        #             try:
+        #                 outlook = win32.Dispatch('outlook.application')
+        #                 mail = outlook.CreateItem(0)
+        #                 mail.To = email_recipient_to
+        #                 mail.CC = email_recipient_cc
+        #                 mail.Subject = email_recipient_subject
+        #                 if "28d" in title:
+        #                     mail.HtmlBody = body_text_28
+        #                 else:
+        #                     mail.HtmlBody = body_text
+        #                 mail.Attachments.Add(attachment)
+        #                 mail.Save()
+        #                 e = "Drafted email for: {0}".format(title)
+        #                 self.status_output_box.appendPlainText(e)
+        #             except Exception as e:
+        #                 print(e)
+        #                 self.status_output_box.appendPlainText(e)
+        #                 pass
+        # if self.analyzed:
+        #     if os.path.isfile(signature_path):
+        #         with open(signature_path, "r") as file:
+        #             body_text = file.read()
+        #         with open(signature_path_28, "r") as file:
+        #             body_text_28 = file.read()
+        #     else:
+        #         # print("Signature File Not Found")
+        #         body_text = ""
+        #         pass
+        #     all_list_titles = []
+        #     all_list_data = []
+        #     for i in range(self.processed_files_list_widget.count()):
+        #         all_list_data.append(self.processed_files_list_widget.item(
+        #             i).data(QtCore.Qt.UserRole).split("%%")[0])
+        #         all_list_titles.append(
+        #             self.processed_files_list_widget.item(i).text())
+        #     for i, project_number in enumerate(self.project_numbers):
+        #         if self.project_numbers_short[i][0] == "P":
+        #             self.project_numbers_short[i] = self.project_numbers_short[i].replace(
+        #                 "P-", "P-00")
+        #         project_number, _, _, _, _, email_recipient_to, email_recipient_cc, email_recipient_subject = project_info(project_number=project_number, project_number_short=self.project_numbers_short[i],
+        #                                                                                                                    test=self.test)
+        #         attachment = all_list_data[i]
+        #         try:
+        #             outlook = win32.Dispatch('outlook.application')
+        #             mail = outlook.CreateItem(0)
+        #             mail.To = email_recipient_to
+        #             mail.CC = email_recipient_cc
+        #             mail.Subject = email_recipient_subject
+        #             if "28d" in attachment:
+        #                 mail.HtmlBody = body_text_28
+        #             else:
+        #                 mail.HtmlBody = body_text
+        #             mail.Attachments.Add(attachment)
+        #             mail.Save()
+        #             e = "Drafted email for: {0}".format(all_list_titles[i])
+        #             self.status_output_box.appendPlainText(e)
+        #         except Exception as e:
+        #             print(e)
+        #             self.status_output_box.appendPlainText(str(e))
+        #             pass
 
     def test_check(self):
         """Checks for 'Test Mode'.\n
@@ -1735,12 +2115,44 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.test = False
 
+    def tab_clicked_handler(self, tab_index):
+
+        if tab_index != self.tab_widget.indexOf(self.processed_files_tab):
+            return
+
+        self.tab_widget.setTabText(self.tab_widget.indexOf(
+            self.processed_files_tab), QtCore.QCoreApplication.translate("MainWindow", "Console"))
+
+        self.unseen_console_alerts = 0
+
+    def output_to_console(self, msgs, alerts=1):
+        """Outputs a message for user to see. If user is not currently viewing console tab, tab name will display number of important messages.
+
+        Args:
+            msgs (list): list of messages. Each list item will display on a new line. 
+            alerts (int, optional): Number of alerts to add to unseen amount. Defaults to 1.
+        """
+
+        for msg in msgs:
+            self.status_output_box.appendPlainText(msg)
+        self.status_output_box.appendPlainText("")
+
+        # If user is not currently in the console tab, add number of alerts to tab title
+        # If user is in the console tab, then reset the number of unseen alerts to 0 and do not update title
+        if self.tab_widget.currentIndex() != self.tab_widget.indexOf(self.processed_files_tab):
+            self.unseen_console_alerts += alerts
+            self.tab_widget.setTabText(self.tab_widget.indexOf(
+            self.processed_files_tab), QtCore.QCoreApplication.translate("MainWindow", f"Console ({self.unseen_console_alerts})"))
+            return
+        
+        self.unseen_console_alerts = 0
+
+
     def open_file_dialog(self):
         """Opens a file dialog to select files for input"""
 
         # When clicking Select Files, clear any previously selected files, and reset the file status box
         self.file_names = None
-        self.status_output_box.clear()
 
         self.dialog = QtWidgets.QFileDialog(directory=str(
             os.path.abspath(os.path.join(os.getcwd(), "test_files"))))
@@ -1751,19 +2163,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.process_button.setEnabled(False)
             return
 
+        self.process_button.setText(QtCore.QCoreApplication.translate("MainWindow", f"Process ({len(self.file_names)} Selected)"))
+        file_names_strings = []
         if len(self.file_names) == 1:
-            file_names_string = "(" + str(len(self.file_names)) + \
-                ")" + " file has been selected: \n"
+            file_names_string = "New Selection of (" + str(len(self.file_names)) + \
+                ")" + " file:"
         else:
-            file_names_string = "(" + str(len(self.file_names)) + \
-                ")" + " files have been selected: \n"
+            file_names_string = "New Selection of (" + str(len(self.file_names)) + \
+                ")" + " files:"
+        
+        file_names_strings.append(file_names_string)
+        for item in self.file_names:
+            file_names_strings.append(item)
 
         self.process_button.setEnabled(True)
-
-        for item in self.file_names:
-            file_names_string = file_names_string + item + "\n"
-
-        self.status_output_box.appendPlainText(file_names_string)
+        self.output_to_console(file_names_strings, alerts=len(file_names_strings)-1)
 
     def rename_file_handler(self):
         """Upon double clicking a list item, it can leave it open for some reason and not allow it to be clicked again, so close persistant editor upon double click.
@@ -1775,134 +2189,41 @@ class MainWindow(QtWidgets.QMainWindow):
         self.processed_files_list_widget.editItem(
             self.processed_files_list_widget.currentItem())
 
-    # TODO: Update this function
-
     def file_rename_button_handler(self):
-        file_path = self.processed_files_list_widget.currentItem().data(
-            QtCore.Qt.UserRole).split("%%")
-        file_path_transit_src = file_path[0]
-        # Project path may be changed if project number updated so declare up here
-        file_path_project_src = file_path[1]
+        """Renames the currently selected file from its original location, as well as in the directory specified in project_data
+        """        
 
-        # See if project number is the edited string. If it is and description is == "SomeProjectDescription"
-        # Then the project was previously not detected properly so assume the project edit is correct and find
-        # details in the database table.
-        # Before renaming occurs Old data = entry in the listWidget
-        #                        New data = entry in the text edit box
-        description = "SomeProjectDescription"
-        old_project_number = ""
-        new_project_number = ""
-        project_number = ""
-        project_number_short = ""
-        old_package = ""
-        old_title = self.processed_files_list_widget.currentItem().text()
-        project_details_changed = False
-        new_title = self.file_rename_line_edit.text()
-        if re.search(r"-([\dPBpb\.-]+)_", old_title, re.I) is not None:
-            old_project_number = re.search(
-                r"-([\dPBpb\.-]+)_", old_title, re.I).groups()
-            old_project_number = old_project_number[-1]
-        elif re.search(r"-(NA)_", old_title, re.I) is not None:
-            old_project_number = "NA"
-        if re.search(r"-([\dPBpb\.-]+)_", new_title, re.I) is not None:
-            new_project_number = re.search(
-                r"-([\dPBpb\.-]+)_", new_title, re.I).groups()
-            new_project_number = new_project_number[-1]
-        if old_project_number != new_project_number:
-            project_number, project_number_short, _, _, file_path, _, _, _ = project_info(
-                project_number=new_project_number, project_number_short=new_project_number, test=self.test)
-            project_details_changed = True
-        if re.search(r"(\d+)-[\dA-z]", old_title, re.I) is not None:
-            old_package = re.search(r"(\d+)-[\dA-z]", old_title, re.I).groups()
-            old_package = old_package[-1]
+        current_item = self.processed_files_list_widget.currentItem()
+        current_name = current_item.text()
+        new_name =  self.file_rename_line_edit.text()
 
-        if project_details_changed:
-            updated_file_details = old_title.replace(
-                "SomeProjectDescription", description)
-            updated_package = detect_package_number(
-                file_path_project_src)
-            updated_file_details = updated_file_details.replace(
-                old_package, updated_package)
-            updated_file_details = updated_file_details.replace(
-                old_project_number, project_number_short)
-            rename_transit_len = 260 - len(
-                str(file_path_transit_src.replace(file_path_transit_src.split("\\").pop(), "")))
-            rename_project_length = 260 - len(str(file_path_project_src))
-            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
-                updated_file_details = updated_file_details.replace(
-                    "Concrete", "Conc")
-            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
-                updated_file_details = updated_file_details.replace(
-                    "-2022", "")
-                updated_file_details = updated_file_details.replace(
-                    "-2021", "")
-            if len(updated_file_details) > rename_transit_len or len(updated_file_details) > rename_project_length:
-                if rename_project_length > rename_transit_len:
-                    cut = rename_project_length + 4
-                else:
-                    cut = rename_transit_len + 4
-                updated_file_details = updated_file_details.replace(".pdf", "")
-                updated_file_details = updated_file_details[:-cut] + "LONG.pdf"
-            rename_path_transit = os.path.abspath(os.path.join(
-                file_path_transit_src.replace(
-                    file_path_transit_src.split("\\").pop(), ""),
-                updated_file_details + ".pdf"))
-            rename_path_project = os.path.abspath(os.path.join(
-                file_path_project_src, updated_file_details + ".pdf"))
-            os.rename(file_path_transit_src, rename_path_transit)
-            if not os.path.isfile(file_path_project_src):
-                file_path_project_src = rename_path_project
-            if os.path.isfile(file_path_project_src):
-                if file_path_project_src != file_path_transit_src:
-                    os.rename(file_path_project_src, rename_path_project)
-            else:
-                shutil.copy(rename_path_transit, rename_path_project)
-            self.processed_files_list_widget.currentItem().setText(updated_file_details)
-            data = rename_path_transit + "%%" + rename_path_project
-            self.processed_files_list_widget.currentItem().setData(QtCore.Qt.UserRole, data)
-            self.file_rename_line_edit.setText(updated_file_details)
-            self.project_numbers_short[self.processed_files_list_widget.currentRow(
-            )] = project_number_short
-            self.project_numbers[self.processed_files_list_widget.currentRow(
-            )] = project_number
-        else:
-            # 254 to accommodate the .pdf
-            rename_transit_len = 254 - \
-                len(file_path_transit_src.replace(
-                    file_path_transit_src.split("\\").pop(), ""))
-            rename_project_len = 254 - \
-                len(file_path_project_src.replace(
-                    file_path_project_src.split("\\").pop(), ""))
-            if len(self.file_rename_line_edit.text()) > rename_transit_len or len(self.file_rename_line_edit.text()) > rename_project_len:
-                # print("Filename too long")
-                if rename_transit_len > rename_project_len:
-                    msg_string = f"Filename too long. Reduce by {len(self.file_rename_line_edit.text()) - rename_transit_len}"
-                else:
-                    msg_string = f"Filename too long. Reduce by {len(self.file_rename_line_edit.text()) - rename_project_len}"
-                ctypes.windll.user32.MessageBoxW(
-                    0, msg_string, "Filename Too Long", 1)
-            else:
-                rename_path_transit = os.path.abspath(os.path.join(
-                    file_path_transit_src.replace(
-                        file_path_transit_src.split("\\").pop(), ""),
-                    str(self.file_rename_line_edit.text()) + ".pdf"))
-                rename_path_project = os.path.abspath(os.path.join(
-                    file_path_project_src.replace(
-                        file_path_project_src.split("\\").pop(), ""),
-                    str(self.file_rename_line_edit.text()) + ".pdf"))
-                try:
-                    os.rename(file_path_transit_src, rename_path_transit)
-                except Exception:
-                    pass
-                if file_path_project_src != file_path_transit_src:  # If project and transit aren't the same, rename
-                    try:
-                        os.rename(file_path_project_src, rename_path_project)
-                    except Exception:
-                        pass
-                self.processed_files_list_widget.currentItem().setText(
-                    self.file_rename_line_edit.text())
-                data = rename_path_transit + "%%" + rename_path_project
-                self.processed_files_list_widget.currentItem().setData(QtCore.Qt.UserRole, data)
+        if new_name == current_name:
+            return
+
+        file_dirs = current_item.data(QtCore.Qt.UserRole)
+        source_path = file_dirs["source"]
+        project_data_path = file_dirs["project_data"]
+
+        renamed_source_path = source_path.replace(current_name, new_name)
+        renamed_project_data_path = project_data_path.replace(current_name, new_name)
+        
+        try:
+            os.rename(source_path, renamed_source_path)
+        except WindowsError as e:
+            # Display a message to user once simplified
+            print(e)
+            pass
+
+        try:
+            os.rename(project_data_path, renamed_project_data_path)
+        except WindowsError as e:
+            print(e)
+            pass
+            
+        self.processed_files_list_widget.currentItem().setText(
+            self.file_rename_line_edit.text())
+        file_dirs = {"source": renamed_source_path, "project_data": renamed_project_data_path}
+        self.processed_files_list_widget.currentItem().setData(QtCore.Qt.UserRole, file_dirs)
 
     def evt_analyze_complete(self, results):
         """Appends processed files list widget with new processed file data
@@ -1915,7 +2236,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.apply_unique_file_identifier_button.setEnabled(True)
 
             if results[-1] is None:  # No file type detected therefore new template
-                self.apply_unique_profile_project_number_button.setEnabled(False)
+                self.apply_unique_profile_project_number_button.setEnabled(
+                    False)
                 self.apply_unique_profile_parameter_button.setEnabled(False)
                 self.update_template_pixmap()
                 return
@@ -1933,11 +2255,16 @@ class MainWindow(QtWidgets.QMainWindow):
             print_string = results[1]
             file_name = results[2]
             file_path = results[3]
-            self.status_output_box.appendPlainText(print_string)
-            self.processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
-            self.processed_files_list_item.setData(QtCore.Qt.UserRole, file_path)
+            project_data_dir = results[5]
+            file_dirs = {"source": file_path, "project_data": project_data_dir}
+            self.output_to_console([print_string])
+            self.processed_files_list_item = QtWidgets.QListWidgetItem(
+                file_name)
+            self.processed_files_list_item.setData(
+                QtCore.Qt.UserRole, file_dirs)
             self.processed_files_list_widget.addItem(
                 self.processed_files_list_item)
+        self.process_button.setEnabled(False)
 
     def evt_export_complete(self, results):
         """Displays error message to user if one is present in results otherwise does nothing.
@@ -1962,6 +2289,29 @@ class MainWindow(QtWidgets.QMainWindow):
             export_error_dialog.exec()
         else:
             self.progress_popup.setValue(100)
+
+    def evt_delete_all_complete(self, results):
+        """Displays error message to user if one is present in results otherwise does nothing.
+
+        Args:
+            results (list): return message
+        """
+
+        self.process_button.setEnabled(True)
+        self.import_project_data_button.setEnabled(True)
+        if results and results[0] is not None:
+            export_error_dialog = QtWidgets.QMessageBox()
+            export_error_dialog.setIcon(QtWidgets.QMessageBox.Warning)
+            export_error_dialog.setWindowTitle("Project Data Delete Error")
+            export_error_dialog.setText(
+                f"Error when trying to delete all values from database.\n\n \
+                {results[0]}")
+            export_error_dialog.exec()
+        else:
+            self.progress_popup.setValue(100)
+            self.database_fetch("project_data")
+            self.database_discard_edited_project_data()
+            self.clear_project_data_entry_fields()
 
     def evt_import_complete(self, results):
         """Displays error message to user if one is present in results otherwise does nothing.
@@ -2008,20 +2358,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.analyzed = False
             self.progress = 0
             self.progress_bar.setValue(0)
-            self.status_output_box.appendPlainText("Analysis Started...\n")
+            self.output_to_console(["Analysis Started..."])
             self.data_processing()
             self.analyzed = True
         else:
-            self.status_output_box.appendPlainText(
-                "Please select at least 1 file to analyze...\n")
+            self.output_to_console(["Please select at least 1 file to analyze..."])
         self.process_button.setEnabled(True)
 
     def list_widget_handler(self):
         """Displays the currently selected list widget item"""
 
-        file_path = str(self.processed_files_list_widget.currentItem().data(
-            QtCore.Qt.UserRole)).replace("\\", "/")
-        self.file_preview.load(QtCore.QUrl(f"file:{file_path}"))
+        file_dirs = self.processed_files_list_widget.currentItem().data(
+            QtCore.Qt.UserRole)
+        source_dir = file_dirs["source"].replace("\\", "/")
+        if not os.path.exists(source_dir):
+            self.processed_files_list_widget.takeItem(self.processed_files_list_widget.currentRow())
+            self.processed_files_list_widget.setCurrentRow(0)
+            set_text = self.processed_files_list_widget.currentItem().text()
+            self.file_rename_line_edit.setText(set_text)
+            return
+        self.file_preview.load(QtCore.QUrl(f"file:{source_dir}"))
         self.file_preview.show()
         set_text = self.processed_files_list_widget.currentItem().text()
         self.file_rename_line_edit.setText(set_text)
@@ -2038,13 +2394,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.analyze_worker.signals.result.connect(
                 self.evt_analyze_complete)
             self.thread_pool.start(self.analyze_worker)
+        self.process_button.setText(QtCore.QCoreApplication.translate("MainWindow", "Process"))
 
 
 if __name__ == "__main__":
 
     app = QtWidgets.QApplication([])
     # # Open the qss styles file and read in the css-alike styling code
-    # with open('styles.qss', 'r') as f:
+    # with open('style/styles.qss', 'r') as f:
     #     style = f.read()
 
     # # Set the stylesheet of the application

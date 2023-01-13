@@ -125,7 +125,8 @@ def initialize_database():
                     x_2 REAL,
                     y_1 REAL,
                     y_2 REAL,
-                    file_naming_format TEXT
+                    file_naming_format TEXT,
+                    count INT DEFAULT 0
                     );"""
                 cursor.execute(database_initialization)
 
@@ -152,11 +153,11 @@ def initialize_database():
                 database_initialization = """CREATE TABLE IF NOT EXISTS project_data (
                         id INTEGER PRIMARY KEY,
                         project_number TEXT UNIQUE NOT NULL,
-                        directory TEXT NOT NULL,
-                        email_to TEXT NOT NULL,
+                        directory TEXT,
+                        email_to TEXT,
                         email_cc TEXT,
                         email_bcc TEXT,
-                        email_subject TEXT NOT NULL
+                        email_subject TEXT
                         );"""
                 cursor.execute(database_initialization)
 
@@ -211,10 +212,10 @@ def fetch_file_profiles():
             file_profiles_query = """SELECT unique_profile_name, profile_identifier_text FROM profiles"""
             profiles = cursor.execute(file_profiles_query).fetchall()
             if not profiles:
-                return [["No Profiles Found",""],]
-            return [["Choose File Profile",""]] + profiles
+                return []
+            return profiles
         except sqlite3.DatabaseError as e:
-            return [["Database Error",""],]
+            return []
         finally:
             db_disconnect(connection, cursor)
     except ConnectionError as e:
@@ -363,6 +364,49 @@ class ExportProjectDataThread(QRunnable):
             msg = f'Error: {e}'
             self.signals.result.emit([msg])
 
+class DeleteProjectDataThread(QRunnable):
+    def __init__(self):
+        super(DeleteProjectDataThread, self).__init__()
+        self.signals = WorkerSignals()
+
+    @Slot()
+    def run(self):
+        # debugpy.debug_this_thread()
+        try:
+            msg = None
+            connection, cursor = db_connect(db_file_path)
+            try:
+                self.signals.progress.emit(50)
+                cursor.execute("""DELETE FROM project_data;""")
+                connection.commit()
+                self.signals.progress.emit(100)
+            except Exception as e:
+                msg = f'Error: {e}'
+            finally:
+                db_disconnect(connection, cursor)
+                self.signals.result.emit([msg])
+        except ConnectionError as e:
+            msg = f'Error: {e}'
+            self.signals.result.emit([msg])
+
+
+def delete_project_data_entry(project_number):
+    try:
+        msg = None
+        connection, cursor = db_connect(db_file_path)
+        try:
+            delete_statement = """DELETE FROM project_data WHERE project_number=?;"""
+            cursor.execute(delete_statement, (project_number,))
+            connection.commit()
+        except Exception as e:
+            msg = f"Error updating Project Data: {e}"
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+            msg = f'Error: {e}'
+
+    return msg
+
 def update_project_data(old_data, new_data):
     try:
         msg = None
@@ -375,6 +419,24 @@ def update_project_data(old_data, new_data):
             connection.commit()
         except Exception as e:
             msg = f"Error updating Project Data: {e}"
+        finally:
+            db_disconnect(connection, cursor)
+    except ConnectionError as e:
+            msg = f'Error: {e}'
+
+    return msg
+
+def add_new_project_data(new_data):
+    try:
+        msg = None
+        connection, cursor = db_connect(db_file_path)
+        try:
+            new_data_query = """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject) VALUES(?,?,?,?,?,?);"""
+            data = [new_data[key] for key in ["project_number", "directory", "email_to", "email_cc", "email_bcc", "email_subject"]]
+            cursor.execute(new_data_query, data)
+            connection.commit()
+        except Exception as e:
+            msg = f"{e}"
         finally:
             db_disconnect(connection, cursor)
     except ConnectionError as e:

@@ -2,7 +2,7 @@ import sys
 import os
 import io
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QSizePolicy
 from PySide6.QtCore import Qt, QPoint, QRect, Slot, QRectF
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QTextOption
 import pytesseract
@@ -14,17 +14,19 @@ tesseract_path = str(os.path.abspath(
 class TemplateWidget(QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
 
-    def __init__(self, image_data, pil_image, parent=None):
+    def __init__(self, image_data=None, pil_image=None, parent=None):
         super(TemplateWidget, self).__init__(parent)
         self.pix = QPixmap()
         self.pil_image = pil_image
-        self.pix.loadFromData(image_data)
+        if image_data is not None:
+            self.pix.loadFromData(image_data)
+            self.initial_width, self.initialHeight = self.pix.width(), self.pix.height()
+            self.pix = self.pix.scaledToWidth(int(self.pix.width()/2))
+            self.after_width, self.afterHeight = self.pix.width(), self.pix.height()
+            self.width_ratio = self.after_width / self.initial_width
+            self.height_ratio = self.afterHeight / self.initialHeight
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.found_text = ''
-        self.initial_width, self.initialHeight = self.pix.width(), self.pix.height()
-        self.pix = self.pix.scaledToWidth(int(self.pix.width()/2))
-        self.after_width, self.afterHeight = self.pix.width(), self.pix.height()
-        self.width_ratio = self.after_width / self.initial_width
-        self.height_ratio = self.afterHeight / self.initialHeight
         self.data_info = None
         self.profile_rect_info = None
         self.image_area_too_small = False
@@ -32,6 +34,12 @@ class TemplateWidget(QWidget):
         self.begin, self.end = QPoint(), QPoint()
         self.last_point = QPoint()
         self.drawing = False
+
+    # This will resize the pixmap but need to include paramaters to adjust the paint event rectangles
+    # def resizeEvent(self, event):
+    #     # Update the pixmap when the widget is resized
+    #     self.pix = self.pix.scaled(event.size(), Qt.KeepAspectRatio)
+    #     self.update()
     
     def set_data_info(self, data_info, profile_rect_info):
         """Used to externally set class variable for use in paint event"""
