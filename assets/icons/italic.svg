@@ -1,21 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="50mm"
    height="50mm"
    viewBox="0 0 50 50"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
    sodipodi:docname="italic.svg"
    inkscape:export-filename="bold.png"
    inkscape:export-xdpi="25.4"
-   inkscape:export-ydpi="25.4"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   inkscape:export-ydpi="25.4">
+  <metadata
+     id="metadata9">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
   <sodipodi:namedview
      id="namedview7"
      pagecolor="#ffffff"
@@ -30,12 +42,13 @@
      inkscape:zoom="2.3786088"
      inkscape:cx="-87.65628"
      inkscape:cy="93.331867"
-     inkscape:window-width="1680"
-     inkscape:window-height="987"
-     inkscape:window-x="1912"
-     inkscape:window-y="24"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0">
     <inkscape:grid
        type="xygrid"
        id="grid273"
@@ -52,14 +65,14 @@
      id="layer1">
     <text
        xml:space="preserve"
-       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:68.7137px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';fill:#000000;fill-opacity:1;stroke-width:5.72613"
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:68.7137px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';fill:#ffffff;fill-opacity:1;stroke-width:5.72613;"
        x="7.9245977"
        y="49.958382"
        id="text113"
        transform="scale(0.99916729,1.0008334)"><tspan
          sodipodi:role="line"
          id="tspan111"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:68.7137px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke-width:5.72613"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:68.7137px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke-width:5.72613;"
          x="7.9245977"
          y="49.958382">I</tspan></text>
   </g>

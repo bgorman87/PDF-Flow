@@ -1,21 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="50mm"
    height="50mm"
    viewBox="0 0 50 50"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
    sodipodi:docname="align left.svg"
    inkscape:export-filename="bold.png"
    inkscape:export-xdpi="25.4"
-   inkscape:export-ydpi="25.4"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   inkscape:export-ydpi="25.4">
+  <metadata
+     id="metadata12">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
   <sodipodi:namedview
      id="namedview7"
      pagecolor="#ffffff"
@@ -30,12 +42,13 @@
      inkscape:zoom="3.3638608"
      inkscape:cx="75.062559"
      inkscape:cy="106.72261"
-     inkscape:window-width="1680"
-     inkscape:window-height="987"
-     inkscape:window-x="1912"
-     inkscape:window-y="24"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0">
     <inkscape:grid
        type="xygrid"
        id="grid273"
@@ -51,35 +64,35 @@
      inkscape:groupmode="layer"
      id="layer1">
     <rect
-       style="fill:#000000;fill-opacity:1;stroke-width:0.256325"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.256325"
        id="rect4128"
        width="50"
        height="5"
        x="0"
        y="-1.110223e-16" />
     <rect
-       style="fill:#000000;fill-opacity:1;stroke-width:0.214457"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.214457"
        id="rect4128-3"
        width="35"
        height="5"
        x="0"
        y="11.25" />
     <rect
-       style="fill:#000000;fill-opacity:1;stroke-width:0.256325"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.256325"
        id="rect4128-3-8"
        width="50"
        height="5"
        x="0"
        y="22.5" />
     <rect
-       style="fill:#000000;fill-opacity:1;stroke-width:0.214457"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.214457"
        id="rect4128-3-1"
        width="35"
        height="5"
        x="0"
        y="33.75" />
     <rect
-       style="fill:#000000;fill-opacity:1;stroke-width:0.229264"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.229264"
        id="rect4128-3-5"
        width="40"
        height="5"

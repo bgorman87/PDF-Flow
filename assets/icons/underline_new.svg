@@ -1,21 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="50mm"
    height="50mm"
    viewBox="0 0 50 50"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
    sodipodi:docname="underline_new.svg"
    inkscape:export-filename="bold.png"
    inkscape:export-xdpi="25.4"
-   inkscape:export-ydpi="25.4"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   inkscape:export-ydpi="25.4">
+  <metadata
+     id="metadata11">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
   <sodipodi:namedview
      id="namedview7"
      pagecolor="#ffffff"
@@ -30,12 +42,13 @@
      inkscape:zoom="2.3786088"
      inkscape:cx="41.200554"
      inkscape:cy="93.331867"
-     inkscape:window-width="1680"
-     inkscape:window-height="987"
-     inkscape:window-x="1912"
-     inkscape:window-y="24"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="g442"
+     inkscape:document-rotation="0">
     <inkscape:grid
        type="xygrid"
        id="grid273"
@@ -45,28 +58,43 @@
        snapvisiblegridlinesonly="false" />
   </sodipodi:namedview>
   <defs
-     id="defs2" />
+     id="defs2">
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter864"
+       x="-0.00014517035"
+       width="1.0002903"
+       y="-0.00010238214"
+       height="1.0002048">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="0.0019056143"
+         id="feGaussianBlur866" />
+    </filter>
+  </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
     <g
        id="g442"
-       transform="matrix(1.1109634,0,0,1.1193038,-2.7740846,-1.0994134)">
+       transform="matrix(1.1109634,0,0,1.1193038,-2.7740846,-1.0994134)"
+       style="filter:url(#filter864)">
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;stroke-width:3.8854"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ffffff;stroke-width:3.8854;fill-opacity:1;"
          x="7.957633"
          y="34.97504"
          id="text113"
          transform="scale(0.99916729,1.0008334)"><tspan
            sodipodi:role="line"
            id="tspan111"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:3.8854"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:46.625px;font-family:sans-serif;-inkscape-font-specification:sans-serif;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:3.8854;fill:#ffffff;fill-opacity:1;"
            x="7.957633"
            y="34.97504">U</tspan></text>
       <rect
-         style="fill:#000000;stroke-width:0.261101"
+         style="fill:#ffffff;stroke-width:0.261101;fill-opacity:1"
          id="rect341"
          width="31.504189"
          height="3.1833501"

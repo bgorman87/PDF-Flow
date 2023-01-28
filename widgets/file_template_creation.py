@@ -1,22 +1,20 @@
-import sys
-import os
 import io
+import os
+import sys
 
-from PySide6.QtWidgets import QWidget, QSizePolicy
-from PySide6.QtCore import Qt, QPoint, QRect, Slot, QRectF
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QTextOption
 import pytesseract
+from PySide6 import QtCore, QtGui, QtWidgets
 
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 tesseract_path = str(os.path.abspath(
     os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
 
-class TemplateWidget(QWidget):
+class TemplateWidget(QtWidgets.QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
 
     def __init__(self, image_data=None, pil_image=None, parent=None):
         super(TemplateWidget, self).__init__(parent)
-        self.pix = QPixmap()
+        self.pix = QtGui.QPixmap()
         self.pil_image = pil_image
         if image_data is not None:
             self.pix.loadFromData(image_data)
@@ -25,20 +23,20 @@ class TemplateWidget(QWidget):
             self.after_width, self.afterHeight = self.pix.width(), self.pix.height()
             self.width_ratio = self.after_width / self.initial_width
             self.height_ratio = self.afterHeight / self.initialHeight
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.found_text = ''
         self.data_info = None
         self.profile_rect_info = None
         self.image_area_too_small = False
 
-        self.begin, self.end = QPoint(), QPoint()
-        self.last_point = QPoint()
+        self.begin, self.end = QtCore.QPoint(), QtCore.QPoint()
+        self.last_point = QtCore.QPoint()
         self.drawing = False
 
     # This will resize the pixmap but need to include paramaters to adjust the paint event rectangles
     # def resizeEvent(self, event):
     #     # Update the pixmap when the widget is resized
-    #     self.pix = self.pix.scaled(event.size(), Qt.KeepAspectRatio)
+    #     self.pix = self.pix.scaled(event.size(), QtCore.Qt.KeepAspectRatio)
     #     self.update()
     
     def set_data_info(self, data_info, profile_rect_info):
@@ -48,41 +46,41 @@ class TemplateWidget(QWidget):
 
     def reset_rect(self):
         """After creating new paramater or identifer, called to reset the curreently drawn rect"""
-        self.begin, self.end = QPoint(), QPoint()
+        self.begin, self.end = QtCore.QPoint(), QtCore.QPoint()
         self.update()
 
     def paintEvent(self, event):
         """Handles all of the painting for the existing parameter locations and names, as well as the drawing of a new bounding box"""
-        painter = QPainter(self)
-        painter.drawPixmap(QPoint(), self.pix)
+        painter = QtGui.QPainter(self)
+        painter.drawPixmap(QtCore.QPoint(), self.pix)
         if self.data_info != None:
             for data in self.data_info:
-                data_rect = QRect(QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)), QPoint(int(data[1]*self.width_ratio), int(data[3]*self.width_ratio)))
-                text_rect = QRectF(QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)-20), QPoint(int(data[1]*self.width_ratio), int(data[2]*self.width_ratio)))
-                data_pen = QPen(QColor(255,165,0), 3, Qt.DashLine)
+                data_rect = QtCore.QRect(QtCore.QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[3]*self.width_ratio)))
+                text_rect = QtCore.QRectF(QtCore.QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)-20), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[2]*self.width_ratio)))
+                data_pen = QtGui.QPen(QtGui.QColor(255,165,0), 3, QtCore.Qt.DashLine)
                 painter.setPen(data_pen)
                 painter.drawRect(data_rect)
-                text_option = QTextOption(Qt.AlignLeft | Qt.AlignVCenter)
-                text_option.setWrapMode(QTextOption.NoWrap)
+                text_option = QtGui.QTextOption(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                text_option.setWrapMode(QtGui.QTextOption.NoWrap)
                 painter.drawText(text_rect, data[-1], text_option)
         if self.profile_rect_info != None:
-            data_rect = QRect(
-                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)), 
-                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[3]*self.width_ratio))
+            data_rect = QtCore.QRect(
+                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)), 
+                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[3]*self.width_ratio))
                 )
-            text_rect = QRectF(
-                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)-20), 
-                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio))
+            text_rect = QtCore.QRectF(
+                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)-20), 
+                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio))
                 )
-            data_pen = QPen(QColor(255,125,125), 3, Qt.DashLine)
+            data_pen = QtGui.QPen(QtGui.QColor(255,125,125), 3, QtCore.Qt.DashLine)
             painter.setPen(data_pen)
             painter.drawRect(data_rect)
-            text_option = QTextOption(Qt.AlignLeft | Qt.AlignVCenter)
-            text_option.setWrapMode(QTextOption.NoWrap)
+            text_option = QtGui.QTextOption(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            text_option.setWrapMode(QtGui.QTextOption.NoWrap)
             painter.drawText(text_rect, f"Profile: " + self.profile_rect_info[-1], text_option)
         if not self.begin.isNull() and not self.end.isNull():
-            rect = QRect(self.begin, self.end)
-            pen = QPen(Qt.red, 3, Qt.SolidLine)
+            rect = QtCore.QRect(self.begin, self.end)
+            pen = QtGui.QPen(QtCore.Qt.red, 3, QtCore.Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(rect)
         
@@ -91,14 +89,14 @@ class TemplateWidget(QWidget):
         """Handles starting the creation of a new bounding box."""
 
         # Bounding box must be started within the bounds of the PDF template
-        if event.button() == Qt.LeftButton and ((event.x() < self.pix.width() and event.x() > 0) and (event.y() < self.pix.height() and event.y() > 0)):
+        if event.button() == QtCore.Qt.LeftButton and ((event.x() < self.pix.width() and event.x() > 0) and (event.y() < self.pix.height() and event.y() > 0)):
             self.drawing = True
             self.begin = event.pos()
             self.end = self.begin
 
     def mouseMoveEvent(self, event):
         """Handles updating bounding box currently being drawn."""
-        if event.buttons() and Qt.LeftButton and self.drawing:
+        if event.buttons() and QtCore.Qt.LeftButton and self.drawing:
 
             # If mouse is outside of PDF template, then only draw bounding box to edge of PDF
             if event.x() < self.pix.width() and event.x() > 0 and event.y() < self.pix.height() and event.y() > 0:
@@ -116,13 +114,13 @@ class TemplateWidget(QWidget):
                     end_y = self.pix.height()
                 else:
                     end_y = event.y()
-                self.end = QPoint(end_x, end_y)
+                self.end = QtCore.QPoint(end_x, end_y)
             self.update()
 
     def mouseReleaseEvent(self, event):
         """Handles setting final bounding box points as well as processing current bounding box text."""
 
-        if event.button() == Qt.LeftButton and self.drawing:
+        if event.button() == QtCore.Qt.LeftButton and self.drawing:
 
             # If mouse is outside of PDF template, then only draw bounding box to edge of PDF
             if event.x() < self.pix.width() and event.x() > 0 and event.y() < self.pix.height() and event.y() > 0:
@@ -140,13 +138,13 @@ class TemplateWidget(QWidget):
                     end_y = self.pix.height()
                 else:
                     end_y = event.y()
-                self.end = QPoint(end_x, end_y)
+                self.end = QtCore.QPoint(end_x, end_y)
             self.drawing = False
             self.update()
             # print(f"Info located at x1:{int(self.begin.x()/self.widthRatio)} y1:{int(self.begin.y()/self.widthRatio)} and x2:{int(self.end.x()/self.widthRatio)} and y2:{int(self.end.y()/self.widthRatio)}")
             
             # Because you can draw bounding box from right to left or left to right, ensure that self.begin and self.end are always the min and max respectively
-            self.begin, self.end = QPoint(min(self.begin.x(), self.end.x()), min(self.begin.y(), self.end.y())), QPoint(max(self.begin.x(), self.end.x()), max(self.begin.y(), self.end.y()))
+            self.begin, self.end = QtCore.QPoint(min(self.begin.x(), self.end.x()), min(self.begin.y(), self.end.y())), QtCore.QPoint(max(self.begin.x(), self.end.x()), max(self.begin.y(), self.end.y()))
 
             cropped_x_1 = int(self.begin.x()/self.width_ratio)
             cropped_y_1 = int(self.begin.y()/self.height_ratio)
