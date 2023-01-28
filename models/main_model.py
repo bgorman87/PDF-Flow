@@ -52,7 +52,9 @@ class MainModel(QtCore.QObject):
 
     def initialize_database(self):
         """Checks if the database and tables exists and if not will create the database and intialize the necessary tables."""
-
+        
+        tables_initialized = False
+        
         with self.db_connection(self.database_path) as connection:
             database_profile_table_check = """SELECT * FROM profiles;"""
             database_parameter_table_check = """SELECT * FROM profile_parameters;"""
