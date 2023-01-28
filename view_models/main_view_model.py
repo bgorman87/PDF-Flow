@@ -22,6 +22,7 @@ class MainViewModel(QtCore.QObject):
         super().__init__()
         self.console_text = ""
         self.main_model = main_model
+        self.main_model.initialize_database()
         self.current_stack_item = 0
         self.console_alerts = 0
         self.loaded_files = 0
