@@ -1,20 +1,26 @@
+"""
+This Module provides a set of functions to interact with the database.
+
+"""
+
 import os
 import sqlite3
 import errno
-from PySide6.QtCore import *
 import time
 import csv
 
-import debugpy
+from PySide6 import QtCore
+
+# import debugpy
 
 db_file_path = os.path.join(os.getcwd(), "database", "db.sqlite3")
 
-class WorkerSignals(QObject):
+class WorkerSignals(QtCore.QObject):
     """Class of signals to be used from threaded processes"""
-    finished = Signal()
-    error = Signal(tuple)
-    result = Signal(list)
-    progress = Signal(int)
+    finished = QtCore.Signal()
+    error = QtCore.Signal(tuple)
+    result = QtCore.Signal(list)
+    progress = QtCore.Signal(int)
 
 def scrub(string_item):
     """Used to clean up OCR results as well as help prevent SQL injection/errors.
@@ -51,7 +57,7 @@ def db_connect(db_path):
     try:
         if not os.path.exists(db_path):
             raise FileNotFoundError
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print(f"Error {errno.ENOENT} - {os.strerror(errno.ENOENT)} - {db_path}")
         print("Empty database will be created in the noted location.")
         pass
@@ -283,13 +289,13 @@ def fetch_data(database_table):
     
     return results
 
-class ImportProjectDataThread(QRunnable):
+class ImportProjectDataThread(QtCore.QRunnable):
     def __init__(self, project_data):
         super(ImportProjectDataThread, self).__init__()
         self.signals = WorkerSignals()
         self.import_project_data = project_data
 
-    @Slot()
+    @QtCore.Slot()
     def run(self):
         # debugpy.debug_this_thread()
         try:
@@ -327,13 +333,13 @@ class ImportProjectDataThread(QRunnable):
             self.signals.result.emit([msg])
 
 
-class ExportProjectDataThread(QRunnable):
+class ExportProjectDataThread(QtCore.QRunnable):
     def __init__(self, export_location):
         super(ExportProjectDataThread, self).__init__()
         self.signals = WorkerSignals()
         self.export_location = export_location
 
-    @Slot()
+    @QtCore.Slot()
     def run(self):
         # debugpy.debug_this_thread()
         try:
@@ -364,12 +370,12 @@ class ExportProjectDataThread(QRunnable):
             msg = f'Error: {e}'
             self.signals.result.emit([msg])
 
-class DeleteProjectDataThread(QRunnable):
+class DeleteProjectDataThread(QtCore.QRunnable):
     def __init__(self):
         super(DeleteProjectDataThread, self).__init__()
         self.signals = WorkerSignals()
 
-    @Slot()
+    @QtCore.Slot()
     def run(self):
         # debugpy.debug_this_thread()
         try:

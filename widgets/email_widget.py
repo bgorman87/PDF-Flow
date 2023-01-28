@@ -1,31 +1,30 @@
 from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt
-from PySide6.QtGui import QPainter, QPen, QBrush, QTextFormat, QIcon, QFont, QTextCharFormat, QTextBlockFormat, QTextImageFormat, QPixmap, QColor
-from PySide6.QtWidgets import (QComboBox, QFontComboBox, QDialog, QFrame,
-    QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFormLayout, QLineEdit, 
-    QCheckBox, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QColorDialog)
+from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QPainter, QPen,
+                           QPixmap, QTextBlockFormat, QTextCharFormat,
+                           QTextFormat, QTextImageFormat)
+from PySide6 import QtWidgets
 
-
-class EmailWidget(QWidget):
+class EmailWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.has_typed = False
-        self.widget_layout = QVBoxLayout(self)
-        self.widget_title_layout = QHBoxLayout()
-        self.widget_label = QLabel()
+        self.widget_layout = QtWidgets.QVBoxLayout(self)
+        self.widget_title_layout = QtWidgets.QHBoxLayout()
+        self.widget_label = QtWidgets.QLabel()
         self.widget_label.setText(QCoreApplication.translate("Form", u"Email Editor", None))
-        self.widget_title_line = QFrame()
-        self.widget_title_line.setFrameShape(QFrame.HLine)
-        self.widget_title_line.setFrameShadow(QFrame.Sunken)
-        self.widget_title_line.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.widget_title_line = QtWidgets.QFrame()
+        self.widget_title_line.setFrameShape(QtWidgets.QFrame.HLine)
+        self.widget_title_line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.widget_title_line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
         self.widget_title_layout.addWidget(self.widget_label)
         self.widget_title_layout.addWidget(self.widget_title_line)
 
         self.widget_layout.addLayout(self.widget_title_layout)
 
-        self.horizontal_option_layout = QHBoxLayout()
+        self.horizontal_option_layout = QtWidgets.QHBoxLayout()
 
-        self.font_combo_box = QFontComboBox()
+        self.font_combo_box = QtWidgets.QFontComboBox()
         font = QFont()
         font.setFamilies([u"Calibri"])
         self.font_combo_box.setCurrentFont(font)
@@ -33,50 +32,53 @@ class EmailWidget(QWidget):
 
         self.horizontal_option_layout.addWidget(self.font_combo_box)
 
-        self.font_choice_seperator = QFrame()
-        self.font_choice_seperator.setFrameShape(QFrame.VLine)
-        self.font_choice_seperator.setFrameShadow(QFrame.Sunken)
+        self.font_choice_seperator = QtWidgets.QFrame()
+        self.font_choice_seperator.setFrameShape(QtWidgets.QFrame.VLine)
+        self.font_choice_seperator.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.horizontal_option_layout.addWidget(self.font_choice_seperator)
 
-        self.bold_button = QPushButton()
-        self.bold_button.setMaximumSize(QSize(24, 24))
+        self.bold_button = QtWidgets.QPushButton()
+        self.bold_button.setMaximumSize(QSize(28, 28))
         icon = QIcon()
         icon.addFile(u"assets/icons/bold.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.bold_button.setIcon(icon)
+        self.bold_button.setProperty("class", "invert-icon")
         self.bold_button.setIconSize(QSize(12, 12))
         self.bold_button.setCheckable(True)
         self.bold_button.toggled.connect(self.toggleBold)
         self.horizontal_option_layout.addWidget(self.bold_button)
 
-        self.italic_button = QPushButton()
-        self.italic_button.setMaximumSize(QSize(24, 24))
+        self.italic_button = QtWidgets.QPushButton()
+        self.italic_button.setMaximumSize(QSize(28, 28))
         icon1 = QIcon()
         icon1.addFile(u"assets/icons/italic.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.italic_button.setIcon(icon1)
+        self.italic_button.setProperty("class", "invert-icon")
         self.italic_button.setIconSize(QSize(12, 12))
         self.italic_button.setCheckable(True)
         self.italic_button.toggled.connect(self.toggleItalic)
         self.horizontal_option_layout.addWidget(self.italic_button)
 
-        self.underline_button = QPushButton()
-        self.underline_button.setMaximumSize(QSize(24, 24))
+        self.underline_button = QtWidgets.QPushButton()
+        self.underline_button.setMaximumSize(QSize(28, 28))
         icon2 = QIcon()
         icon2.addFile(u"assets/icons/underline_new.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.underline_button.setIcon(icon2)
+        self.underline_button.setProperty("class", "invert-icon")
         self.underline_button.setIconSize(QSize(12, 12))
         self.underline_button.setCheckable(True)
         self.underline_button.toggled.connect(self.toggleUnderline)
         self.horizontal_option_layout.addWidget(self.underline_button)
 
-        self.color_button = QPushButton()
-        self.color_button.setMaximumSize(QSize(24, 24))
-        icon8_pixmap = QPixmap(12, 12)
+        self.color_button = QtWidgets.QPushButton()
+        self.color_button.setMaximumSize(QSize(28, 28))
+        icon8_pixmap = QPixmap(14, 14)
         icon8_pixmap.fill(QColor(0, 0, 0))
         painter = QPainter(icon8_pixmap)
-        pen = QPen(QColor(0, 0, 0))
-        pen.setWidth(1)
-        painter.setPen(pen)
-        painter.drawRect(0, 0, 11, 11)
+        # pen = QPen(QColor(125, 125, 125))
+        # pen.setWidth(3)
+        # painter.setPen(pen)
+        # painter.drawRect(0, 0, 14, 14)
         painter.end()
         icon8 = QIcon(icon8_pixmap)
         self.color_button.setIcon(icon8)
@@ -84,75 +86,81 @@ class EmailWidget(QWidget):
         self.color_button.clicked.connect(self.toggleColor)
         self.horizontal_option_layout.addWidget(self.color_button)
 
-        self.font_size_combo_box = QComboBox()
+        self.font_size_combo_box = QtWidgets.QComboBox()
         for size in [8,9,10,11,12,14,16,18,20,22,24,26,28,36,48,72]:
             self.font_size_combo_box.addItem(f"{size}")
         self.font_size_combo_box.setCurrentIndex(4)
         self.font_size_combo_box.currentIndexChanged.connect(self.changeFontSize)
         self.horizontal_option_layout.addWidget(self.font_size_combo_box)
 
-        self.alignment_seperator = QFrame()
-        self.alignment_seperator.setFrameShape(QFrame.VLine)
-        self.alignment_seperator.setFrameShadow(QFrame.Sunken)
+        self.alignment_seperator = QtWidgets.QFrame()
+        self.alignment_seperator.setFrameShape(QtWidgets.QFrame.VLine)
+        self.alignment_seperator.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.horizontal_option_layout.addWidget(self.alignment_seperator)
 
-        self.align_left_button = QPushButton()
-        self.align_left_button.setMaximumSize(QSize(24, 24))
+        self.align_left_button = QtWidgets.QPushButton()
+        self.align_left_button.setMaximumSize(QSize(28, 28))
         icon3 = QIcon()
         icon3.addFile(u"assets/icons/align left.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.align_left_button.setProperty("class", "invert-icon")
         self.align_left_button.setIcon(icon3)
+        
         self.align_left_button.setIconSize(QSize(12, 12))
         self.align_left_button.setCheckable(True)
         self.align_left_button.clicked.connect(lambda: self.setAlignment(Qt.AlignLeft))
         self.horizontal_option_layout.addWidget(self.align_left_button)
 
-        self.align_center_button = QPushButton()
-        self.align_center_button.setMaximumSize(QSize(24, 24))
+        self.align_center_button = QtWidgets.QPushButton()
+        self.align_center_button.setMaximumSize(QSize(28, 28))
         icon4 = QIcon()
         icon4.addFile(u"assets/icons/align center.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.align_center_button.setIcon(icon4)
+        self.align_center_button.setProperty("class", "invert-icon")
         self.align_center_button.setIconSize(QSize(12, 12))
         self.align_center_button.setCheckable(True)
         self.align_center_button.clicked.connect(lambda: self.setAlignment(Qt.AlignCenter))
         self.horizontal_option_layout.addWidget(self.align_center_button)
 
-        self.align_right_button = QPushButton()
-        self.align_right_button.setMaximumSize(QSize(24, 24))
+        self.align_right_button = QtWidgets.QPushButton()
+        self.align_right_button.setMaximumSize(QSize(28, 28))
         icon5 = QIcon()
         icon5.addFile(u"assets/icons/align right.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.align_right_button.setIcon(icon5)
+        self.align_right_button.setProperty("class", "invert-icon")
         self.align_right_button.setIconSize(QSize(12, 12))
         self.align_right_button.setCheckable(True)
         self.align_right_button.clicked.connect(lambda: self.setAlignment(Qt.AlignRight))
         self.horizontal_option_layout.addWidget(self.align_right_button)
 
-        self.link_seperator = QFrame()
-        self.link_seperator.setFrameShape(QFrame.VLine)
-        self.link_seperator.setFrameShadow(QFrame.Sunken)
+        self.link_seperator = QtWidgets.QFrame()
+        self.link_seperator.setFrameShape(QtWidgets.QFrame.VLine)
+        self.link_seperator.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.horizontal_option_layout.addWidget(self.link_seperator)
 
-        self.add_picture_button = QPushButton()
-        self.add_picture_button.setMaximumSize(QSize(24, 24))
+        self.add_picture_button = QtWidgets.QPushButton()
+        self.add_picture_button.setMaximumSize(QSize(28, 28))
         icon6 = QIcon()
         icon6.addFile(u"assets/icons/insert image.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.add_picture_button.setIcon(icon6)
+        self.add_picture_button.setProperty("class", "invert-icon")
         self.add_picture_button.setIconSize(QSize(14, 14))
         self.add_picture_button.clicked.connect(self.insertImage)
         self.horizontal_option_layout.addWidget(self.add_picture_button)
 
-        self.add_link_button = QPushButton()
-        self.add_link_button.setMaximumSize(QSize(24, 24))
+        self.add_link_button = QtWidgets.QPushButton()
+        self.add_link_button.setMaximumSize(QSize(28, 28))
         icon7 = QIcon()
         icon7.addFile(u"assets/icons/insert link new.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.add_link_button.setIcon(icon7)
-        self.add_link_button.setIconSize(QSize(16, 16))
+        self.add_link_button.setProperty("class", "invert-icon")
+        self.add_link_button.setIconSize(QSize(14, 14))
         self.add_link_button.clicked.connect(self.show_hyperlink_dialog)
         self.horizontal_option_layout.addWidget(self.add_link_button)
 
         self.widget_layout.addLayout(self.horizontal_option_layout)
 
-        self.text_edit_area = QTextEdit()
-        self.text_edit_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.text_edit_area = QtWidgets.QTextEdit()
+        self.text_edit_area.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         font_family = self.font_combo_box.currentText()
         self.text_edit_area.setCurrentFont(QFont(font_family))
         self.text_edit_area.setFontPointSize(12.0)
@@ -162,6 +170,8 @@ class EmailWidget(QWidget):
         # The buttons will update with whatever formatting is present on that character/line
         self.text_edit_area.cursorPositionChanged.connect(self.updateFormatting)
         self.widget_layout.addWidget(self.text_edit_area)
+
+        self.show()
 
 
     # Whenever the cursor changes position, update all of the formatting options to where the cursor is placed
@@ -202,10 +212,10 @@ class EmailWidget(QWidget):
             pixmap = QPixmap(12,12)
             pixmap.fill(charFormat.foreground().color())
             painter = QPainter(pixmap)
-            pen = QPen(QColor(0, 0, 0))
-            pen.setWidth(1)
-            painter.setPen(pen)
-            painter.drawRect(0, 0, 11, 11)
+            # pen = QPen(QColor(0, 0, 0))
+            # pen.setWidth(1)
+            # painter.setPen(pen)
+            # painter.drawRect(0, 0, 11, 11)
             painter.end()
             icon = QIcon(pixmap)
             self.color_button.setIcon(icon)
@@ -231,16 +241,16 @@ class EmailWidget(QWidget):
 
     def toggleColor(self):
         """Set the color of the selected text."""
-        color = QColorDialog.getColor()
+        color = QtWidgets.QColorDialog.getColor()
         if color.isValid():
             self.text_edit_area.setTextColor(color)
             pixmap = QPixmap(12,12)
             pixmap.fill(color)
             painter = QPainter(pixmap)
-            pen = QPen(QColor(0, 0, 0))
-            pen.setWidth(1)
-            painter.setPen(pen)
-            painter.drawRect(0, 0, 11, 11)
+            # pen = QPen(QColor(0, 0, 0))
+            # pen.setWidth(1)
+            # painter.setPen(pen)
+            # painter.drawRect(0, 0, 11, 11)
             painter.end()
             icon = QIcon(pixmap)
             self.color_button.setIcon(icon)
@@ -365,7 +375,7 @@ class EmailWidget(QWidget):
 
     def insertImage(self):
         # Get the image file name
-        fileName, _ = QFileDialog.getOpenFileName(self, "Insert Image", "", "Images (*.png *.xpm *.jpg *.bmp *.gif)")
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Insert Image", "", "Images (*.png *.xpm *.jpg *.bmp *.gif)")
 
         # Return if no file was selected
         if not fileName:
@@ -389,16 +399,16 @@ class EmailWidget(QWidget):
         dialog.show()
 
 
-class HyperlinkDialog(QDialog):
+class HyperlinkDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         # Create the form layout and widgets
-        layout = QFormLayout()
-        self.text_edit = QLineEdit()
-        self.url_edit = QLineEdit()
-        self.new_window_checkbox = QCheckBox()
-        self.insert_button = QPushButton("Insert")
+        layout = QtWidgets.QFormLayout()
+        self.text_edit = QtWidgets.QLineEdit()
+        self.url_edit = QtWidgets.QLineEdit()
+        self.new_window_checkbox = QtWidgets.QCheckBox()
+        self.insert_button = QtWidgets.QPushButton("Insert")
 
         # Add the widgets to the layout and set their labels
         layout.addRow("Text:", self.text_edit)
@@ -411,23 +421,31 @@ class HyperlinkDialog(QDialog):
         self.insert_button.clicked.connect(self.insert_link)
 
     def insert_link(self):
-           # Get the link text and URL from the form
-            link_text = self.text_edit.text()
-            link_url = self.url_edit.text()
+        # Get the link text and URL from the form
+        link_text = self.text_edit.text()
+        link_url = self.url_edit.text()
 
-            # Create a QTextCharFormat object with the link URL set as a property and blue color and underline style
-            char_format = QTextCharFormat()
-            char_format.setAnchor(True)
-            char_format.setAnchorHref(link_url)
-            char_format.setAnchorNames(link_url) # Set the anchor name to the link URL
+        # Create a QTextCharFormat object with the link URL set as a property and blue color and underline style
+        char_format = QTextCharFormat()
+        char_format.setAnchor(True)
+        char_format.setAnchorHref(link_url)
+        char_format.setAnchorNames(link_url) # Set the anchor name to the link URL
 
-            # If the open in new window checkbox is checked, set the target property to _blank
-            if self.new_window_checkbox.isChecked():
-                char_format.setAnchorNames(["_blank"])
+        # If the open in new window checkbox is checked, set the target property to _blank
+        if self.new_window_checkbox.isChecked():
+            char_format.setAnchorNames(["_blank"])
 
-            # Create a QTextCursor object and insert the linked text
-            cursor = self.parent().text_edit_area.textCursor()
-            cursor.insertText(link_text, char_format)
+        # Create a QTextCursor object and insert the linked text
+        cursor = self.parent().text_edit_area.textCursor()
+        cursor.insertText(link_text, char_format)
 
-            # Close the dialog
-            self.close()
+        # Close the dialog
+        self.close()
+
+def QIcon_from_svg(svg_filepath: str, color: str = 'black') -> QIcon:
+    img = QPixmap(svg_filepath)
+    qp = QPainter(img)
+    qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    qp.fillRect( img.rect(), QColor(color) )
+    qp.end()
+    return QIcon(img)

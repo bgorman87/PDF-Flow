@@ -1,16 +1,23 @@
-import os
-import io
-import random
-import datetime
-import shutil
+"""
+This module handles all of the document analysis
+"""
 
-import debugpy
+import datetime
+import io
+import os
+import random
+import shutil
 
 import pytesseract
 import regex as re
-from PySide6.QtCore import *
 from pdf2image import convert_from_path
-from functions.data_handler import db_connect, db_file_path, db_disconnect, scrub, WorkerSignals
+from PySide6 import QtCore
+
+from functions.data_handler import (WorkerSignals, db_connect, db_disconnect,
+                                    db_file_path, scrub)
+
+# import debugpy
+
 
 # from functions.date_formater import date_formatter, months
 # from functions.project_info import project_info
@@ -47,7 +54,7 @@ class ItemFound(Exception):
     pass
 
 
-class WorkerAnalyzeThread(QRunnable):
+class WorkerAnalyzeThread(QtCore.QRunnable):
 
     def __init__(self, file_name, test, analyzed, template=False):
         super(WorkerAnalyzeThread, self).__init__()
@@ -58,7 +65,7 @@ class WorkerAnalyzeThread(QRunnable):
         self.signals = WorkerSignals()
         self.template = template
 
-    @Slot()
+    @QtCore.Slot()
     def run(self):
         # debugpy.debug_this_thread()
         
@@ -98,7 +105,7 @@ class WorkerAnalyzeThread(QRunnable):
         file_type = 0
         for i, file_profile in enumerate(profiles):
             if self.template:
-                self.signals.progress.emit(int(i+1/len(profiles))*100)
+                self.signals.progress.emit(int(i+1/len(profiles))*90)
             file_identifier_text = file_profile[1]
             active_profile_name = file_profile[2]
             file_id_x1 = file_profile[3]
@@ -117,7 +124,7 @@ class WorkerAnalyzeThread(QRunnable):
             if file_identifier_text.strip().lower() in scrub(text.replace("\n", " ")).strip().lower():
                 file_type = file_profile[0]
                 if self.template:
-                    self.signals.progress.emit(100)
+                    self.signals.progress.emit(90)
                     self.signals.result.emit([self.template, active_profile_name, file_type])
                     return
                 break
@@ -129,7 +136,7 @@ class WorkerAnalyzeThread(QRunnable):
             rename_path_project_dir = rename_path
             active_profile_name = ""
             if self.template:
-                self.signals.progress.emit(100)
+                self.signals.progress.emit(90)
                 self.signals.result.emit([self.template, active_profile_name, None])
                 return
             pass
@@ -248,7 +255,7 @@ class WorkerAnalyzeThread(QRunnable):
         prev_file_name = self.file.split("/")[-1]
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [self.template, print_string, new_file_name, rename_path, active_profile_name, rename_project_data_path]
-        self.signals.progress.emit(100)
+        self.signals.progress.emit(90)
         self.signals.result.emit(returns)
 
     def analyze_image(self, img_path):
@@ -302,7 +309,7 @@ class WorkerAnalyzeThread(QRunnable):
     #     return gray
 
 # TODO : Look at speeding this up. Big time sink when folders have hundreds of files and analyzing multiple files at once. 
-def detect_package_number(file_path, project_file_path):
+def detect_package_number(file_path: str, project_file_path: str) -> str:
     """Checks project_file_path directory for all pdf files to determine the current document number. If unable it'll resort to checking file_path.
 
     Args:
