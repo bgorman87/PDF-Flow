@@ -1,10 +1,11 @@
-from PySide6 import QtCore
 import contextlib
+import csv
+import errno
 import os
 import sqlite3
-import errno
-import csv
 import typing
+
+from PySide6 import QtCore
 
 
 class MainModel(QtCore.QObject):
@@ -126,9 +127,16 @@ class MainModel(QtCore.QObject):
                     print(f"DB Initialization error: {e}")
                     raise
 
-    def fetch_active_parameters(
-        self, file_profile_name: str
-    ) -> tuple[list[tuple[str]], str]:
+    def fetch_profile_id(self, profile_name: str) -> int:
+        with self.db_connection(self.database_path) as connection:
+            file_profile_id_query = """SELECT profile_id FROM profiles WHERE unique_profile_name=?"""
+            file_profile_data = connection.cursor().execute(
+                file_profile_id_query, (profile_name,)
+            ).fetchone()
+            file_profile_id = file_profile_data[0]
+            return file_profile_id
+
+    def fetch_active_parameters(self, profile_id: int) -> list[str]:
         """Get active parameters for a file_profile
 
         Args:
@@ -139,51 +147,70 @@ class MainModel(QtCore.QObject):
         """
         with self.db_connection(self.database_path) as connection:
             try:
-                file_profile_id_query = """SELECT profile_id, file_naming_format FROM profiles WHERE unique_profile_name=?"""
-                file_profile_data = connection.cursor().execute(
-                    file_profile_id_query, (file_profile_name,)
-                ).fetchone()
-                file_profile_id, file_naming_scheme = (
-                    file_profile_data[0],
-                    file_profile_data[1],
-                )
-                active_params_query = """SELECT parameter_id, description, example_text FROM profile_parameters WHERE profile_id=?"""
+                active_params_query = """SELECT description FROM profile_parameters WHERE profile_id=?"""
                 active_params = connection.cursor().execute(
-                    active_params_query, (file_profile_id,)
+                    active_params_query, (profile_id,)
                 ).fetchall()
-                return [("-1", "doc_num", "01")] + active_params, file_naming_scheme
+                return ["doc_num",] + active_params
             except (TypeError, sqlite3.DatabaseError) as e:
-                return [], []
+                return []
+            
+    def update_profile_used_count(self, profile_id: int) -> None:
+        with self.db_connection(self.database_path) as connection:
+            update_query = """UPDATE profiles SET count=(SELECT count FROM profiles WHERE profile_id=?)+1 WHERE profile_id=?;"""
+            connection.cursor().execute(update_query, (profile_id, profile_id))
+            connection.commit()
+
+    def fetch_project_directory(self, project_number: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            try:
+                directory_select_query = """SELECT directory FROM project_data WHERE project_number=?;"""
+                rename_path_project_dir = connection.cursor.execute(
+                    directory_select_query, (project_number,)).fetchone()
+                rename_path_project_dir = rename_path_project_dir[0]
+                return rename_path_project_dir
+            except (TypeError, sqlite3.DatabaseError) as e:
+                return ""
+
+    def fetch_parameter_example_text(self, profile_id: int, paramater: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            try:
+                example_text_query = """SELECT example_text FROM profile_parameters WHERE profile_id=? AND description=?"""
+                example_text = connection.cursor().execute(
+                    example_text_query, (profile_id, paramater)
+                ).fetchall()
+                return example_text
+            except (TypeError, sqlite3.DatabaseError) as e:
+                return ""
 
 
-    def fetch_file_profiles(self) -> list[str]:
+    def fetch_file_profiles(self, order_by: str) -> list[str]:
         """Fetces the file_profile data to display to user in dropdowns
 
         Returns:
-            list: Format [[file_profile_name, identifier_text]]
+            list: Profile names
         """
         with self.db_connection(self.database_path) as connection:
-            try:
+            if order_by is None:
                 file_profiles_query = """SELECT unique_profile_name, profile_identifier_text FROM profiles"""
-                profiles = connection.cursor().execute(file_profiles_query).fetchall()
-                if not profiles:
-                    return []
-                return profiles
-            except sqlite3.DatabaseError as e:
-                return []
+            else:
+                file_profiles_query = f"""SELECT unique_profile_name, profile_identifier_text FROM profiles ORDER BY {order_by} DESC"""
+            profiles = connection.cursor().execute(file_profiles_query).fetchall()
+        if not profiles:
+            return []
+        return profiles
 
-    def fetch_profile_file_name_pattern(self, profile_name: str) -> str:
+
+    def fetch_profile_file_name_pattern(self, profile_id: str) -> str:
         with self.db_connection(self.database_path) as connection:
-            try:
-                profile_file_name_scheme_query = """SELECT file_naming_format FROM profiles WHERE unique_profile_name = ?"""
-                current_profile_name = connection.cursor().execute(
-                    profile_file_name_scheme_query, (self.scrub(profile_name),)
-                ).fetchone()
-                if not current_profile_name:
-                    return []
-                return current_profile_name[0]
-            except sqlite3.DatabaseError as e:
-                return []
+            profile_file_name_scheme_query = """SELECT file_naming_format FROM profiles WHERE profile_id = ?"""
+            file_name_scheme = connection.cursor().execute(
+                profile_file_name_scheme_query, (profile_id,)
+            ).fetchone()
+        if not file_name_scheme:
+            return ""
+        return file_name_scheme[0]
+
 
     def update_file_profile_file_name_pattern(self, profile_name, pattern):
         """Updates the file naming scheme in the database for a file_profile
@@ -205,6 +232,18 @@ class MainModel(QtCore.QObject):
                 connection.commit()
             except sqlite3.DatabaseError as e:
                 print(e)
+    
+    def fetch_all_project_numbers(self) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            project_numbers_query = """SELECT project_number FROM project_data;"""
+            project_numbers = connection.cursor.execute(project_numbers_query).fetchall()
+        return project_numbers
+    
+    def fetch_all_project_directories(self) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            project_directories_query = """SELECT directory FROM project_data;"""
+            project_directories = connection.cursor.execute(project_directories_query).fetchall()
+        return project_directories
 
     def fetch_table_names(self):
         """Fetches table names in database for users to choose in dropdown list

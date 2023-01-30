@@ -1,6 +1,8 @@
-from PySide6 import QtCore, QtWidgets
-from models import main_model
 import typing
+
+from PySide6 import QtCore, QtWidgets
+
+from models import main_model
 
 
 class MainViewModel(QtCore.QObject):
@@ -53,8 +55,12 @@ class MainViewModel(QtCore.QObject):
         self.loaded_files = loaded_files_count
         self.loaded_files_update.emit()
 
-    def set_processed_files(self, processed_files_count: int) -> None:
-        self.processed_files = processed_files_count
+    def update_processed_files_count(self, processed_files_count: int) -> None:
+        self.processed_files += processed_files_count
+        self.processed_files_update.emit()
+
+    def reset_processed_files_count(self) -> None:
+        self.process_files = 0
         self.processed_files_update.emit()
 
     def set_emailed_files_update(self, emailed_files_count: int) -> None:
@@ -77,16 +83,34 @@ class MainViewModel(QtCore.QObject):
         self.process_button_count = value
         self.process_button_count_update.emit()
 
-    def fetch_file_profiles(self) -> list[str]:
-        return self.main_model.fetch_file_profiles()
+    def fetch_file_profiles(self, order_by: str = None) -> list[str]:
+        return self.main_model.fetch_file_profiles(order_by=order_by)
+
+    def fetch_profile_id(self, profile_name: str) -> int:
+        return self.main_model.fetch_profile_id(profile_name=profile_name)
 
     def fetch_active_parameters(
-        self, profile_name: str
-    ) -> tuple[list[tuple[str]], str]:
-        return self.main_model.fetch_active_parameters(profile_name)
+        self, profile_id: str
+    ) -> list[str]:
+        return self.main_model.fetch_active_parameters(profile_id=profile_id)
+    
+    def update_profile_used_count(self, profile_id: int) -> None:
+        self.main_model.update_profile_used_count(profile_id=profile_id)
 
-    def fetch_profile_file_name_pattern(self, profile_name: str) -> str:
-        return self.main_model.fetch_profile_file_name_pattern(profile_name)
+    def fetch_project_directory(self, project_number: str) -> str:
+        return self.main_model.fetch_project_directory(project_number=project_number)
+    
+    def fetch_all_project_directories(self) -> list[str]:
+        return self.main_model.fetch_all_project_directories
+    
+    def fetch_all_project_numbers(self) -> list[str]:
+        return self.main_model.fetch_all_project_numbers
+
+    def fetch_profile_file_name_pattern(self, profile_id: int) -> str:
+        return self.main_model.fetch_profile_file_name_pattern(profile_id=profile_id)
+    
+    def fetch_parameter_example_text(self, profile_id: int, paramater: str) -> str:
+        return self.main_model.fetch_parameter_example_text(profile_id=profile_id, paramater=paramater)
 
     def update_profile_file_name_pattern(
         self, profile_name: str, profile_file_name_pattern: str

@@ -1,18 +1,21 @@
 from PySide6 import QtWidgets
-from view_models import navigation_view_model, main_view_model
+
+from view_models import main_view_model, navigation_view_model
+
 
 class NavigationView(QtWidgets.QVBoxLayout):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
         self.main_view_model = main_view_model
-        self.view_model = navigation_view_model.NavigationViewModel(self.main_view_model)
-        
+        self.view_model = navigation_view_model.NavigationViewModel(
+            self.main_view_model)
+
         self.process_nav_button = QtWidgets.QPushButton()
         self.process_nav_button.setText("Process")
 
         self.console_nav_button = QtWidgets.QPushButton()
-        self.console_nav_button.setText("Console")
-        
+        self.console_nav_button.setText("Console (0)")
+
         self.data_viewer_nav_button = QtWidgets.QPushButton()
         self.data_viewer_nav_button.setText("Project Data")
 
@@ -47,26 +50,40 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.addWidget(self.emailed_files_button)
 
         self.addSpacing(50)
-        
-        self.process_nav_button.setProperty("id", self.indexOf(self.process_nav_button))
-        self.console_nav_button.setProperty("id", self.indexOf(self.console_nav_button))
-        self.data_viewer_nav_button.setProperty("id", self.indexOf(self.data_viewer_nav_button))
-        self.settings_nav_button.setProperty("id", self.indexOf(self.settings_nav_button))
-        self.template_nav_button.setProperty("id", self.indexOf(self.template_nav_button))
+
+        self.process_nav_button.setProperty(
+            "id", self.indexOf(self.process_nav_button))
+        self.console_nav_button.setProperty(
+            "id", self.indexOf(self.console_nav_button))
+        self.data_viewer_nav_button.setProperty(
+            "id", self.indexOf(self.data_viewer_nav_button))
+        self.settings_nav_button.setProperty(
+            "id", self.indexOf(self.settings_nav_button))
+        self.template_nav_button.setProperty(
+            "id", self.indexOf(self.template_nav_button))
 
         self.process_nav_button.setProperty("class", "nav-button")
         self.console_nav_button.setProperty("class", "nav-button")
         self.data_viewer_nav_button.setProperty("class", "nav-button")
         self.settings_nav_button.setProperty("class", "nav-button")
         self.template_nav_button.setProperty("class", "nav-button")
-        
-        self.process_nav_button.clicked.connect(lambda: self.view_model.stacked_item_change(self.process_nav_button.property("id")))
-        self.console_nav_button.clicked.connect(lambda: self.view_model.stacked_item_change(self.console_nav_button.property("id")))
-        self.data_viewer_nav_button.clicked.connect(lambda: self.view_model.stacked_item_change(self.data_viewer_nav_button.property("id")))
-        self.template_nav_button.clicked.connect(lambda: self.view_model.stacked_item_change(self.template_nav_button.property("id")))
-        self.settings_nav_button.clicked.connect(lambda: self.view_model.stacked_item_change(self.settings_nav_button.property("id")))
 
-        self.main_view_model.console_alerts_update.connect(lambda: self.console_nav_button.setText(f"Console ({self.main_view_model.console_alerts})"))
-        self.main_view_model.loaded_files_update.connect(lambda: self.loaded_files_button.setText(f"Loaded Files: {self.main_view_model.loaded_files}"))
-        self.main_view_model.processed_files_update.connect(lambda: self.processed_files_button.setText(f"Processed Files: {self.main_view_model.processed_files}"))
-        self.main_view_model.emailed_files_update.connect(lambda: self.emailed_files_button.setText(f"Emailed Files: {self.main_view_model.emailed_files}"))
+        self.process_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.process_nav_button.property("id")))
+        self.console_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.console_nav_button.property("id")))
+        self.data_viewer_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.data_viewer_nav_button.property("id")))
+        self.template_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.template_nav_button.property("id")))
+        self.settings_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.settings_nav_button.property("id")))
+
+        self.main_view_model.console_alerts_update.connect(
+            lambda: self.console_nav_button.setText(f"Console ({self.main_view_model.console_alerts})"))
+        self.main_view_model.loaded_files_update.connect(lambda: self.loaded_files_button.setText(
+            f"Loaded Files: {self.main_view_model.loaded_files}"))
+        self.main_view_model.processed_files_update.connect(lambda: self.processed_files_button.setText(
+            f"Processed Files: {self.main_view_model.processed_files}"))
+        self.main_view_model.emailed_files_update.connect(lambda: self.emailed_files_button.setText(
+            f"Emailed Files: {self.main_view_model.emailed_files}"))
