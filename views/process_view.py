@@ -1,6 +1,8 @@
-from PySide6 import QtWidgets, QtCore, QtWebEngineWidgets, QtWebEngineCore
+from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets
+
 from view_models import process_view_model
 from widgets import utility_widgets
+
 
 class ProcessView(QtWidgets.QWidget):
     def __init__(self, view_model: process_view_model.ProcessViewModel):
@@ -18,11 +20,13 @@ class ProcessView(QtWidgets.QWidget):
 
         # Action button to start file analysis
         self.process_button = QtWidgets.QPushButton()
-        # self.process_button.clicked.connect(self.analyze_button_handler)
+        self.process_button.clicked.connect(self.view_model.process_files)
         self.process_button.setObjectName("analyze_button")
         self.process_button.setEnabled(False)
-        self.view_model.main_view_model.procress_button_state_update.connect(lambda: self.process_button.setEnabled(self.view_model.main_view_model.process_button_state))
-        self.view_model.main_view_model.process_button_count_update.connect(lambda: self.process_button_text_update(self.view_model.main_view_model.process_button_count))
+        self.view_model.main_view_model.procress_button_state_update.connect(
+            lambda: self.process_button.setEnabled(self.view_model.main_view_model.process_button_state))
+        self.view_model.main_view_model.process_button_count_update.connect(
+            lambda: self.process_button_text_update(self.view_model.main_view_model.process_button_count))
         self.input_tab_action_buttons.addWidget(self.process_button)
 
         # Action button to start email process
@@ -61,24 +65,30 @@ class ProcessView(QtWidgets.QWidget):
         self.processed_files_list_widget.setSelectionMode(
             QtWidgets.QAbstractItemView.SingleSelection
         )
-        self.processed_files_list_widget.setGeometry(QtCore.QRect(10, 30, 320, 100))
-        self.processed_files_list_widget.setObjectName("processed_files_list_widget")
+        self.processed_files_list_widget.setGeometry(
+            QtCore.QRect(10, 30, 320, 100))
+        self.processed_files_list_widget.setObjectName(
+            "processed_files_list_widget")
         self.main_layout.addWidget(self.processed_files_list_widget)
         self.main_layout.setStretch(
             self.main_layout.indexOf(self.processed_files_list_widget), 2
         )
+        self.view_model.processed_files_list_widget_update.connect(
+            self.add_processed_list_widget_item)
 
         # Lines within the analyzed files widget above
         self.processed_files_list_item = QtWidgets.QListWidgetItem()
-        # self.processed_files_list_widget.itemClicked.connect(self.list_widget_handler)
-        # self.processed_files_list_widget.itemDoubleClicked.connect(
-        #     self.rename_file_handler
-        # )
+        self.processed_files_list_widget.itemClicked.connect(
+            lambda: self.view_model.list_widget_handler(self.processed_files_list_widget.currentItem()))
+        self.processed_files_list_widget.itemDoubleClicked.connect(
+            self.rename_file_handler
+        )
 
         self.file_rename_layout = QtWidgets.QHBoxLayout()
         # Text editor line to edit file names
         self.file_rename_line_edit = QtWidgets.QLineEdit()
         self.file_rename_line_edit.setObjectName("file_rename_line_edit")
+        self.view_model.display_file_name.connect(self.display_file_name)
         self.file_rename_layout.addWidget(self.file_rename_line_edit)
         self.file_rename_layout.setStretch(
             self.file_rename_layout.indexOf(self.file_rename_line_edit), 5
@@ -116,6 +126,7 @@ class ProcessView(QtWidgets.QWidget):
         initialized_pdf = ""
         self.file_preview.load(QtCore.QUrl(initialized_pdf))
         self.file_preview.setHtml("<body bgcolor='#4a4a4a'></body>")
+        self.view_model.display_pdf_preview.connect(self.display_pdf_preview)
         self.main_layout.addWidget(self.file_preview)
         self.main_layout.setStretch(
             self.main_layout.indexOf(self.file_preview), 8
@@ -131,8 +142,10 @@ class ProcessView(QtWidgets.QWidget):
         self.progress_bar.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setFormat("Select Files to Begin...")
-        self.view_model.main_view_model.process_progress_value_update.connect(lambda: self.progress_bar.setValue(self.view_model.main_view_model.process_progress_value))
-        self.view_model.main_view_model.process_progress_text_update.connect(lambda: self.progress_bar.setFormat(self.view_model.main_view_model.process_progress_text))
+        self.view_model.main_view_model.process_progress_value_update.connect(
+            lambda: self.progress_bar.setValue(self.view_model.main_view_model.process_progress_value))
+        self.view_model.main_view_model.process_progress_text_update.connect(
+            lambda: self.progress_bar.setFormat(self.view_model.main_view_model.process_progress_text))
         self.main_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_layout)
 
@@ -146,6 +159,34 @@ class ProcessView(QtWidgets.QWidget):
         self.process_button.setText(
             _translate("SettingsView", "Process")
         )
+        self.email_button.setText(_translate("SettingsView", "Email"))
+        self.processed_files_label.setText(
+            _translate("SettingsView", "Processed Files"))
+        self.file_rename_button.setText(_translate("SettingsView", "Rename"))
+        self.file_preview_label.setText(
+            _translate("SettingsView", "File Previewer"))
+
+    def display_pdf_preview(self):
+        pdf_dir = self.view_model.selected_file_dir
+        self.file_preview.load(QtCore.QUrl(f"file:{pdf_dir}"))
+        self.file_preview.show()
+
+    def display_file_name(self):
+        pdf_name = self.view_model.selected_file_name
+        self.file_rename_line_edit.setText(pdf_name)
+
+    def rename_file_handler(self):
+        """Closes persistant editor if open"""
+
+        if self.processed_files_list_widget.isPersistentEditorOpen(
+            self.processed_files_list_widget.currentItem()
+        ):
+            self.processed_files_list_widget.closePersistentEditor(
+                self.processed_files_list_widget.currentItem()
+            )
+        self.processed_files_list_widget.editItem(
+            self.processed_files_list_widget.currentItem()
+        )
 
     def process_button_text_update(self, value: int) -> None:
         if value == 0:
@@ -154,5 +195,8 @@ class ProcessView(QtWidgets.QWidget):
             button_text = f"Process ({value}) File"
         else:
             button_text = f"Process ({value}) Files"
-        
+
         self.process_button.setText(button_text)
+
+    def add_processed_list_widget_item(self, list_item: QtWidgets.QListWidgetItem):
+        self.processed_files_list_widget.addItem(list_item)
