@@ -56,12 +56,10 @@ class ItemFound(Exception):
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
 
-    def __init__(self, file_name: str, test: bool, analyzed: bool, main_view_model: main_view_model.MainViewModel, template: bool = False, ):
+    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel, template: bool = False, ):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
-        self.test = test
-        self.analyzed = analyzed
         self.signals = WorkerSignals()
         self.template = template
         self.main_view_model = main_view_model
@@ -81,8 +79,9 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         # Checking each unique id area for the unique identifier text
         # If identifier text found, the sheet is that type (return profile_id)
         file_type = self.find_file_profile(pdf_image=image)
+        
         if self.template:
-            self.signals.progress.emit(90)
+            self.signals.progress.emit(100)
             self.signals.result.emit(file_type)
             return
 
@@ -170,7 +169,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
         profiles = self.main_view_model.fetch_file_profiles(order_by="count")
 
-        for file_profile in enumerate(profiles):
+        for file_profile in profiles:
+            
             file_identifier_text = file_profile[1]
             active_profile_name = file_profile[2]
             file_id_x1 = file_profile[3]
@@ -227,7 +227,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return data
 
     def analyze_image(self, img_path):
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        # pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()
 

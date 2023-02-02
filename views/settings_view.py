@@ -43,16 +43,10 @@ class SettingsView(QtWidgets.QWidget):
             "settings_profile_templates_list_widget"
         )
         self.settings_profile_templates_list_widget.addItems(
-            self.view_model.format_file_profile_dropdown()
+            self.view_model.format_file_profile_list()
         )
         self.settings_profile_templates_list_widget.itemClicked.connect(
-            self.view_model.display_active_parameters
-        )
-        self.view_model.template_choice_update.connect(
-            lambda: self.update_parameter_list(
-                paramater_items=self.view_model.active_parameter_items,
-                file_naming_scheme=self.view_model.active_file_naming_scheme,
-            )
+            self.view_model.display_active_parameters_from_item
         )
         self.settings_profile_choices_layout.addWidget(
             self.settings_profile_templates_list_widget
@@ -62,6 +56,13 @@ class SettingsView(QtWidgets.QWidget):
         self.settings_profile_parameters_list_widget = QtWidgets.QListWidget()
         self.settings_profile_parameters_list_widget.setSelectionMode(
             QtWidgets.QAbstractItemView.SingleSelection
+        )
+        
+        self.view_model.parameter_update_list.connect(
+            lambda: self.update_parameter_list(
+                paramater_items=self.view_model.active_parameter_items,
+                file_naming_scheme=self.view_model.active_file_naming_scheme,
+            )
         )
         self.settings_profile_parameters_list_widget.setObjectName(
             "settings_profile_parameters_list_widget"
@@ -159,6 +160,12 @@ class SettingsView(QtWidgets.QWidget):
         )
         self.settings_profile_naming_scheme_button.setText(
             _translate("SettingsView", "Save Filename Pattern")
+        )
+
+    def update_profile_list(self):
+        self.settings_profile_templates_list_widget.clear()
+        self.settings_profile_templates_list_widget.addItems(
+            self.view_model.format_file_profile_list()
         )
 
     def update_parameter_list(
