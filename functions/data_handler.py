@@ -10,6 +10,7 @@ import time
 import csv
 
 from PySide6 import QtCore
+from typing import Any
 
 # import debugpy
 
@@ -19,7 +20,7 @@ class WorkerSignals(QtCore.QObject):
     """Class of signals to be used from threaded processes"""
     finished = QtCore.Signal()
     error = QtCore.Signal(tuple)
-    result = QtCore.Signal(list)
+    result = QtCore.Signal(Any)
     progress = QtCore.Signal(int)
 
 def scrub(string_item):

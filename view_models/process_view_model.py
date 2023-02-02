@@ -71,7 +71,7 @@ class ProcessViewModel(QtCore.QObject):
         # For each file create a new thread to increase performance
         for file_name in self._file_names:
             self.analyze_worker = analysis.WorkerAnalyzeThread(
-                file_name=file_name, test=True, analyzed=False, main_view_model=self.main_view_model
+                file_name=file_name, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.progress.connect(
                 self.evt_analyze_progress)

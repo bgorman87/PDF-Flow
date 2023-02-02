@@ -6,8 +6,9 @@ import pytesseract
 from PySide6 import QtCore, QtGui, QtWidgets
 
 poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
-tesseract_path = str(os.path.abspath(
-    os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
+# tesseract_path = str(os.path.abspath(
+#     os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
+
 
 class TemplateWidget(QtWidgets.QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
@@ -16,14 +17,16 @@ class TemplateWidget(QtWidgets.QWidget):
         super(TemplateWidget, self).__init__(parent)
         self.pix = QtGui.QPixmap()
         self.pil_image = pil_image
-        if image_data is not None:
-            self.pix.loadFromData(image_data)
-            self.initial_width, self.initialHeight = self.pix.width(), self.pix.height()
-            self.pix = self.pix.scaledToWidth(int(self.pix.width()/2))
-            self.after_width, self.afterHeight = self.pix.width(), self.pix.height()
-            self.width_ratio = self.after_width / self.initial_width
-            self.height_ratio = self.afterHeight / self.initialHeight
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.initial_width = 0
+        self.initial_height = 0
+        self.width_ratio = 0
+        self.height_ratio = 0
+        self._image_data = image_data
+        if self._image_data is not None:
+            self.initialize_pdf()
+
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                           QtWidgets.QSizePolicy.Expanding)
         self.found_text = ''
         self.data_info = None
         self.profile_rect_info = None
@@ -33,19 +36,43 @@ class TemplateWidget(QtWidgets.QWidget):
         self.last_point = QtCore.QPoint()
         self.drawing = False
 
+    def initialize_pdf(self):
+        self.pix.loadFromData(self._image_data)
+        self.initial_width, self.initial_height = self.pix.width(), self.pix.height()
+        self.pix = self.pix.scaledToWidth(int(self.pix.width()/2))
+        self.after_width, self.after_height = self.pix.width(), self.pix.height()
+        self.width_ratio = self.after_width / self.initial_width
+        self.height_ratio = self.after_height / self.initial_height
+
+    def set_width_ratio(self, width: int):
+        self.width_ratio = width / self.initial_width
+
+    def set_height_ratio(self, height: int):
+        self.height_ratio = height / self.initial_height
+
     # This will resize the pixmap but need to include paramaters to adjust the paint event rectangles
-    # def resizeEvent(self, event):
-    #     # Update the pixmap when the widget is resized
-    #     self.pix = self.pix.scaled(event.size(), QtCore.Qt.KeepAspectRatio)
-    #     self.update()
-    
+    def resizeEvent(self, event):
+        if self._image_data is not None:
+            # Update the pixmap when the widget is resized only when a PDF is loaded
+            self.set_width_ratio(event.size().width())
+            self.set_height_ratio(event.size().height())
+
+            image = QtGui.QImage()
+            image.loadFromData(self._image_data)
+            image = image.scaled(event.size(), aspectMode=QtCore.Qt.IgnoreAspectRatio, mode=QtCore.Qt.SmoothTransformation)
+            
+            self.pix = QtGui.QPixmap.fromImage(image)
+            self.reset_rect()
+            self.update()
+
     def set_data_info(self, data_info, profile_rect_info):
         """Used to externally set class variable for use in paint event"""
         self.data_info = data_info
         self.profile_rect_info = profile_rect_info
+        self.reset_rect()
 
     def reset_rect(self):
-        """After creating new paramater or identifer, called to reset the curreently drawn rect"""
+        """After creating new paramater or identifer, called to reset the currently drawn rect"""
         self.begin, self.end = QtCore.QPoint(), QtCore.QPoint()
         self.update()
 
@@ -55,35 +82,45 @@ class TemplateWidget(QtWidgets.QWidget):
         painter.drawPixmap(QtCore.QPoint(), self.pix)
         if self.data_info != None:
             for data in self.data_info:
-                data_rect = QtCore.QRect(QtCore.QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[3]*self.width_ratio)))
-                text_rect = QtCore.QRectF(QtCore.QPoint(int(data[0]*self.width_ratio), int(data[2]*self.width_ratio)-20), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[2]*self.width_ratio)))
-                data_pen = QtGui.QPen(QtGui.QColor(255,165,0), 3, QtCore.Qt.DashLine)
+                data_rect = QtCore.QRect(QtCore.QPoint(int(data[0]*self.width_ratio), int(
+                    data[2]*self.height_ratio)), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[3]*self.height_ratio)))
+                text_rect = QtCore.QRectF(QtCore.QPoint(int(data[0]*self.width_ratio), int(
+                    data[2]*self.height_ratio)-20), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[2]*self.height_ratio)))
+                data_pen = QtGui.QPen(QtGui.QColor(
+                    255, 165, 0), 3, QtCore.Qt.DashLine)
                 painter.setPen(data_pen)
                 painter.drawRect(data_rect)
-                text_option = QtGui.QTextOption(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                text_option = QtGui.QTextOption(
+                    QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
                 text_option.setWrapMode(QtGui.QTextOption.NoWrap)
                 painter.drawText(text_rect, data[-1], text_option)
         if self.profile_rect_info != None:
             data_rect = QtCore.QRect(
-                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)), 
-                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[3]*self.width_ratio))
-                )
+                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
+                    self.profile_rect_info[2]*self.height_ratio)),
+                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
+                    self.profile_rect_info[3]*self.height_ratio))
+            )
             text_rect = QtCore.QRectF(
-                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio)-20), 
-                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(self.profile_rect_info[2]*self.width_ratio))
-                )
-            data_pen = QtGui.QPen(QtGui.QColor(255,125,125), 3, QtCore.Qt.DashLine)
+                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
+                    self.profile_rect_info[2]*self.height_ratio)-20),
+                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
+                    self.profile_rect_info[2]*self.height_ratio))
+            )
+            data_pen = QtGui.QPen(QtGui.QColor(
+                255, 125, 125), 3, QtCore.Qt.DashLine)
             painter.setPen(data_pen)
             painter.drawRect(data_rect)
-            text_option = QtGui.QTextOption(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            text_option = QtGui.QTextOption(
+                QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
             text_option.setWrapMode(QtGui.QTextOption.NoWrap)
-            painter.drawText(text_rect, f"Profile: " + self.profile_rect_info[-1], text_option)
+            painter.drawText(text_rect, f"Profile: " +
+                             self.profile_rect_info[-1], text_option)
         if not self.begin.isNull() and not self.end.isNull():
             rect = QtCore.QRect(self.begin, self.end)
             pen = QtGui.QPen(QtCore.Qt.red, 3, QtCore.Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(rect)
-        
 
     def mousePressEvent(self, event):
         """Handles starting the creation of a new bounding box."""
@@ -142,16 +179,18 @@ class TemplateWidget(QtWidgets.QWidget):
             self.drawing = False
             self.update()
             # print(f"Info located at x1:{int(self.begin.x()/self.widthRatio)} y1:{int(self.begin.y()/self.widthRatio)} and x2:{int(self.end.x()/self.widthRatio)} and y2:{int(self.end.y()/self.widthRatio)}")
-            
+
             # Because you can draw bounding box from right to left or left to right, ensure that self.begin and self.end are always the min and max respectively
-            self.begin, self.end = QtCore.QPoint(min(self.begin.x(), self.end.x()), min(self.begin.y(), self.end.y())), QtCore.QPoint(max(self.begin.x(), self.end.x()), max(self.begin.y(), self.end.y()))
+            self.begin, self.end = QtCore.QPoint(min(self.begin.x(), self.end.x()), min(self.begin.y(
+            ), self.end.y())), QtCore.QPoint(max(self.begin.x(), self.end.x()), max(self.begin.y(), self.end.y()))
 
             cropped_x_1 = int(self.begin.x()/self.width_ratio)
             cropped_y_1 = int(self.begin.y()/self.height_ratio)
             cropped_x_2 = int(self.end.x()/self.width_ratio)
             cropped_y_2 = int(self.end.y()/self.height_ratio)
 
-            cropped_pil_image = self.pil_image.crop((cropped_x_1, cropped_y_1, cropped_x_2, cropped_y_2))
+            cropped_pil_image = self.pil_image.crop(
+                (cropped_x_1, cropped_y_1, cropped_x_2, cropped_y_2))
             width, height = cropped_pil_image.size
             if width > 5 and height > 5:
                 self.image_area_too_small = False
@@ -164,14 +203,14 @@ class TemplateWidget(QtWidgets.QWidget):
 
         Args:
             cropped_pil_image (PILLOW Image): Pillow image of the file_profile template PDF which has been cropped to then user defined bounding box
-        """   
+        """
 
         if self.image_area_too_small:
             self.found_text = "Image Area Too Small"
             return
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        # pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
-        ###  Page segmentation modes for config below (--psm) ###
+        # Page segmentation modes for config below "--psm {mode}"
         #   0    Orientation and script detection (OSD) only.
         #   1    Automatic page segmentation with OSD.
         #   2    Automatic page segmentation, but no OSD, or OCR.
@@ -189,8 +228,9 @@ class TemplateWidget(QtWidgets.QWidget):
         ##########################################################
 
         config_str = f"--psm {6}"
-        self.found_text = pytesseract.image_to_string(cropped_pil_image, config=config_str).strip()
-        
+        self.found_text = pytesseract.image_to_string(
+            cropped_pil_image, config=config_str).strip()
+
         print(f"Found: {self.found_text}")
 
     def scaled_width(self):
@@ -199,16 +239,16 @@ class TemplateWidget(QtWidgets.QWidget):
 
         Returns:
             float: Width of the currently shown file_profile template
-        """  
+        """
         return self.pix.width()
-        
+
     def scaled_height(self):
         """Returns the scaled height of the current file_profile template. \n
         Could just call .pix.height() directly but easier to understand when called from outside of this class.
 
         Returns:
             float: Height of the currently shown file_profile template
-        """        
+        """
         return self.pix.height()
 
     def true_coords(self):
@@ -216,7 +256,7 @@ class TemplateWidget(QtWidgets.QWidget):
 
         Returns:
             list: List format [x_1, x_2, y_1, y_2]
-        """        
+        """
         x_1 = int(self.begin.x()/self.width_ratio)
         x_2 = int(self.end.x()/self.width_ratio)
         y_1 = int(self.begin.y()/self.width_ratio)

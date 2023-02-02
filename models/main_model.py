@@ -11,7 +11,8 @@ from PySide6 import QtCore
 class MainModel(QtCore.QObject):
     def __init__(self):
         super().__init__()
-        self.database_path = os.path.join(os.getcwd(), "database", "db.sqlite3")
+        self.database_path = os.path.join(
+            os.getcwd(), "database", "db.sqlite3")
 
     class WorkerSignals(QtCore.QObject):
         """Class of signals to be used from threaded processes"""
@@ -53,9 +54,9 @@ class MainModel(QtCore.QObject):
 
     def initialize_database(self):
         """Checks if the database and tables exists and if not will create the database and intialize the necessary tables."""
-        
+
         tables_initialized = False
-        
+
         with self.db_connection(self.database_path) as connection:
             database_profile_table_check = """SELECT * FROM profiles;"""
             database_parameter_table_check = """SELECT * FROM profile_parameters;"""
@@ -127,14 +128,60 @@ class MainModel(QtCore.QObject):
                     print(f"DB Initialization error: {e}")
                     raise
 
+    def fetch_all_profile_template_info(self) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            unique_texts_query = """SELECT profile_id, profile_identifier_text, unique_profile_name FROM profiles"""
+            unique_texts = connection.cursor().execute(unique_texts_query).fetchall()
+
+        return unique_texts
+
+    def fetch_profile_rect_bounds(self, profile_id: int) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            prof_txt_loc_query = (
+                """SELECT x_1, x_2, y_1, y_2 FROM profiles WHERE profile_id=?"""
+            )
+            [db_x_1, db_x_2, db_y_1, db_y_2] = connection.cursor().execute(
+                prof_txt_loc_query, (profile_id,)
+            ).fetchone()
+        return [db_x_1, db_x_2, db_y_1, db_y_2]
+
+    def delete_profile_by_name(self, profile_name: str):
+        with self.db_connection(self.database_path) as connection:
+            connection.cursor().execute(
+                """DELETE FROM profiles WHERE profile_name=?""",
+                (profile_name,),
+            )
+            connection.commit()
+
+    def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
+        with self.db_connection(self.database_path) as connection:
+
+            add_data = """INSERT INTO profiles(profile_identifier_text, unique_profile_name, x_1, x_2, y_1, y_2) VALUES(?,?,?,?,?,?)"""
+            data = (profile_identifier,
+                    profile_name, x_1, x_2, y_1, y_2)
+            connection.cursor().execute(add_data, data)
+            connection.commit()
+
     def fetch_profile_id(self, profile_name: str) -> int:
         with self.db_connection(self.database_path) as connection:
             file_profile_id_query = """SELECT profile_id FROM profiles WHERE unique_profile_name=?"""
             file_profile_data = connection.cursor().execute(
                 file_profile_id_query, (profile_name,)
             ).fetchone()
-            file_profile_id = file_profile_data[0]
-            return file_profile_id
+            if file_profile_data is None:
+                file_profile_id = None
+            else:
+                file_profile_id = file_profile_data[0]
+        return file_profile_id
+
+    def fetch_profile_description(self, profile_id: int) -> str:
+        with self.db_connection(self.database_path) as connection:
+            file_profile_description_query = """SELECT unique_profile_name FROM profiles WHERE profile_id=?"""
+            file_profile_data = connection.cursor().execute(
+                file_profile_description_query, (profile_id,)
+            ).fetchone()
+            file_profile_description = file_profile_data[0]
+        return file_profile_description
 
     def fetch_active_parameters(self, profile_id: int) -> list[str]:
         """Get active parameters for a file_profile
@@ -154,7 +201,7 @@ class MainModel(QtCore.QObject):
                 return ["doc_num",] + active_params
             except (TypeError, sqlite3.DatabaseError) as e:
                 return []
-            
+
     def update_profile_used_count(self, profile_id: int) -> None:
         with self.db_connection(self.database_path) as connection:
             update_query = """UPDATE profiles SET count=(SELECT count FROM profiles WHERE profile_id=?)+1 WHERE profile_id=?;"""
@@ -165,24 +212,67 @@ class MainModel(QtCore.QObject):
         with self.db_connection(self.database_path) as connection:
             try:
                 directory_select_query = """SELECT directory FROM project_data WHERE project_number=?;"""
-                rename_path_project_dir = connection.cursor.execute(
+                rename_path_project_dir = connection.cursor().execute(
                     directory_select_query, (project_number,)).fetchone()
                 rename_path_project_dir = rename_path_project_dir[0]
                 return rename_path_project_dir
             except (TypeError, sqlite3.DatabaseError) as e:
                 return ""
 
-    def fetch_parameter_example_text(self, profile_id: int, paramater: str) -> str:
+    def fetch_parameter_example_text(self, profile_id: int, parameter: str) -> str:
         with self.db_connection(self.database_path) as connection:
             try:
                 example_text_query = """SELECT example_text FROM profile_parameters WHERE profile_id=? AND description=?"""
                 example_text = connection.cursor().execute(
-                    example_text_query, (profile_id, paramater)
+                    example_text_query, (profile_id, parameter)
                 ).fetchall()
                 return example_text
             except (TypeError, sqlite3.DatabaseError) as e:
                 return ""
 
+    def fetch_paramater_rects(self, profile_id: int) -> list[str]:
+        rects_data = []
+        with self.db_connection(self.database_path) as connection:
+            select_rects = """SELECT x_1, x_2, y_1, y_2, description FROM profile_parameters WHERE profile_id=?;"""
+            rects_data = connection.cursor().execute(
+                select_rects, (profile_id,)
+            ).fetchall()
+        return rects_data
+
+    def fetch_profile_rect(self, profile_id: int) -> list[str]:
+        rects_profile_data = []
+        with self.db_connection(self.database_path) as connection:
+            select_profile_rect = """SELECT x_1, x_2, y_1, y_2, unique_profile_name FROM profiles WHERE profile_id=?;"""
+            rects_profile_data = connection.cursor().execute(
+                select_profile_rect, (profile_id,)
+            ).fetchone()
+        return rects_profile_data
+
+    def fetch_parameter_id(self, profile_id: int, parameter_name: str) -> int:
+        with self.db_connection(self.database_path) as connection:
+            parameter_query = """SELECT parameter_id FROM profile_parameters WHERE profile_id=? AND description=?;"""
+            paramater_data = (profile_id, parameter_name)
+            parameter_id = connection.cursor().execute(
+                parameter_query, paramater_data).fetchone()
+        if parameter_id is not None:
+            parameter_id = parameter_id[0]
+        return parameter_id
+
+    def add_new_parameter(self, profile_id: int, parameter_name: str, regex: str, x_1: int, x_2: int, y_1: int, y_2: int, example: str):
+        with self.db_connection(self.database_path) as connection:
+            add_parameter_query = """INSERT INTO profile_parameters(profile_id, description, regex, x_1, x_2, y_1, y_2, example_text) VALUES(?,?,?,?,?,?,?,?)"""
+            data = (
+                profile_id,
+                parameter_name,
+                regex,
+                x_1,
+                x_2,
+                y_1,
+                y_2,
+                example,
+            )
+            connection.cursor().execute(add_parameter_query, data)
+            connection.commit()
 
     def fetch_file_profiles(self, order_by: str) -> list[str]:
         """Fetces the file_profile data to display to user in dropdowns
@@ -192,14 +282,13 @@ class MainModel(QtCore.QObject):
         """
         with self.db_connection(self.database_path) as connection:
             if order_by is None:
-                file_profiles_query = """SELECT unique_profile_name, profile_identifier_text FROM profiles"""
+                file_profiles_query = """SELECT * FROM profiles"""
             else:
-                file_profiles_query = f"""SELECT unique_profile_name, profile_identifier_text FROM profiles ORDER BY {order_by} DESC"""
+                file_profiles_query = f"""SELECT * FROM profiles ORDER BY {order_by} DESC"""
             profiles = connection.cursor().execute(file_profiles_query).fetchall()
         if not profiles:
             return []
         return profiles
-
 
     def fetch_profile_file_name_pattern(self, profile_id: str) -> str:
         with self.db_connection(self.database_path) as connection:
@@ -210,7 +299,6 @@ class MainModel(QtCore.QObject):
         if not file_name_scheme:
             return ""
         return file_name_scheme[0]
-
 
     def update_file_profile_file_name_pattern(self, profile_name, pattern):
         """Updates the file naming scheme in the database for a file_profile
@@ -232,17 +320,19 @@ class MainModel(QtCore.QObject):
                 connection.commit()
             except sqlite3.DatabaseError as e:
                 print(e)
-    
+
     def fetch_all_project_numbers(self) -> list[str]:
         with self.db_connection(self.database_path) as connection:
             project_numbers_query = """SELECT project_number FROM project_data;"""
-            project_numbers = connection.cursor.execute(project_numbers_query).fetchall()
+            project_numbers = connection.cursor().execute(
+                project_numbers_query).fetchall()
         return project_numbers
-    
+
     def fetch_all_project_directories(self) -> list[str]:
         with self.db_connection(self.database_path) as connection:
             project_directories_query = """SELECT directory FROM project_data;"""
-            project_directories = connection.cursor.execute(project_directories_query).fetchall()
+            project_directories = connection.cursor().execute(
+                project_directories_query).fetchall()
         return project_directories
 
     def fetch_table_names(self):
@@ -272,8 +362,7 @@ class MainModel(QtCore.QObject):
                     "No Tables Found",
                 ]
 
-    def fetch_data(self, database_table: str) -> list[list[str],list[str]]:
-
+    def fetch_data(self, database_table: str) -> list[list[str], list[str]]:
         """Fetcehs all database results from a database table"""
         results = None
         with self.db_connection(self.database_path) as connection:
@@ -281,7 +370,8 @@ class MainModel(QtCore.QObject):
             query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM {self.scrub(database_table)}"""
             try:
                 database_fetch_results = connection.cursor().execute(query).fetchall()
-                names = list(map(lambda x: x[0], connection.cursor().description))
+                names = list(
+                    map(lambda x: x[0], connection.cursor().description))
                 results = [database_fetch_results, names]
             except sqlite3.DatabaseError as e:
                 print(e)
@@ -349,18 +439,18 @@ class MainModel(QtCore.QObject):
                 msg = f"{e}"
 
         return msg
-    
+
     def export_project_data_thread(self, export_location):
         ExportProjectDataThread()
 
 
 class ImportProjectDataThread(QtCore.QRunnable):
     def __init__(
-            self, project_data: list[str], 
-            worker_signals: MainModel.WorkerSignals,
-            db_connection: typing.Callable,
-            database_path: str
-        ):
+        self, project_data: list[str],
+        worker_signals: MainModel.WorkerSignals,
+        db_connection: typing.Callable,
+        database_path: str
+    ):
         super(ImportProjectDataThread, self).__init__()
         self.worker_signals: worker_signals
         self.db_connection: db_connection
@@ -379,7 +469,8 @@ class ImportProjectDataThread(QtCore.QRunnable):
                 result_list = []
                 for i, result in enumerate(results):
                     result_list.append(result[0])
-                    self.signals.progress.emit(int((1 + i) / len(results) * progress))
+                    self.signals.progress.emit(
+                        int((1 + i) / len(results) * progress))
 
                 # Remove non-unique project numbers before importing
                 # Removing them now and using executemany was WAY faster than not removing duplicates and using execute to insert rows individually
@@ -426,7 +517,8 @@ class ExportProjectDataThread(QtCore.QRunnable):
         with self.db_connection(self.database_path) as connection:
             try:
 
-                results = connection.cursor().execute("""SELECT * FROM project_data;""").fetchall()
+                results = connection.cursor().execute(
+                    """SELECT * FROM project_data;""").fetchall()
 
                 # revove id col
                 results = [result[1:] for result in results]
@@ -435,7 +527,8 @@ class ExportProjectDataThread(QtCore.QRunnable):
 
                 self.signals.progress.emit(25)
                 with open(
-                    os.path.abspath(os.path.join(self.export_location, "exported.csv")),
+                    os.path.abspath(os.path.join(
+                        self.export_location, "exported.csv")),
                     "w",
                     newline="",
                 ) as csv_file:
