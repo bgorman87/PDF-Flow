@@ -135,7 +135,7 @@ class MainModel(QtCore.QObject):
 
         return unique_texts
 
-    def fetch_profile_rect_bounds(self, profile_id: int) -> list[str]:
+    def fetch_profile_rectangle_bounds_by_profile_id(self, profile_id: int) -> list[str]:
         with self.db_connection(self.database_path) as connection:
             prof_txt_loc_query = (
                 """SELECT x_1, x_2, y_1, y_2 FROM profiles WHERE profile_id=?"""
@@ -162,7 +162,7 @@ class MainModel(QtCore.QObject):
             connection.cursor().execute(add_data, data)
             connection.commit()
 
-    def fetch_profile_id(self, profile_name: str) -> int:
+    def fetch_profile_id_by_profile_name(self, profile_name: str) -> int:
         with self.db_connection(self.database_path) as connection:
             file_profile_id_query = """SELECT profile_id FROM profiles WHERE unique_profile_name=?"""
             file_profile_data = connection.cursor().execute(
@@ -174,7 +174,7 @@ class MainModel(QtCore.QObject):
                 file_profile_id = file_profile_data[0]
         return file_profile_id
 
-    def fetch_profile_description(self, profile_id: int) -> str:
+    def fetch_profile_description_by_profile_id(self, profile_id: int) -> str:
         with self.db_connection(self.database_path) as connection:
             file_profile_description_query = """SELECT unique_profile_name FROM profiles WHERE profile_id=?"""
             file_profile_data = connection.cursor().execute(
@@ -183,7 +183,7 @@ class MainModel(QtCore.QObject):
             file_profile_description = file_profile_data[0]
         return file_profile_description
 
-    def fetch_active_parameters(self, profile_id: int) -> list[str]:
+    def fetch_active_parameters_by_profile_id(self, profile_id: int) -> list[str]:
         """Get active parameters for a file_profile
 
         Args:
@@ -198,17 +198,17 @@ class MainModel(QtCore.QObject):
                 active_params = connection.cursor().execute(
                     active_params_query, (profile_id,)
                 ).fetchall()
-                return ["doc_num",] + active_params
+                return ["doc_num",] + [parameter[0] for parameter in active_params if parameter]
             except (TypeError, sqlite3.DatabaseError) as e:
                 return []
 
-    def update_profile_used_count(self, profile_id: int) -> None:
+    def update_profile_used_count_by_profile_id(self, profile_id: int) -> None:
         with self.db_connection(self.database_path) as connection:
             update_query = """UPDATE profiles SET count=(SELECT count FROM profiles WHERE profile_id=?)+1 WHERE profile_id=?;"""
             connection.cursor().execute(update_query, (profile_id, profile_id))
             connection.commit()
 
-    def fetch_project_directory(self, project_number: str) -> str:
+    def fetch_project_directory_by_project_number(self, project_number: str) -> str:
         with self.db_connection(self.database_path) as connection:
             try:
                 directory_select_query = """SELECT directory FROM project_data WHERE project_number=?;"""
@@ -219,18 +219,20 @@ class MainModel(QtCore.QObject):
             except (TypeError, sqlite3.DatabaseError) as e:
                 return ""
 
-    def fetch_parameter_example_text(self, profile_id: int, parameter: str) -> str:
+    def fetch_parameter_example_text_by_name_and_profile_id(self, profile_id: int, parameter: str) -> str:
         with self.db_connection(self.database_path) as connection:
             try:
                 example_text_query = """SELECT example_text FROM profile_parameters WHERE profile_id=? AND description=?"""
                 example_text = connection.cursor().execute(
                     example_text_query, (profile_id, parameter)
                 ).fetchall()
-                return example_text
+                if example_text:
+                    return example_text[0]
+                return ""
             except (TypeError, sqlite3.DatabaseError) as e:
                 return ""
 
-    def fetch_paramater_rects(self, profile_id: int) -> list[str]:
+    def fetch_paramater_rectangles_and_description_by_profile_id(self, profile_id: int) -> list[str]:
         rects_data = []
         with self.db_connection(self.database_path) as connection:
             select_rects = """SELECT x_1, x_2, y_1, y_2, description FROM profile_parameters WHERE profile_id=?;"""
@@ -239,7 +241,7 @@ class MainModel(QtCore.QObject):
             ).fetchall()
         return rects_data
 
-    def fetch_profile_rect(self, profile_id: int) -> list[str]:
+    def fetch_profile_rectangle_by_profile_id(self, profile_id: int) -> list[str]:
         rects_profile_data = []
         with self.db_connection(self.database_path) as connection:
             select_profile_rect = """SELECT x_1, x_2, y_1, y_2, unique_profile_name FROM profiles WHERE profile_id=?;"""
@@ -248,7 +250,7 @@ class MainModel(QtCore.QObject):
             ).fetchone()
         return rects_profile_data
 
-    def fetch_parameter_id(self, profile_id: int, parameter_name: str) -> int:
+    def fetch_parameter_id_by_name(self, profile_id: int, parameter_name: str) -> int:
         with self.db_connection(self.database_path) as connection:
             parameter_query = """SELECT parameter_id FROM profile_parameters WHERE profile_id=? AND description=?;"""
             paramater_data = (profile_id, parameter_name)
@@ -274,7 +276,7 @@ class MainModel(QtCore.QObject):
             connection.cursor().execute(add_parameter_query, data)
             connection.commit()
 
-    def fetch_file_profiles(self, order_by: str) -> list[str]:
+    def fetch_all_file_profiles(self, order_by: str) -> list[str]:
         """Fetces the file_profile data to display to user in dropdowns
 
         Returns:
@@ -290,7 +292,7 @@ class MainModel(QtCore.QObject):
             return []
         return profiles
 
-    def fetch_profile_file_name_pattern(self, profile_id: str) -> str:
+    def fetch_profile_file_name_pattern_by_profile_id(self, profile_id: str) -> str:
         with self.db_connection(self.database_path) as connection:
             profile_file_name_scheme_query = """SELECT file_naming_format FROM profiles WHERE profile_id = ?"""
             file_name_scheme = connection.cursor().execute(
@@ -300,7 +302,7 @@ class MainModel(QtCore.QObject):
             return ""
         return file_name_scheme[0]
 
-    def update_file_profile_file_name_pattern(self, profile_name, pattern):
+    def update_template_profile_file_name_pattern(self, profile_name, pattern):
         """Updates the file naming scheme in the database for a file_profile
 
         Args:
@@ -335,7 +337,7 @@ class MainModel(QtCore.QObject):
                 project_directories_query).fetchall()
         return project_directories
 
-    def fetch_table_names(self):
+    def fetch_all_table_names(self):
         """Fetches table names in database for users to choose in dropdown list
 
         Returns:
@@ -362,23 +364,7 @@ class MainModel(QtCore.QObject):
                     "No Tables Found",
                 ]
 
-    def fetch_data(self, database_table: str) -> list[list[str], list[str]]:
-        """Fetcehs all database results from a database table"""
-        results = None
-        with self.db_connection(self.database_path) as connection:
-            # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM {self.scrub(database_table)}"""
-            try:
-                database_fetch_results = connection.cursor().execute(query).fetchall()
-                names = list(
-                    map(lambda x: x[0], connection.cursor().description))
-                results = [database_fetch_results, names]
-            except sqlite3.DatabaseError as e:
-                print(e)
-
-        return results
-
-    def delete_project_data_entry(self, project_number: str) -> str:
+    def delete_project_data_entry_by_project_number(self, project_number: str) -> str:
 
         msg = None
         with self.db_connection(self.database_path) as connection:
@@ -393,7 +379,7 @@ class MainModel(QtCore.QObject):
 
         return msg
 
-    def update_project_data(self, old_data, new_data):
+    def update_project_data_entry(self, old_data, new_data):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
