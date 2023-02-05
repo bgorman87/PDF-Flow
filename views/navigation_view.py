@@ -81,9 +81,9 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         self.main_view_model.console_alerts_update.connect(
             lambda: self.console_nav_button.setText(f"Console ({self.main_view_model.console_alerts})"))
-        self.main_view_model.loaded_files_update.connect(lambda: self.loaded_files_button.setText(
-            f"Loaded Files: {self.main_view_model.loaded_files}"))
+        self.main_view_model.loaded_files_count_update.connect(lambda: self.loaded_files_button.setText(
+            f"Loaded Files: {self.main_view_model.loaded_files_count}"))
         self.main_view_model.processed_files_update.connect(lambda: self.processed_files_button.setText(
             f"Processed Files: {self.main_view_model.processed_files}"))
-        self.main_view_model.emailed_files_update.connect(lambda: self.emailed_files_button.setText(
-            f"Emailed Files: {self.main_view_model.emailed_files}"))
+        self.main_view_model.emailed_files_count_update.connect(lambda: self.emailed_files_button.setText(
+            f"Emailed Files: {self.main_view_model.emailed_files_count}"))

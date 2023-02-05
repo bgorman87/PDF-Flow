@@ -79,7 +79,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         # Checking each unique id area for the unique identifier text
         # If identifier text found, the sheet is that type (return profile_id)
         file_type = self.find_file_profile(pdf_image=image)
-        
+
         if self.template:
             self.signals.progress.emit(100)
             self.signals.result.emit(file_type)
@@ -94,14 +94,15 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             self.signals.result.emit(returns)
             return
 
-        self.main_view_model.update_profile_used_count(profile_id=file_type)
+        self.main_view_model.update_profile_used_count_by_profile_id(
+            profile_id=file_type)
         parameter_data = self.find_parameter_data(
             profile_id=file_type, pdf_image=image)
 
         project_number = parameter_data.get("project_number")
         # If project_number specified in database, try to get directory info
         if project_number is not None:
-            rename_path_project_dir = self.main_view_model.fetch_project_directory(
+            rename_path_project_dir = self.main_view_model.fetch_project_directory_by_project_number(
                 project_number=project_number)
             if not rename_path_project_dir:
 
@@ -115,7 +116,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         doc_number = detect_package_number(
             self.file_dir_path, rename_path_project_dir)
 
-        file_pattern = self.main_view_model.fetch_profile_file_name_pattern(
+        file_pattern = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             file_type)
 
         # If no file pattern just add each paramater value seperated by hyphen
@@ -153,8 +154,14 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         if rename_path_project_dir is not None:
             try:
                 shutil.copy(rename_path, rename_path_project_dir)
-            except Exception as e:
-                print(f"Error copying file to project directory: {e}")
+            except FileNotFoundError as e:
+                file_name = rename_path.replace("\\", "/").split("/")[-1]
+                if rename_path_project_dir == "":
+                    self.main_view_model.add_console_text(f"No project directory found for {file_name}")
+                else:
+                    self.main_view_model.add_console_text(f"Error copying {file_name} to project directory: {rename_path_project_dir}")
+                self.main_view_model.add_console_alerts(1)
+
 
         rename_project_data_path = os.path.abspath(
             os.path.join(rename_path_project_dir, new_file_name + ".pdf"))
@@ -167,10 +174,11 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     def find_file_profile(self, pdf_image: io.BytesIO) -> int:
 
-        profiles = self.main_view_model.fetch_file_profiles(order_by="count")
+        profiles = self.main_view_model.fetch_all_file_profiles(
+            order_by="count")
 
         for file_profile in profiles:
-            
+
             file_identifier_text = file_profile[1]
             active_profile_name = file_profile[2]
             file_id_x1 = file_profile[3]
@@ -193,36 +201,38 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return 0
 
     def find_parameter_data(self, profile_id: int, pdf_image: io.BytesIO) -> dict:
-        file_profile_parameters = self.main_view_model.fetch_active_parameters(
+        file_profile_parameters = self.main_view_model.fetch_active_parameters_by_profile_id(
             profile_id=profile_id)
         # Iterate through each location of each paramater
         data = {}
-        for file_profile_paramater in file_profile_parameters:
+        for file_profile_parameter in file_profile_parameters[1:]:
+            [x_1, x_2, y_1, y_2] = self.main_view_model.fetch_parameter_rectangle_by_name_and_profile_id(profile_id=profile_id, parameter_name=file_profile_parameter)
+            parameter_regex = self.main_view_model.fetch_parameter_regex_by_parameter_name_and_profile_id(profile_id=profile_id, parameter_name=file_profile_parameter)
             for scale in [1.0, 1.01, 1.02, 1.03, 1.04, 1.05]:
-                x1 = int(file_profile_paramater[4] / scale)
-                x2 = int(file_profile_paramater[5] * scale)
-                y1 = int(file_profile_paramater[6] / scale)
-                y2 = int(file_profile_paramater[7] * scale)
+                scaled_x_1 = int(x_1 / scale)
+                scaled_x_2 = int(x_2 * scale)
+                scaled_y_1 = int(y_1 / scale)
+                scaled_y_2 = int(y_2 * scale)
 
                 # crop image to desired location
-                cropped_image = pdf_image.crop((x1, y1, x2, y2))
+                cropped_image = pdf_image.crop((scaled_x_1, scaled_y_1, scaled_x_2, scaled_y_2))
 
                 result = self.analyze_image(cropped_image)
 
-                if file_profile_paramater[3] is None:
-                    data[file_profile_paramater[2]] = scrub(result.replace(
+                if not parameter_regex:
+                    data[file_profile_parameter] = scrub(result.replace(
                         "\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
                     break
-                print(f"regex: {file_profile_paramater[3]}")
+                print(f"regex: {parameter_regex}")
                 data_point = re.search(
-                    rf"{file_profile_paramater[3]}", result, re.M + re.I)
-                data[file_profile_paramater[2]] = data_point
+                    rf"{parameter_regex}", result, re.M + re.I)
+                data[file_profile_parameter] = data_point
                 if data_point is not None:
                     data_point = data_point.groups()
                     # Get rid of any extra hyphens, random spaces, new line characters, and then feed it into scrub to get rid of non alpha-numeric
                     data_point = scrub(
                         data_point[-1].replace("\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
-                    data[file_profile_paramater[2]] = data_point
+                    data[file_profile_parameter] = data_point
                     break
         return data
 

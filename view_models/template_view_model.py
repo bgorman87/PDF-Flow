@@ -85,7 +85,7 @@ class TemplateViewModel(QtCore.QObject):
         self._parameter_button_enabled = True
         self.unique_parameter_status_update.emit()
 
-        profile_name = self.main_view_model.fetch_profile_description(
+        profile_name = self.main_view_model.fetch_profile_description_by_profile_id(
             file_type)
 
         self._current_file_profile = file_type
@@ -273,9 +273,10 @@ class TemplateViewModel(QtCore.QObject):
         # If an id exists then the name given is already in use
         db_id = None
         if property_type == "profile":
-            db_id = self.main_view_model.fetch_profile_id(profile_name=name)
+            db_id = self.main_view_model.fetch_profile_id_by_profile_name(
+                profile_name=name)
         elif property_type == "parameter":
-            db_id = self.main_view_model.fetch_parameter_id(
+            db_id = self.main_view_model.fetch_parameter_id_by_name_and_profile_id(
                 profile_id=self._current_file_profile, parameter_name=name)
         if property_type == "project_number":
             name = property_type
@@ -284,17 +285,17 @@ class TemplateViewModel(QtCore.QObject):
         # if so display message to user and use this function as a callback to bring it back up
         if name == "" or db_id is not None or ("project_number" == name.lower() and property_type != "project_number"):
             if name == "":
-                message_box_window_title = "No Profile Name"
-                text_body = "Please enter a profile name."
+                message_box_window_title = "No Name"
+                text_body = "Please enter a description/name."
             elif db_id is not None:
-                message_box_window_title = "Profile Name Not Unique"
-                text_body = "Profile name taken. Please enter a unique profile name."
+                message_box_window_title = "Name Not Unique"
+                text_body = "Description/name already used for this profile. Please enter a unique value."
             else:
                 message_box_window_title = "Reserved Name"
                 text_body = "project_number is a reserved template keyword. To set the project_number paramater, use the 'Apply Project Number' button."
             severity_icon = QtWidgets.QMessageBox.Critical
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
+            buttons = ["Close",]
+            button_roles = [QtWidgets.QMessageBox.RejectRole,]
             callback = [lambda: self.apply_template_property(
                 property_type=property_type, template_display=template_display),]
             message_box_dict = {
@@ -371,7 +372,7 @@ class TemplateViewModel(QtCore.QObject):
         # if identifier already in database, check if current rect bounds intersects with matching profile entry
         identifier_intersects = False
         if indentifier_text_found:
-            [db_x_1, db_x_2, db_y_1, db_y_2] = self.main_view_model.fetch_profile_rect_bounds(
+            [db_x_1, db_x_2, db_y_1, db_y_2] = self.main_view_model.fetch_profile_rectangle_bounds_by_profile_id(
                 profile_id=profile_id)
 
             RECTANGLE = collections.namedtuple("RECTANGLE", "x1 x2 y1 y2")
@@ -432,7 +433,8 @@ class TemplateViewModel(QtCore.QObject):
             example=example,
         )
         self.paint_existing_data_rects(profile_id=profile_id)
-        self.main_view_model.parameter_update_list.emit(profile_id)
+        # TODO: add function here to update parameter list  in settings if currently
+        # selected profile in settings is the one being updated.
 
     def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_view_model.add_new_profile(
@@ -450,7 +452,7 @@ class TemplateViewModel(QtCore.QObject):
         self._parameter_button_enabled = True
         self.unique_parameter_status_update.emit()
 
-        profile_id = self.main_view_model.fetch_profile_id(
+        profile_id = self.main_view_model.fetch_profile_id_by_profile_name(
             profile_name=profile_name)
         self._current_file_profile = profile_id
         self.paint_existing_data_rects(profile_id=profile_id)

@@ -225,7 +225,7 @@ class MainModel(QtCore.QObject):
                 example_text_query = """SELECT example_text FROM profile_parameters WHERE profile_id=? AND description=?"""
                 example_text = connection.cursor().execute(
                     example_text_query, (profile_id, parameter)
-                ).fetchall()
+                ).fetchone()
                 if example_text:
                     return example_text[0]
                 return ""
@@ -298,9 +298,9 @@ class MainModel(QtCore.QObject):
             file_name_scheme = connection.cursor().execute(
                 profile_file_name_scheme_query, (profile_id,)
             ).fetchone()
-        if not file_name_scheme:
-            return ""
-        return file_name_scheme[0]
+        if file_name_scheme:
+            return file_name_scheme[0]
+        return ""
 
     def update_template_profile_file_name_pattern(self, profile_name, pattern):
         """Updates the file naming scheme in the database for a file_profile
@@ -378,7 +378,23 @@ class MainModel(QtCore.QObject):
                 msg = f"Error updating Project Data: {e}"
 
         return msg
+    
+    def fetch_parameter_rectangle_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> list[int]:
+        with self.db_connection(self.database_path) as connection:
+            parameter_ractangle_query = """SELECT x_1, x_2, y_1, y_2 FROM profile_parameters WHERE profile_id=? AND description=?;"""
+            profile_rectangle = connection.cursor().execute(parameter_ractangle_query, (profile_id, parameter_name)).fetchone()
 
+        return profile_rectangle
+
+    
+    def fetch_parameter_regex_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            parameter_regex_query = """SELECT regex FROM profile_parameters WHERE profile_id=? AND description=?;"""
+            profile_regex = connection.cursor().execute(parameter_regex_query, (profile_id, parameter_name)).fetchone()
+        if profile_regex:
+            return profile_regex[0]
+        return ""
+    
     def update_project_data_entry(self, old_data, new_data):
         msg = None
         with self.db_connection(self.database_path) as connection:
@@ -554,3 +570,4 @@ class DeleteProjectDataThread(QtCore.QRunnable):
                 msg = f"Error: {e}"
             finally:
                 self.signals.result.emit([msg])
+

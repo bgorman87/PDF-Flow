@@ -7,4 +7,4 @@ class ConsoleWidget(QtWidgets.QPlainTextEdit):
         self.setObjectName("console")
         self.setReadOnly(True)
         self.view_model = view_model
-        self.view_model.console_text_insert.connect(lambda: self.insertPlainText(self.view_model.text))
+        self.view_model.console_text_insert.connect(lambda: self.insertPlainText(f"{self.view_model.text}\n"))

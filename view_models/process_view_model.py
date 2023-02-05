@@ -25,20 +25,20 @@ class ProcessViewModel(QtCore.QObject):
         """Opens a file dialog to select files for input"""
         # When clicking Select Files, clear any previously selected files, and reset the file status box
         self._file_names = None
-        self.main_view_model.set_loaded_files(0)
+        self.main_view_model.set_loaded_files_count(0)
 
         self._file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
             caption="Select Files to Process", filter="PDF (*.pdf)"
         )
 
-        self.main_view_model.set_process_progress_value(0)
+        self.main_view_model.set_process_progress_bar_value(0)
         if not self._file_names:
             self.main_view_model.set_process_button_state(False)
-            self.main_view_model.set_process_progress_text(
+            self.main_view_model.set_process_progress_bar_text(
                 "Select Files to Begin...")
             return
 
-        self.main_view_model.set_process_progress_text(
+        self.main_view_model.set_process_progress_bar_text(
             "Press 'Process' Button to Start Processing Files..."
         )
 
@@ -60,14 +60,14 @@ class ProcessViewModel(QtCore.QObject):
         # Signals for this are defined in main_view_model because nav needs the info as well
         self.main_view_model.add_console_text(file_names_string)
         self.main_view_model.add_console_alerts(number_files)
-        self.main_view_model.set_loaded_files(number_files)
+        self.main_view_model.set_loaded_files_count(number_files)
         self.main_view_model.set_process_button_state(True)
         self.main_view_model.set_process_button_count(number_files)
 
     # For each file in self._file_names create a thread to process
     def process_files(self):
         """Processes the selected files"""
-        self.main_view_model.set_process_progress_text("Processing... %p%")
+        self.main_view_model.set_process_progress_bar_text("Processing... %p%")
         # For each file create a new thread to increase performance
         for file_name in self._file_names:
             self.analyze_worker = analysis.WorkerAnalyzeThread(
@@ -119,10 +119,10 @@ class ProcessViewModel(QtCore.QObject):
 
         # Since val is progress of each individual file, need to ensure whole progress accounts for all files
         self._progress += val
-        self.main_view_model.set_process_progress_value(
+        self.main_view_model.set_process_progress_bar_value(
             int(self._progress / len(self._file_names)))
         if self._progress >= 100:
-            self.main_view_model.set_process_progress_text(
+            self.main_view_model.set_process_progress_bar_text(
                 "Processing Complete.")
 
     def evt_analyze_complete(self, results: list[str]):
