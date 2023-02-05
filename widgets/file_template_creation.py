@@ -13,8 +13,8 @@ poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
 class TemplateWidget(QtWidgets.QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
 
-    def __init__(self, image_data=None, pil_image=None, parent=None):
-        super(TemplateWidget, self).__init__(parent)
+    def __init__(self, image_data=None, pil_image=None):
+        super(TemplateWidget, self).__init__()
         self.pix = QtGui.QPixmap()
         self.pil_image = pil_image
         self.initial_width = 0
@@ -259,6 +259,6 @@ class TemplateWidget(QtWidgets.QWidget):
         """
         x_1 = int(self.begin.x()/self.width_ratio)
         x_2 = int(self.end.x()/self.width_ratio)
-        y_1 = int(self.begin.y()/self.width_ratio)
-        y_2 = int(self.end.y()/self.width_ratio)
+        y_1 = int(self.begin.y()/self.height_ratio)
+        y_2 = int(self.end.y()/self.height_ratio)
         return [x_1, x_2, y_1, y_2]

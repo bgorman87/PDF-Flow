@@ -57,8 +57,8 @@ class SettingsView(QtWidgets.QWidget):
         self.settings_profile_parameters_list_widget.setSelectionMode(
             QtWidgets.QAbstractItemView.SingleSelection
         )
-        
-        self.view_model.parameter_update_list.connect(
+
+        self.view_model.main_view_model.parameter_update_list.connect(
             lambda: self.update_parameter_list(
                 paramater_items=self.view_model.active_parameter_items,
                 file_naming_scheme=self.view_model.active_file_naming_scheme,
@@ -68,7 +68,8 @@ class SettingsView(QtWidgets.QWidget):
             "settings_profile_parameters_list_widget"
         )
         self.settings_profile_parameters_list_widget.itemClicked.connect(
-            lambda: self.view_model.add_active_param_line_edit(self.settings_profile_naming_scheme_line_edit, self.settings_profile_parameters_list_widget.currentItem().text())
+            lambda: self.view_model.add_active_param_line_edit(
+                self.settings_profile_naming_scheme_line_edit, self.settings_profile_parameters_list_widget.currentItem().text())
         )
         self.view_model.file_name_update.connect(
             lambda: self.update_file_name_line_edit(
@@ -96,9 +97,10 @@ class SettingsView(QtWidgets.QWidget):
             "settings_profile_naming_scheme_line_edit"
         )
         self.settings_profile_naming_scheme_line_edit.textChanged.connect(
-            self.view_model.display_example_file_name
+            self.view_model.display_file_name
         )
-        self.view_model.file_name_example_update.connect(lambda: self.update_file_name_example_line_edit(self.view_model.settings_profile_naming_scheme_example_text))
+        self.view_model.file_name_example_update.connect(lambda: self.update_file_name_example_line_edit(
+            self.view_model.settings_profile_naming_scheme_example_text))
         self.settings_file_name_pattern_layout.addWidget(
             self.settings_profile_naming_scheme_line_edit
         )
@@ -109,7 +111,8 @@ class SettingsView(QtWidgets.QWidget):
             "settings_profile_naming_scheme_button"
         )
         self.settings_profile_naming_scheme_button.clicked.connect(
-            lambda: self.view_model.check_profile_file_name_pattern(self.settings_profile_templates_list_widget.currentItem().text())
+            lambda: self.view_model.check_profile_file_name_pattern(
+                self.settings_profile_templates_list_widget.currentItem().text())
         )
         self.settings_file_name_pattern_layout.addWidget(
             self.settings_profile_naming_scheme_button
@@ -122,7 +125,8 @@ class SettingsView(QtWidgets.QWidget):
         self.settings_profile_naming_scheme_example_label.setObjectName(
             "settings_profile_naming_scheme_example_label"
         )
-        self.main_layout.addWidget(self.settings_profile_naming_scheme_example_label)
+        self.main_layout.addWidget(
+            self.settings_profile_naming_scheme_example_label)
 
         # Line edit to display an example of data shown
         self.settings_profile_naming_scheme_example_line_edit = QtWidgets.QLineEdit()
@@ -159,7 +163,7 @@ class SettingsView(QtWidgets.QWidget):
             _translate("SettingsView", "Choose Profile:")
         )
         self.settings_profile_naming_scheme_button.setText(
-            _translate("SettingsView", "Save Filename Pattern")
+            _translate("SettingsView", "Save File Name Pattern")
         )
 
     def update_profile_list(self):
@@ -174,15 +178,18 @@ class SettingsView(QtWidgets.QWidget):
         self.settings_profile_parameters_list_widget.clear()
         self.settings_profile_naming_scheme_line_edit.clear()
 
-        self.settings_profile_naming_scheme_line_edit.setText(file_naming_scheme)
+        self.settings_profile_naming_scheme_line_edit.setText(
+            file_naming_scheme)
         for param_list_item in paramater_items:
-            self.settings_profile_parameters_list_widget.addItem(param_list_item)
+            self.settings_profile_parameters_list_widget.addItem(
+                param_list_item)
 
     def update_file_name_line_edit(self, new_text: str, cursor_position: int) -> None:
         self.settings_profile_naming_scheme_line_edit.setText(new_text)
         self.settings_profile_naming_scheme_line_edit.setFocus()
-        self.settings_profile_naming_scheme_line_edit.setCursorPosition(cursor_position)
+        self.settings_profile_naming_scheme_line_edit.setCursorPosition(
+            cursor_position)
 
     def update_file_name_example_line_edit(self, new_example_text: str) -> None:
-        self.settings_profile_naming_scheme_example_line_edit.setText(new_example_text)
-
+        self.settings_profile_naming_scheme_example_line_edit.setText(
+            new_example_text)

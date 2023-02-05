@@ -63,8 +63,9 @@ class MainView(QtWidgets.QMainWindow):
         self.message_box = message_box_view.MessageBoxView(
             message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box_dict)
         )
-        result = self.message_box.exec()
-        self.main_view_model.message_box_handler(result, message_box_dict["callback"])
+        result_index = self.message_box.exec_()
+        # result = message_box_dict.get("button_roles")[result_index]
+        self.main_view_model.message_box_handler(message_box_dict["callback"][result_index])
 
     def center_application(self, screen):
         # get the size of the main window

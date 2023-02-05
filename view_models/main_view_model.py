@@ -119,10 +119,10 @@ class MainViewModel(QtCore.QObject):
         return self.main_model.fetch_project_directory_by_project_number(project_number=project_number)
 
     def fetch_all_project_directories(self) -> list[str]:
-        return self.main_model.fetch_all_project_directories
+        return self.main_model.fetch_all_project_directories()
 
     def fetch_all_project_numbers(self) -> list[str]:
-        return self.main_model.fetch_all_project_numbers
+        return self.main_model.fetch_all_project_numbers()
 
     def fetch_profile_file_name_pattern_by_profile_id(self, profile_id: int) -> str:
         return self.main_model.fetch_profile_file_name_pattern_by_profile_id(profile_id=profile_id)
@@ -194,24 +194,12 @@ class MainViewModel(QtCore.QObject):
 
     def message_box_handler(
         self,
-        message_box_result: int,
-        callback: list[typing.Callable],
+        callback: typing.Callable,
     ):
-        # 5 = YesRole & 0 = AcceptRole
-        if message_box_result == 5 or message_box_result == 0:
-            if callback[0] is None:
-                return
-            callback[0]()
-
-        # 4 = NoRole
-        elif message_box_result == 4:
-            if callback[1] is None:
-                return
-            callback[1]()
-
-        # Any other button press (cancel)
-        else:
+        if callback is None:
             return
+
+        callback()
 
     def update_window_size(self, width: int, height: int):
         self._width, self._height = width, height
@@ -226,3 +214,10 @@ class MainViewModel(QtCore.QObject):
 
     def fetch_profile_rect_and_desc(self, profile_id: int) -> list[str]:
         return self.main_model.fetch_profile_rectangle_by_profile_id(profile_id)
+
+    def fetch_parameter_rectangle_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> list[int]:
+        return self.main_model.fetch_parameter_rectangle_by_name_and_profile_id(profile_id=profile_id, parameter_name=parameter_name)
+    
+    def fetch_parameter_regex_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
+        return self.main_model.fetch_parameter_regex_by_parameter_name_and_profile_id(profile_id=profile_id, parameter_name=parameter_name)
+
