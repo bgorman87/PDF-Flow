@@ -56,10 +56,10 @@ class TemplateViewModel(QtCore.QObject):
             self.progress_popup = loading_widget.LoadingWidget(
                 title="Template Check", text="Comparing file to existing profiles..."
             )
-            self.analyze_worker.signals.progress.connect(
+            self.analyze_worker.progress.connect(
                 self.evt_loading_widget_progress
             )
-            self.analyze_worker.signals.result.connect(
+            self.analyze_worker.result.connect(
                 self.evt_analyze_complete)
             self._thread_pool.start(self.analyze_worker)
 
