@@ -8,7 +8,6 @@ import os
 import random
 import shutil
 
-import debugpy
 import pytesseract
 import regex as re
 from pdf2image import convert_from_path
@@ -17,14 +16,15 @@ from PySide6 import QtCore
 from functions.data_handler import WorkerSignals, scrub
 from view_models import main_view_model
 
+from utils import utils
+
 # from functions.date_formater import date_formatter, months
 # from functions.project_info import project_info
 # from functions.project_number import detect_project_number
 
 
 # hard coded tesseract and poppler path from current working directory
-tesseract_path = str(os.path.abspath(
-    os.path.join(os.getcwd(), r"Tesseract/tesseract.exe")))
+tesseract_path = utils.resource_path("Tesseract/tesseract.exe")
 # poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler/bin")))
 poppler_path = f"{os.path.abspath('/usr/bin')}"
 print(poppler_path)
@@ -66,7 +66,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     @QtCore.Slot()
     def run(self):
-        debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True)
