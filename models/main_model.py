@@ -1,18 +1,17 @@
 import contextlib
 import csv
-import errno
 import os
 import sqlite3
 import typing
 
 from PySide6 import QtCore
-
+from utils import utils
 
 class MainModel(QtCore.QObject):
     def __init__(self):
         super().__init__()
-        self.database_path = os.path.join(
-            os.getcwd(), "database", "db.sqlite3")
+        self.database_path = utils.resource_path("database/db.sqlite3")
+        self.database_folder = utils.resource_path("database") # I dont feel like splitting database_path
 
     class WorkerSignals(QtCore.QObject):
         """Class of signals to be used from threaded processes"""
@@ -54,6 +53,9 @@ class MainModel(QtCore.QObject):
 
     def initialize_database(self):
         """Checks if the database and tables exists and if not will create the database and intialize the necessary tables."""
+
+        if not os.path.exists(self.database_folder):
+            os.makedirs(self.database_folder)
 
         tables_initialized = False
 

@@ -1,8 +1,12 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from datetime import date
+
 from models import main_model
 from view_models import main_view_model, message_box_view_model
 from views import message_box_view, navigation_view, stacked_view
+
+from utils import utils
 
 
 class MainView(QtWidgets.QMainWindow):
@@ -29,7 +33,7 @@ class MainView(QtWidgets.QMainWindow):
         self.main_layout.setStretch(1, 1)
 
         self.copyright_label = QtWidgets.QLabel(
-            "© 2023 Brandon Gorman. All rights reserved."
+            f"© {date.today().year} Brandon Gorman. All rights reserved."
         )
         self.copyright_label.setProperty("class", "copyright-label")
         self.copyright_layout = QtWidgets.QHBoxLayout()
@@ -83,10 +87,13 @@ class MainView(QtWidgets.QMainWindow):
     def resize_window(self, size: tuple):
         self.resize(size)
 
+
 def main():
     app = QtWidgets.QApplication([])
-    # # Open the qss styles file and read in the css-alike styling code
-    with open("style/styles.qss", "r") as f:
+    
+    # Open the qss styles file and read in the css-alike styling code
+    style_file_path = utils.resource_path("style/styles.qss")
+    with open(style_file_path, "r") as f:
         style = f.read()
 
     # Set the stylesheet of the application
@@ -96,7 +103,7 @@ def main():
     palette = QtGui.QPalette()
     palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.white))  # type: ignore
     app.setPalette(palette)
-    QtGui.QFontDatabase.addApplicationFont("assests/Roboto-Regular.ttf")
+    QtGui.QFontDatabase.addApplicationFont(utils.resource_path("assests/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel()))
     window.setWindowTitle("PDF Processor")
     window.navigation_view.setProperty("class", "nav-widget")

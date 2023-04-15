@@ -132,8 +132,6 @@ class ProcessView(QtWidgets.QWidget):
             self.main_layout.indexOf(self.file_preview), 8
         )
 
-        # Initialize a blank entry, otherwise GUI will reload upon choosing tab
-        # initialized_pdf = "B:/Documents/Programming/GitHub/modular_report_sorter/assets/pdf/blank.pdf"
         self.file_preview.show()
 
         # Progress bar to show analyze progress

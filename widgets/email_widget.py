@@ -3,7 +3,7 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QPainter, QPen,
                            QPixmap, QTextBlockFormat, QTextCharFormat,
                            QTextFormat, QTextImageFormat)
 from PySide6 import QtWidgets
-
+from utils import utils
 class EmailWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,7 +40,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.bold_button = QtWidgets.QPushButton()
         self.bold_button.setMaximumSize(QSize(28, 28))
         icon = QIcon()
-        icon.addFile(u"assets/icons/bold.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(utils.resource_path(u"assets/icons/bold.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.bold_button.setIcon(icon)
         self.bold_button.setProperty("class", "invert-icon")
         self.bold_button.setIconSize(QSize(12, 12))
@@ -51,7 +51,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.italic_button = QtWidgets.QPushButton()
         self.italic_button.setMaximumSize(QSize(28, 28))
         icon1 = QIcon()
-        icon1.addFile(u"assets/icons/italic.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(utils.resource_path(u"assets/icons/italic.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.italic_button.setIcon(icon1)
         self.italic_button.setProperty("class", "invert-icon")
         self.italic_button.setIconSize(QSize(12, 12))
@@ -62,7 +62,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.underline_button = QtWidgets.QPushButton()
         self.underline_button.setMaximumSize(QSize(28, 28))
         icon2 = QIcon()
-        icon2.addFile(u"assets/icons/underline_new.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(utils.resource_path(u"assets/icons/underline_new.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.underline_button.setIcon(icon2)
         self.underline_button.setProperty("class", "invert-icon")
         self.underline_button.setIconSize(QSize(12, 12))
@@ -101,7 +101,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.align_left_button = QtWidgets.QPushButton()
         self.align_left_button.setMaximumSize(QSize(28, 28))
         icon3 = QIcon()
-        icon3.addFile(u"assets/icons/align left.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(utils.resource_path(u"assets/icons/align left.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.align_left_button.setProperty("class", "invert-icon")
         self.align_left_button.setIcon(icon3)
         
@@ -113,7 +113,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.align_center_button = QtWidgets.QPushButton()
         self.align_center_button.setMaximumSize(QSize(28, 28))
         icon4 = QIcon()
-        icon4.addFile(u"assets/icons/align center.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(utils.resource_path(u"assets/icons/align center.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.align_center_button.setIcon(icon4)
         self.align_center_button.setProperty("class", "invert-icon")
         self.align_center_button.setIconSize(QSize(12, 12))
@@ -124,7 +124,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.align_right_button = QtWidgets.QPushButton()
         self.align_right_button.setMaximumSize(QSize(28, 28))
         icon5 = QIcon()
-        icon5.addFile(u"assets/icons/align right.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(utils.resource_path(u"assets/icons/align right.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.align_right_button.setIcon(icon5)
         self.align_right_button.setProperty("class", "invert-icon")
         self.align_right_button.setIconSize(QSize(12, 12))
@@ -140,7 +140,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.add_picture_button = QtWidgets.QPushButton()
         self.add_picture_button.setMaximumSize(QSize(28, 28))
         icon6 = QIcon()
-        icon6.addFile(u"assets/icons/insert image.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(utils.resource_path(u"assets/icons/insert image.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.add_picture_button.setIcon(icon6)
         self.add_picture_button.setProperty("class", "invert-icon")
         self.add_picture_button.setIconSize(QSize(14, 14))
@@ -150,7 +150,7 @@ class EmailWidget(QtWidgets.QWidget):
         self.add_link_button = QtWidgets.QPushButton()
         self.add_link_button.setMaximumSize(QSize(28, 28))
         icon7 = QIcon()
-        icon7.addFile(u"assets/icons/insert link new.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon7.addFile(utils.resource_path(u"assets/icons/insert link new.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.add_link_button.setIcon(icon7)
         self.add_link_button.setProperty("class", "invert-icon")
         self.add_link_button.setIconSize(QSize(14, 14))
