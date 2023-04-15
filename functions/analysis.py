@@ -12,9 +12,8 @@ import pytesseract
 import regex as re
 from pdf2image import convert_from_path
 from PySide6 import QtCore
-
-from functions.data_handler import WorkerSignals, scrub
 from view_models import main_view_model
+from typing import Any
 
 from utils import utils
 
@@ -55,12 +54,14 @@ class ItemFound(Exception):
 
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
+    result = QtCore.Signal(Any)
+    progress = QtCore.Signal(int)
 
-    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel, template: bool = False, ):
+
+    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel, template: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
-        self.signals = WorkerSignals()
         self.template = template
         self.main_view_model = main_view_model
 
@@ -80,8 +81,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         file_type = self.find_file_profile(pdf_image=image)
 
         if self.template:
-            self.signals.progress.emit(100)
-            self.signals.result.emit(file_type)
+            self.progress.emit(100)
+            self.result.emit(file_type)
             return
 
         if file_type == 0:
@@ -89,8 +90,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 self.file_dir_path, "").replace(".pdf", "")
             print_string = f"No profile found for: {file_title}.pdf"
             returns = [print_string, file_title, self.file, None]
-            self.signals.progress.emit(90)
-            self.signals.result.emit(returns)
+            self.progress.emit(90)
+            self.result.emit(returns)
             return
 
         self.main_view_model.update_profile_used_count_by_profile_id(
@@ -168,8 +169,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [print_string, new_file_name,
                    rename_path, rename_project_data_path]
-        self.signals.progress.emit(90)
-        self.signals.result.emit(returns)
+        self.progress.emit(90)
+        self.result.emit(returns)
 
     def find_file_profile(self, pdf_image: io.BytesIO) -> int:
 
@@ -193,7 +194,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
             # Using tesseract on cropped image, check if its equal to the unique_text
             text = self.analyze_image(cropped_pdf_image)
-            if file_identifier_text.strip().lower() in scrub(text.replace("\n", " ")).strip().lower():
+            if file_identifier_text.strip().lower() in self.main_view_model.scrub(text.replace("\n", " ")).strip().lower():
                 file_type = file_profile[0]
                 return file_type
 
@@ -219,7 +220,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 result = self.analyze_image(cropped_image)
 
                 if not parameter_regex:
-                    data[file_profile_parameter] = scrub(result.replace(
+                    data[file_profile_parameter] = self.main_view_model.scrub(result.replace(
                         "\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
                     break
                 print(f"regex: {parameter_regex}")
@@ -229,7 +230,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 if data_point is not None:
                     data_point = data_point.groups()
                     # Get rid of any extra hyphens, random spaces, new line characters, and then feed it into scrub to get rid of non alpha-numeric
-                    data_point = scrub(
+                    data_point = self.main_view_model.scrub(
                         data_point[-1].replace("\n", "").replace(" ", "-").replace("---", "-").replace("--", "-"))
                     data[file_profile_parameter] = data_point
                     break
