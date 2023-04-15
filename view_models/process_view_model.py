@@ -73,9 +73,9 @@ class ProcessViewModel(QtCore.QObject):
             self.analyze_worker = analysis.WorkerAnalyzeThread(
                 file_name=file_name, main_view_model=self.main_view_model
             )
-            self.analyze_worker.signals.progress.connect(
+            self.analyze_worker.progress.connect(
                 self.evt_analyze_progress)
-            self.analyze_worker.signals.result.connect(
+            self.analyze_worker.result.connect(
                 self.evt_analyze_complete)
             self._thread_pool.start(self.analyze_worker)
             self.evt_analyze_progress(10)

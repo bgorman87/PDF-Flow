@@ -1,8 +1,9 @@
 import typing
 
 from PySide6 import QtCore, QtWidgets
-
+from typing import Any
 from models import main_model
+from widgets import loading_widget
 
 
 class MainViewModel(QtCore.QObject):
@@ -135,6 +136,12 @@ class MainViewModel(QtCore.QObject):
 
     def fetch_profile_rectangle_bounds_by_profile_id(self, profile_id: int) -> list[str]:
         return self.main_model.fetch_profile_rectangle_bounds_by_profile_id(profile_id=profile_id)
+    
+    def fetch_all_project_data(self) -> list[str]:
+        return self.main_model.fetch_all_project_data()
+    
+    def fetch_project_data_table_headers(self) -> list[str]:
+        return self.main_model.fetch_project_data_table_headers()
 
     def delete_profile_add_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_model.delete_profile_by_name(profile_name=profile_name)
@@ -145,6 +152,10 @@ class MainViewModel(QtCore.QObject):
                              y_1=y_1,
                              y_2=y_2
                              )
+
+    def import_project_data_thread(self, project_data: list[str]):
+        self.main_model.import_project_data_thread(project_data=project_data)
+
 
     def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_model.add_new_profile(

@@ -5,14 +5,21 @@ import os
 import sqlite3
 import typing
 
+import debugpy
 from PySide6 import QtCore
+from widgets import loading_widget
 
 
 class MainModel(QtCore.QObject):
+    import_progress = QtCore.Signal(int)
+    import_result = QtCore.Signal(str)
+
     def __init__(self):
         super().__init__()
         self.database_path = os.path.join(
             os.getcwd(), "database", "db.sqlite3")
+        self.import_data = None
+        self._thread_pool = QtCore.QThreadPool()
 
     class WorkerSignals(QtCore.QObject):
         """Class of signals to be used from threaded processes"""
@@ -337,6 +344,41 @@ class MainModel(QtCore.QObject):
                 project_directories_query).fetchall()
         return project_directories
 
+    def fetch_project_data_table_headers(self) -> list[str]:
+        """Fetcehs all database headers from project data table"""
+        headers = None
+        with self.db_connection(self.database_path) as connection:
+            # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data;"""
+            try:
+                cursor = connection.cursor()
+                results = cursor.execute(query).fetchone()
+                if results:
+                    headers = [x[0] for x in cursor.description]
+                else:
+                    headers = []
+            except sqlite3.DatabaseError as e:
+                print(e)
+            finally:
+                cursor.close()
+
+        return headers
+
+    def fetch_all_project_data(self) -> list[str]:
+        """Fetcehs all database results from project data table"""
+        data = None
+        with self.db_connection(self.database_path) as connection:
+            # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data;"""
+            try:
+                database_fetch_results = connection.cursor().execute(query).fetchall()
+                if not database_fetch_results:
+                    database_fetch_results = []
+            except sqlite3.DatabaseError as e:
+                print(e)
+
+        return database_fetch_results
+
     def fetch_all_table_names(self):
         """Fetches table names in database for users to choose in dropdown list
 
@@ -378,23 +420,24 @@ class MainModel(QtCore.QObject):
                 msg = f"Error updating Project Data: {e}"
 
         return msg
-    
+
     def fetch_parameter_rectangle_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> list[int]:
         with self.db_connection(self.database_path) as connection:
             parameter_ractangle_query = """SELECT x_1, x_2, y_1, y_2 FROM profile_parameters WHERE profile_id=? AND description=?;"""
-            profile_rectangle = connection.cursor().execute(parameter_ractangle_query, (profile_id, parameter_name)).fetchone()
+            profile_rectangle = connection.cursor().execute(
+                parameter_ractangle_query, (profile_id, parameter_name)).fetchone()
 
         return profile_rectangle
 
-    
     def fetch_parameter_regex_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
         with self.db_connection(self.database_path) as connection:
             parameter_regex_query = """SELECT regex FROM profile_parameters WHERE profile_id=? AND description=?;"""
-            profile_regex = connection.cursor().execute(parameter_regex_query, (profile_id, parameter_name)).fetchone()
+            profile_regex = connection.cursor().execute(
+                parameter_regex_query, (profile_id, parameter_name)).fetchone()
         if profile_regex:
             return profile_regex[0]
         return ""
-    
+
     def update_project_data_entry(self, old_data, new_data):
         msg = None
         with self.db_connection(self.database_path) as connection:
@@ -445,61 +488,87 @@ class MainModel(QtCore.QObject):
     def export_project_data_thread(self, export_location):
         ExportProjectDataThread()
 
+    def import_project_data_thread(self, project_data: list[str]):
+        self.progress_popup = loading_widget.LoadingWidget(
+            title="Importing", text="Importing Project Data..."
+        )
+        self.import_data_thread = ImportProjectDataThread(
+            project_data=project_data, db_connection=self.db_connection, database_path=self.database_path, import_progress=self.import_progress, import_result=self.import_result)
+
+        self.import_progress.connect(self.update_progress_widget)
+        self._thread_pool.start(self.import_data_thread)
+
+    def update_progress_widget(self, value: int):
+        self.progress_popup.update_val(value=value)
 
 class ImportProjectDataThread(QtCore.QRunnable):
-    def __init__(
-        self, project_data: list[str],
-        worker_signals: MainModel.WorkerSignals,
-        db_connection: typing.Callable,
-        database_path: str
-    ):
+
+    def __init__(self, project_data: list[str], db_connection: typing.Callable, database_path: str, import_result: QtCore.Signal, import_progress: QtCore.Signal):
         super(ImportProjectDataThread, self).__init__()
-        self.worker_signals: worker_signals
-        self.db_connection: db_connection
-        self.database_path: database_path
+        self.db_connection = db_connection
         self.import_project_data = project_data
+        self.database_path = database_path
+        self.result_signal = import_result
+        self.progress_signal = import_progress
+        self._progress = 0
+        self._result = None
 
     @QtCore.Slot()
     def run(self):
+        debugpy.debug_this_thread()
         msg = None
-        with self.db_connection(self.database_path) as connection:
-            try:
-                progress = 33
+        try:
+            progress = 33
+            with self.db_connection(self.database_path) as connection:
                 results = connection.cursor().execute(
                     """SELECT project_number FROM project_data;"""
                 ).fetchall()
-                result_list = []
-                for i, result in enumerate(results):
-                    result_list.append(result[0])
-                    self.signals.progress.emit(
-                        int((1 + i) / len(results) * progress))
+            result_list = []
+            for i, result in enumerate(results):
+                result_list.append(result[0])
+                self._progress = int((1 + i) / len(results) * progress)
+                try:
+                    self.progress_signal.emit(self._progress)
+                except Exception as e:
+                    print(e)
+                    pass
 
-                # Remove non-unique project numbers before importing
-                # Removing them now and using executemany was WAY faster than not removing duplicates and using execute to insert rows individually
-                # and letting unique constraint just go to exception
-                temp_project_data = []
-                for i, project in enumerate(self.import_project_data):
-                    self.signals.progress.emit(
-                        progress
-                        + int((1 + i) / len(self.import_project_data) * progress)
-                    )
-                    if project[0] not in result_list:
-                        temp_project_data.append(project)
-                self.import_project_data = temp_project_data
-
+            # Remove non-unique project numbers before importing
+            # Removing them now and using executemany was WAY faster than not removing duplicates and using execute to insert rows individually
+            # and letting unique constraint just go to exception
+            temp_project_data = []
+            for i, project in enumerate(self.import_project_data):
+                self._progress = self._progress + int((1 + i) / len(self.import_project_data) * progress)
+                self.progress_signal.emit(self._progress)
+                if project[0] not in result_list:
+                    temp_project_data.append(project)
+            self.import_project_data = temp_project_data
+            with self.db_connection(self.database_path) as connection:
                 msg = connection.cursor().executemany(
                     """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject) VALUES(?,?,?,?,?,?);""",
                     self.import_project_data,
                 )
                 connection.commit()
-                self.signals.progress.emit(99)
-            except Exception as e:
-                msg = f"Error: {e}"
-            finally:
-                self.signals.result.emit([msg])
+            self._progress = 99
+            self.progress_signal.emit(self._progress)
+        except Exception as e:
+            msg = f"Error: {e}"
+        finally:
+            self._result = msg
+            self.result_signal.emit(self._result)
+            self._progress = 100
+            self.progress_signal.emit(self._progress)
+
+    @property
+    def progress(self):
+        return self._progress
+    
+    @property
+    def result(self):
+        return self._result
 
 
-class ExportProjectDataThread(QtCore.QRunnable):
+class ExportProjectDataThread(QtCore.QObject, QtCore.QRunnable):
     def __init__(
         self,
         export_location,
@@ -570,4 +639,3 @@ class DeleteProjectDataThread(QtCore.QRunnable):
                 msg = f"Error: {e}"
             finally:
                 self.signals.result.emit([msg])
-
