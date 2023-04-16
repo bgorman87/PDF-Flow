@@ -45,32 +45,33 @@ class DataViewerViewModel(QtCore.QObject):
         if not file_name:
             return
 
-        with open(file_name, "r") as imported_file:
-            try:
+        
+        try:
+            with open(file_name, "r") as imported_file:
                 reader = csv.reader(imported_file)
                 data_to_import = []
                 for row in reader:
                     data_to_import.append(row)
-                self.import_project_data(data_to_import=data_to_import)
-            except csv.Error as e:
+            self.import_project_data(data_to_import=data_to_import)
+        except csv.Error as e:
 
-                message_box_window_title = "Invalid Import File"
-                severity_icon = QtWidgets.QMessageBox.Information
-                text_body = f"File unable to be read as a csv.\n\n{e}"
-                buttons = ["Okay",]
-                button_roles = [QtWidgets.QMessageBox.RejectRole,]
-                callback = [None,]
-                message_box_dict = {
-                    "title": message_box_window_title,
-                    "icon": severity_icon,
-                    "text": text_body,
-                    "buttons": buttons,
-                    "button_roles": button_roles,
-                    "callback": callback
-                }
+            message_box_window_title = "Invalid Import File"
+            severity_icon = QtWidgets.QMessageBox.Information
+            text_body = f"File unable to be read as a csv.\n\n{e}"
+            buttons = ["Okay",]
+            button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            callback = [None,]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback
+            }
 
-                self.main_view_model.display_message_box(
-                    message_box_dict=message_box_dict)
+            self.main_view_model.display_message_box(
+                message_box_dict=message_box_dict)
 
     def import_project_data(self, data_to_import: list[str]):
 
@@ -78,7 +79,7 @@ class DataViewerViewModel(QtCore.QObject):
         while "project_number" in data_to_import[0]:
             data_to_import = data_to_import[1:]
 
-        # Display invalid data to user somehow so theyre aware not all data was imported properly
+        # Display invalid data to user somehow so they're aware not all data was imported properly
         # valid_data_to_import, _ = self.validate_data(data_to_import)
         valid_data_to_import = data_to_import
         self.main_view_model.main_model.import_result.connect(self.import_data_handler)
@@ -89,7 +90,7 @@ class DataViewerViewModel(QtCore.QObject):
             self.update_data_table()
             return
         self.main_view_model.add_console_alerts(1)
-        self.main_view_model.add_console_text(f"Import Error: {error_message}")
+        self.main_view_model.add_console_text(f"Import {error_message}")
 
     def evt_import_complete(self, results):
         """Displays error message to user if one is present in results otherwise does nothing.
@@ -119,3 +120,32 @@ class DataViewerViewModel(QtCore.QObject):
         else:
             self.progress_popup.setValue(100)
             self.database_fetch("project_data")
+
+    def get_project_data_export_location(self):
+        
+        export_location = QtWidgets.QFileDialog.getSaveFileName(
+            caption="Export Project Data",
+            dir="../../",
+            filter="Comma Seperated Values (*.csv)",
+        )
+
+        if not export_location:
+            return
+        
+        export_location = export_location[0]
+        if not export_location.endswith(".csv"):
+            export_location += ".csv"
+        
+        self.export_project_data(export_location=export_location)
+
+    def export_project_data(self, export_location: str):
+        self.main_view_model.main_model.export_result.connect(self.export_data_handler)
+        self.main_view_model.export_project_data_thread(export_location=export_location)
+
+    def export_data_handler(self, error_message: str):
+        self.main_view_model.add_console_alerts(1)
+        if not error_message:
+            self.main_view_model.add_console_text(f"Export Complete.")
+            return
+        
+        self.main_view_model.add_console_text(f"Export {error_message}")

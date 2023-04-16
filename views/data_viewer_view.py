@@ -30,8 +30,8 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Export project data button
         self.export_project_data_button = QtWidgets.QPushButton()
-        # self.export_project_data_button.clicked.connect(
-        #     self.export_project_data)
+        self.export_project_data_button.clicked.connect(
+            self.view_model.get_project_data_export_location)
         self.project_data_cta_layout.addWidget(self.export_project_data_button)
 
         # Delete all project data button
