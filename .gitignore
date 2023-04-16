@@ -17,4 +17,8 @@ dist/
 # Database
 database/
 
+# Test PDF Files
+test_files/
+
+# Database exported file
 *.csv
