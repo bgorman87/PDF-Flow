@@ -16,6 +16,8 @@ class MainModel(QtCore.QObject):
     import_result = QtCore.Signal(str)
     export_progress = QtCore.Signal(int)
     export_result = QtCore.Signal(str)
+    delete_progress = QtCore.Signal(int)
+    delete_result = QtCore.Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -588,6 +590,20 @@ class MainModel(QtCore.QObject):
         self.import_progress.connect(self.update_progress_widget)
         self._thread_pool.start(self.import_data_thread)
 
+    def delete_all_project_data_thread(self):
+        self.progress_popup = loading_widget.LoadingWidget(
+            title="Deleting", text="Deleting Project Data..."
+        )
+        self.delete_data_thread = DeleteProjectDataThread(
+            db_connection=self.db_connection,
+            database_path=self.database_path,
+            delete_progress=self.delete_progress,
+            delete_result=self.delete_result,
+        )
+
+        self.delete_progress.connect(self.update_progress_widget)
+        self._thread_pool.start(self.delete_data_thread)
+
     def update_progress_widget(self, value: int):
         self.progress_popup.update_val(value=value)
 
@@ -726,12 +742,14 @@ class ExportProjectDataThread(QtCore.QRunnable):
 class DeleteProjectDataThread(QtCore.QRunnable):
     def __init__(
         self,
-        worker_signals: MainModel.WorkerSignals,
+        delete_result: QtCore.Signal, 
+        delete_progress: QtCore.Signal,
         db_connection: typing.Callable,
         database_path: str,
     ):
         super(DeleteProjectDataThread, self).__init__()
-        self.signals = worker_signals()
+        self.result_signal = delete_result
+        self.progress_signal = delete_progress
         self.db_connection = db_connection
         self.database_path = database_path
 
@@ -740,11 +758,11 @@ class DeleteProjectDataThread(QtCore.QRunnable):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
-                self.signals.progress.emit(50)
+                self.progress_signal.emit(50)
                 connection.cursor().execute("""DELETE FROM project_data;""")
                 connection.commit()
-                self.signals.progress.emit(100)
             except Exception as e:
                 msg = f"Error: {e}"
             finally:
-                self.signals.result.emit([msg])
+                self.progress_signal.emit(100)
+                self.result_signal.emit([msg])
