@@ -36,9 +36,9 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Delete all project data button
         self.delete_all_project_data_button = QtWidgets.QPushButton()
-        # self.delete_all_project_data_button.clicked.connect(
-        #     self.delete_all_project_data
-        # )
+        self.delete_all_project_data_button.clicked.connect(
+            self.view_model.delete_all_project_data_verification
+        )
         self.delete_all_project_data_button.setProperty(
             "class", "delete-button")
         self.project_data_cta_layout.addWidget(
@@ -399,8 +399,8 @@ class DataViewerView(QtWidgets.QWidget):
 
     def update_data_table(self, project_data: list[str], headers: list[str]):
 
-        if not project_data:
-            return
+        # if not project_data:
+        #     return
 
         # self.database_viewer_table.currentItemChanged.disconnect()
         self.database_viewer_table.clear()

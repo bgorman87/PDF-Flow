@@ -19,7 +19,6 @@ class DataViewerViewModel(QtCore.QObject):
     def update_data_table(self):
         self._project_data = self.main_view_model.fetch_all_project_data()
         self._project_data_headers = self.main_view_model.fetch_project_data_table_headers()
-
         # If there is no project_data, dont let the user export nothing.
         if not self._project_data:
             self.export_project_data_button_enabled.emit(False)
@@ -149,3 +148,37 @@ class DataViewerViewModel(QtCore.QObject):
             return
         
         self.main_view_model.add_console_text(f"Export {error_message}")
+
+    def delete_all_project_data_verification(self):
+
+        message_box_window_title = "Delete Project Data"
+        severity_icon = QtWidgets.QMessageBox.Warning
+        text_body = f"It is advised to backup your project data via exporting before deleting.\n\n\
+        Are you sure you want to delete all project data?"
+        buttons = ["Delete", "Cancel"]
+        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+        callback = [self.delete_all_project_data, None]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback
+        }
+
+        self.main_view_model.display_message_box(
+            message_box_dict=message_box_dict)
+        
+    def delete_all_project_data(self):
+        self.main_view_model.main_model.delete_result.connect(self.delete_all_project_data_handler)
+        self.main_view_model.delete_all_project_data_thread()
+
+    def delete_all_project_data_handler(self, error_message: str):
+        print("hit")
+        self.main_view_model.add_console_alerts(1)
+        if not error_message:
+            self.main_view_model.add_console_text(f"Deletion of all project data complete.")
+            self.update_data_table()
+            return
+        self.main_view_model.add_console_text(f"Delete {error_message}")

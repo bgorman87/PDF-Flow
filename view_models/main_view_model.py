@@ -159,6 +159,9 @@ class MainViewModel(QtCore.QObject):
     def export_project_data_thread(self, export_location: str):
         self.main_model.export_project_data_thread(export_location=export_location)
 
+    def delete_all_project_data_thread(self):
+        self.main_model.delete_all_project_data_thread()
+
 
     def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_model.add_new_profile(
