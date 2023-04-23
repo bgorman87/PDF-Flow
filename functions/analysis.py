@@ -14,6 +14,7 @@ from pdf2image import convert_from_path
 from PySide6 import QtCore
 from view_models import main_view_model
 from typing import Any
+import debugpy
 
 from utils import utils
 
@@ -48,14 +49,14 @@ def integer_test(s):
 break_strengths = []
 
 
-# Exception rule to break out of multi-level for loops when trying to identify project numbers
-class ItemFound(Exception):
-    pass
-
+# # Exception rule to break out of multi-level for loops when trying to identify project numbers
+# class ItemFound(Exception):
+#     pass
+class AnalysisSignals(QtCore.QObject):
+    analysis_result = QtCore.Signal(list)
+    analysis_progress = QtCore.Signal(int)
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
-    result = QtCore.Signal(Any)
-    progress = QtCore.Signal(int)
 
 
     def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel, template: bool = False):
@@ -64,9 +65,11 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
         self.template = template
         self.main_view_model = main_view_model
+        self.signals = AnalysisSignals()
 
     @QtCore.Slot()
     def run(self):
+        # debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True)
@@ -81,8 +84,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         file_type = self.find_file_profile(pdf_image=image)
 
         if self.template:
-            self.progress.emit(100)
-            self.result.emit(file_type)
+            self.signals.analysis_progress.emit(100)
+            self.signals.analysis_result.emit([file_type])
             return
 
         if file_type == 0:
@@ -90,8 +93,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 self.file_dir_path, "").replace(".pdf", "")
             print_string = f"No profile found for: {file_title}.pdf"
             returns = [print_string, file_title, self.file, None]
-            self.progress.emit(90)
-            self.result.emit(returns)
+            self.signals.analysis_progress.emit(90)
+            self.signals.analysis_result.emit(returns)
             return
 
         self.main_view_model.update_profile_used_count_by_profile_id(
@@ -169,8 +172,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [print_string, new_file_name,
                    rename_path, rename_project_data_path]
-        self.progress.emit(90)
-        self.result.emit(returns)
+        self.signals.analysis_progress.emit(90)
+        self.signals.analysis_result.emit(returns)
 
     def find_file_profile(self, pdf_image: io.BytesIO) -> int:
 

@@ -23,7 +23,7 @@ class ProcessView(QtWidgets.QWidget):
         self.process_button.clicked.connect(self.view_model.process_files)
         self.process_button.setObjectName("analyze_button")
         self.process_button.setEnabled(False)
-        self.view_model.main_view_model.procress_button_state_update.connect(
+        self.view_model.main_view_model.process_button_state_update.connect(
             lambda: self.process_button.setEnabled(self.view_model.main_view_model.process_button_state))
         self.view_model.main_view_model.process_button_count_update.connect(
             lambda: self.process_button_text_update(self.view_model.main_view_model.process_button_count))
