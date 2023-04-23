@@ -17,7 +17,7 @@ class MainViewModel(QtCore.QObject):
     emailed_files_count_update = QtCore.Signal()
     process_progress_text_update = QtCore.Signal()
     process_progress_value_update = QtCore.Signal()
-    procress_button_state_update = QtCore.Signal()
+    process_button_state_update = QtCore.Signal()
     process_button_count_update = QtCore.Signal()
     window_size_update = QtCore.Signal()
     profile_update_list = QtCore.Signal()
@@ -83,7 +83,7 @@ class MainViewModel(QtCore.QObject):
 
     def set_process_button_state(self, state: bool) -> None:
         self.process_button_state = state
-        self.procress_button_state_update.emit()
+        self.process_button_state_update.emit()
 
     def set_process_button_count(self, value: int) -> None:
         self.process_button_count = value
