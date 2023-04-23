@@ -48,18 +48,18 @@ class TemplateViewModel(QtCore.QObject):
             self._thread_pool = QtCore.QThreadPool()
             self._loaded_profile_label_text = ""
             self.loaded_profile_label_update.emit()
+            self.progress_popup = loading_widget.LoadingWidget(
+                title="Template Check", text="Comparing file to existing profiles..."
+            )
             self.analyze_worker = analysis.WorkerAnalyzeThread(
                 file_name=self._file_profile_path,
                 template=True,
                 main_view_model=self.main_view_model
             )
-            self.progress_popup = loading_widget.LoadingWidget(
-                title="Template Check", text="Comparing file to existing profiles..."
-            )
-            self.analyze_worker.progress.connect(
+            self.analyze_worker.signals.analysis_progress.connect(
                 self.evt_loading_widget_progress
             )
-            self.analyze_worker.result.connect(
+            self.analyze_worker.signals.analysis_result.connect(
                 self.evt_analyze_complete)
             self._thread_pool.start(self.analyze_worker)
 
@@ -70,7 +70,8 @@ class TemplateViewModel(QtCore.QObject):
         self._unique_file_id_button_enabled = True
         self.unique_file_identifier_button_status.emit()
 
-        if file_type == 0:  # No file type detected therefore new template
+        if not file_type or file_type[0] == 0:  # No file type detected therefore new template
+            print("no file type found")
             self._project_button_enabled = False
             self.project_number_status_update.emit()
 
@@ -86,13 +87,13 @@ class TemplateViewModel(QtCore.QObject):
         self.unique_parameter_status_update.emit()
 
         profile_name = self.main_view_model.fetch_profile_description_by_profile_id(
-            file_type)
+            file_type[0])
 
-        self._current_file_profile = file_type
+        self._current_file_profile = file_type[0]
         self._loaded_profile_label_text = profile_name
         self.loaded_profile_label_update.emit()
         self.update_template_pixmap()
-        self.paint_existing_data_rects(profile_id=file_type)
+        self.paint_existing_data_rects(profile_id=file_type[0])
 
     @property
     def project_button_enabled(self) -> bool:
