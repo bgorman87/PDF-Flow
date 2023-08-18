@@ -653,12 +653,13 @@ class ImportProjectDataThread(QtCore.QRunnable):
             # and letting unique constraint just go to exception
             temp_project_data = []
             for i, project in enumerate(self.import_project_data):
-                self._progress = self._progress + int(
+                self.temp_progress = int(
                     (1 + i) / len(self.import_project_data) * progress
                 )
-                self.progress_signal.emit(self._progress)
+                self.progress_signal.emit(self._progress + self.temp_progress)
                 if project[0] not in result_list:
                     temp_project_data.append(project)
+            self._progress = self._progress + self.temp_progress
             self.import_project_data = temp_project_data
             with self.db_connection(self.database_path) as connection:
                 msg = connection.cursor().executemany(
