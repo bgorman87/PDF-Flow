@@ -9,9 +9,11 @@ class DataViewerView(QtWidgets.QWidget):
         super().__init__()
         self.view_model = view_model
         self.main_layout = QtWidgets.QVBoxLayout()
+        self._project_data_loaded_data = None
+        self._project_data_changed = False
+        self._current_index = None
 
-        self.main_layout.setObjectName(
-            "main_layout")
+        self.main_layout.setObjectName("main_layout")
 
         self.project_data_cta_layout = QtWidgets.QHBoxLayout()
 
@@ -19,21 +21,25 @@ class DataViewerView(QtWidgets.QWidget):
         self.project_data_add_new_button = QtWidgets.QPushButton()
         # self.project_data_add_new_button.clicked.connect(
         #     self.project_data_add_new)
-        self.project_data_cta_layout.addWidget(
-            self.project_data_add_new_button)
+        self.project_data_cta_layout.addWidget(self.project_data_add_new_button)
 
         # Import project data button
         self.import_project_data_button = QtWidgets.QPushButton()
         self.import_project_data_button.clicked.connect(
-            self.view_model.get_project_data_import_file)
+            self.view_model.get_project_data_import_file
+        )
         self.project_data_cta_layout.addWidget(self.import_project_data_button)
 
         # Export project data button
         self.export_project_data_button = QtWidgets.QPushButton()
         self.export_project_data_button.clicked.connect(
-            self.view_model.get_project_data_export_location)
+            self.view_model.get_project_data_export_location
+        )
         self.view_model.main_view_model.process_button_state_update.connect(
-            lambda: self.export_project_data_button.setEnabled(self.view_model.main_view_model.process_button_state))
+            lambda: self.export_project_data_button.setEnabled(
+                self.view_model.main_view_model.process_button_state
+            )
+        )
         self.project_data_cta_layout.addWidget(self.export_project_data_button)
 
         # Delete all project data button
@@ -41,29 +47,23 @@ class DataViewerView(QtWidgets.QWidget):
         self.delete_all_project_data_button.clicked.connect(
             self.view_model.delete_all_project_data_verification
         )
-        self.delete_all_project_data_button.setProperty(
-            "class", "delete-button")
-        self.project_data_cta_layout.addWidget(
-            self.delete_all_project_data_button)
+        self.delete_all_project_data_button.setProperty("class", "delete-button")
+        self.project_data_cta_layout.addWidget(self.delete_all_project_data_button)
 
         self.main_layout.addLayout(self.project_data_cta_layout)
 
         # Line below action buttons
         self.project_data_line_below_cta_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_2 = utility_widgets.HorizontalLine()
-        self.project_data_line_below_cta_layout.addWidget(
-            self.database_tab_line_2)
+        self.project_data_line_below_cta_layout.addWidget(self.database_tab_line_2)
 
-        self.main_layout.addLayout(
-            self.project_data_line_below_cta_layout
-        )
+        self.main_layout.addLayout(self.project_data_line_below_cta_layout)
 
         self.database_search_layout = QtWidgets.QHBoxLayout()
         self.database_search_layout.addStretch(2)
 
         self.database_search_icon = QtWidgets.QLabel()
-        self.database_search_icon.setPixmap(
-            QtGui.QPixmap("assets/icons/search.svg"))
+        self.database_search_icon.setPixmap(QtGui.QPixmap("assets/icons/search.svg"))
         self.database_search_icon.setScaledContents(True)
 
         self.database_search_bar = QtWidgets.QLineEdit()
@@ -80,40 +80,40 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Table widget to display DB results
         self.database_viewer_table = QtWidgets.QTableWidget()
+        self.view_model.data_table_index_update.connect(self.set_data_viewer_index)
+        # model = QtCore.QSortFilterProxyModel()
+        # self.database_viewer_table.setModel(model)
+        self.database_viewer_table.currentItemChanged.connect(
+            self.project_data_discard_check
+        )
         # Enable sorting for table widget
-        # self.database_viewer_table.setSortingEnabled(True)
+        self.database_viewer_table.setSortingEnabled(True)
         self.database_viewer_table.setSelectionMode(
             QtWidgets.QTableWidget.SingleSelection
         )
         self.database_viewer_table.setEditTriggers(
             QtWidgets.QTableWidget.NoEditTriggers
         )
-        self.view_model.data_table_update.connect(lambda: self.update_data_table(
-            project_data=self.view_model.project_data, headers=self.view_model.project_data_headers))
-        # self.database_viewer_table.setModel(QtCore.QSortFilterProxyModel())
-        # self.database_viewer_table.currentItemChanged.connect(
-        #     self.database_populate_project_edit_fields
-        # )
+        self.view_model.data_table_update.connect(
+            lambda: self.update_data_table(
+                project_data=self.view_model.project_data,
+                headers=self.view_model.project_data_headers,
+            )
+        )
 
         self.main_layout.addWidget(self.database_viewer_table)
 
         # Line below table
         self.project_data_line_below_table_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_3 = utility_widgets.HorizontalLine()
-        self.project_data_line_below_table_layout.addWidget(
-            self.database_tab_line_3)
-        self.main_layout.addLayout(
-            self.project_data_line_below_table_layout
-        )
+        self.project_data_line_below_table_layout.addWidget(self.database_tab_line_3)
+        self.main_layout.addLayout(self.project_data_line_below_table_layout)
 
         # Line below table
         self.project_data_line_below_table_2_layout = QtWidgets.QHBoxLayout()
         self.database_tab_line_4 = utility_widgets.HorizontalLine()
-        self.project_data_line_below_table_2_layout.addWidget(
-            self.database_tab_line_4)
-        self.main_layout.addLayout(
-            self.project_data_line_below_table_2_layout
-        )
+        self.project_data_line_below_table_2_layout.addWidget(self.database_tab_line_4)
+        self.main_layout.addLayout(self.project_data_line_below_table_2_layout)
 
         self.project_data_project_number_line_layout = QtWidgets.QHBoxLayout()
 
@@ -131,46 +131,43 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_project_number_line_edit.setObjectName(
             "database_project_number_line_edit"
         )
-        # self.database_project_number_line_edit.editingFinished.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_project_number_line_edit, "project_number"
-        #     )
-        # )
+        self.database_project_number_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_number_line_edit, "project_number"
+            )
+        )
         self.project_data_project_number_line_layout.addWidget(
             self.database_project_number_line_edit
         )
 
-        self.main_layout.addLayout(
-            self.project_data_project_number_line_layout
-        )
+        self.main_layout.addLayout(self.project_data_project_number_line_layout)
 
         self.project_data_directory_layout = QtWidgets.QHBoxLayout()
 
         # Label for directory line edit
         self.database_directory_label = QtWidgets.QLabel()
         self.database_directory_label.setObjectName("database_directory_label")
-        self.project_data_directory_layout.addWidget(
-            self.database_directory_label)
+        self.project_data_directory_layout.addWidget(self.database_directory_label)
 
         # Project directory line edit
         self.database_project_directory_line_edit = QtWidgets.QLineEdit()
         self.database_project_directory_line_edit.setObjectName(
             "database_project_directory_line_edit"
         )
-        # self.database_project_directory_line_edit.editingFinished.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_project_directory_line_edit, "directory"
-        #     )
-        # )
+        self.database_project_directory_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_directory_line_edit, "directory"
+            )
+        )
         self.project_data_directory_layout.addWidget(
             self.database_project_directory_line_edit
         )
 
         # Action button to call rename function
         self.database_project_directory_button = QtWidgets.QPushButton()
-        # self.database_project_directory_button.clicked.connect(
-        #     self.database_project_directory
-        # )
+        self.database_project_directory_button.clicked.connect(
+            self.database_project_directory
+        )
         self.database_project_directory_button.setObjectName(
             "database_project_directory_button"
         )
@@ -181,15 +178,13 @@ class DataViewerView(QtWidgets.QWidget):
         self.project_data_directory_layout.setStretch(0, 1)
         self.project_data_directory_layout.setStretch(1, 10)
         self.project_data_directory_layout.setStretch(2, 2)
-        self.main_layout.addLayout(
-            self.project_data_directory_layout)
+        self.main_layout.addLayout(self.project_data_directory_layout)
 
         self.project_data_email_subject_layout = QtWidgets.QHBoxLayout()
 
         # Label for email subject line edit
         self.database_email_subject_label = QtWidgets.QLabel()
-        self.database_email_subject_label.setObjectName(
-            "database_email_subject_label")
+        self.database_email_subject_label.setObjectName("database_email_subject_label")
         self.project_data_email_subject_layout.addWidget(
             self.database_email_subject_label
         )
@@ -199,17 +194,15 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_project_email_subject_line_edit.setObjectName(
             "database_project_email_subject_line_edit"
         )
-        # self.database_project_email_subject_line_edit.editingFinished.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_project_email_subject_line_edit, "email_subject"
-        #     )
-        # )
+        self.database_project_email_subject_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_email_subject_line_edit, "email_subject"
+            )
+        )
         self.project_data_email_subject_layout.addWidget(
             self.database_project_email_subject_line_edit
         )
-        self.main_layout.addLayout(
-            self.project_data_email_subject_layout
-        )
+        self.main_layout.addLayout(self.project_data_email_subject_layout)
 
         self.project_data_email_lists_layout = QtWidgets.QHBoxLayout()
         self.project_data_email_to_layout = QtWidgets.QVBoxLayout()
@@ -217,27 +210,29 @@ class DataViewerView(QtWidgets.QWidget):
         # Label for email to list widget
         self.database_email_to_label = QtWidgets.QLabel()
         self.database_email_to_label.setObjectName("database_email_to_label")
-        self.project_data_email_to_layout.addWidget(
-            self.database_email_to_label)
+        self.project_data_email_to_layout.addWidget(self.database_email_to_label)
 
         # Email to list widget
         self.database_email_to_list_widget = email_list_widget.EmailListWidget()
         # Enable dragging and dropping of items within the list widget
-        # self.database_email_to_list_widget.setDragDropMode(QtWidgets.QListWidget.InternalMove)
+        self.database_email_to_list_widget.setDragDropMode(
+            QtWidgets.QListWidget.InternalMove
+        )
         # Enable editing of items by double-clicking on them
-        # self.database_email_to_list_widget.setEditTriggers(QtWidgets.QListWidget.DoubleClicked)
-        # self.database_email_to_list_widget.itemClicked.connect(
-        #     lambda: self.database_list_widget_add_blank(
-        #         self.database_email_to_list_widget
-        #     )
-        # )
-        # self.database_email_to_list_widget.itemChanged.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_email_to_list_widget, "email_to"
-        #     )
-        # )
-        self.project_data_email_to_layout.addWidget(
-            self.database_email_to_list_widget)
+        self.database_email_to_list_widget.setEditTriggers(
+            QtWidgets.QListWidget.DoubleClicked
+        )
+        self.database_email_to_list_widget.itemClicked.connect(
+            lambda: self.database_list_widget_add_blank(
+                self.database_email_to_list_widget
+            )
+        )
+        self.database_email_to_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_to_list_widget, "email_to"
+            )
+        )
+        self.project_data_email_to_layout.addWidget(self.database_email_to_list_widget)
 
         self.project_data_email_lists_layout.addLayout(
             self.project_data_email_to_layout
@@ -247,8 +242,7 @@ class DataViewerView(QtWidgets.QWidget):
         # Label for email cc list widget
         self.database_email_cc_label = QtWidgets.QLabel()
         self.database_email_cc_label.setObjectName("database_email_tcc_label")
-        self.project_data_email_cc_layout.addWidget(
-            self.database_email_cc_label)
+        self.project_data_email_cc_layout.addWidget(self.database_email_cc_label)
 
         # Email cc list widget
         self.database_email_cc_list_widget = email_list_widget.EmailListWidget()
@@ -260,13 +254,12 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_email_cc_list_widget.setEditTriggers(
             QtWidgets.QListWidget.DoubleClicked
         )
-        # self.database_email_cc_list_widget.itemChanged.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_email_cc_list_widget, "email_cc"
-        #     )
-        # )
-        self.project_data_email_cc_layout.addWidget(
-            self.database_email_cc_list_widget)
+        self.database_email_cc_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_cc_list_widget, "email_cc"
+            )
+        )
+        self.project_data_email_cc_layout.addWidget(self.database_email_cc_list_widget)
 
         self.project_data_email_lists_layout.addLayout(
             self.project_data_email_cc_layout
@@ -276,8 +269,7 @@ class DataViewerView(QtWidgets.QWidget):
         # Label for email bcc list widget
         self.database_email_bcc_label = QtWidgets.QLabel()
         self.database_email_bcc_label.setObjectName("database_email_bcc_label")
-        self.project_data_email_bcc_layout.addWidget(
-            self.database_email_bcc_label)
+        self.project_data_email_bcc_layout.addWidget(self.database_email_bcc_label)
 
         # Email bcc list widget
         self.database_email_bcc_list_widget = email_list_widget.EmailListWidget()
@@ -289,11 +281,11 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_email_bcc_list_widget.setEditTriggers(
             QtWidgets.QListWidget.DoubleClicked
         )
-        # self.database_email_bcc_list_widget.itemChanged.connect(
-        #     lambda: self.project_data_change_check(
-        #         self.database_email_bcc_list_widget, "email_bcc"
-        #     )
-        # )
+        self.database_email_bcc_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_bcc_list_widget, "email_bcc"
+            )
+        )
         self.project_data_email_bcc_layout.addWidget(
             self.database_email_bcc_list_widget
         )
@@ -301,8 +293,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.project_data_email_lists_layout.addLayout(
             self.project_data_email_bcc_layout
         )
-        self.main_layout.addLayout(
-            self.project_data_email_lists_layout)
+        self.main_layout.addLayout(self.project_data_email_lists_layout)
 
         self.project_data_bottom_cta_layout = QtWidgets.QHBoxLayout()
 
@@ -321,9 +312,10 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Action button to discard manual changes
         self.database_discard_edited_project_data_button = QtWidgets.QPushButton()
-        # self.database_discard_edited_project_data_button.clicked.connect(
-        #     self.database_populate_project_edit_fields
-        # )
+        self.database_discard_edited_project_data_button.clicked.connect(
+            self.project_data_discard_check
+        )
+
         self.database_discard_edited_project_data_button.setObjectName(
             "database_discard_edited_project_data_button"
         )
@@ -340,15 +332,13 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_delete_project_data_button.setObjectName(
             "database_delete_project_data_button"
         )
-        self.database_delete_project_data_button.setProperty(
-            "class", "delete-button")
+        self.database_delete_project_data_button.setProperty("class", "delete-button")
         self.database_delete_project_data_button.setEnabled(False)
         self.project_data_bottom_cta_layout.addWidget(
             self.database_delete_project_data_button
         )
 
-        self.main_layout.addLayout(
-            self.project_data_bottom_cta_layout)
+        self.main_layout.addLayout(self.project_data_bottom_cta_layout)
 
         self.view_model.main_view_model.fetch_all_project_data()
 
@@ -359,18 +349,15 @@ class DataViewerView(QtWidgets.QWidget):
 
     def translate_ui(self):
         _translate = QtCore.QCoreApplication.translate
-        self.database_email_to_label.setText(
-            _translate("MainWindow", "Email TO List:"))
-        self.database_email_cc_label.setText(
-            _translate("MainWindow", "Email CC List:"))
+        self.database_email_to_label.setText(_translate("MainWindow", "Email TO List:"))
+        self.database_email_cc_label.setText(_translate("MainWindow", "Email CC List:"))
         self.database_email_bcc_label.setText(
             _translate("MainWindow", "Email BCC List:")
         )
         self.database_project_number_label.setText(
             _translate("MainWindow", "Project Number:")
         )
-        self.database_directory_label.setText(
-            _translate("MainWindow", "Directory:"))
+        self.database_directory_label.setText(_translate("MainWindow", "Directory:"))
         self.database_email_subject_label.setText(
             _translate("MainWindow", "Email Subject:")
         )
@@ -383,8 +370,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.export_project_data_button.setText(
             _translate("MainWindow", "Export Project Data")
         )
-        self.project_data_add_new_button.setText(
-            _translate("MainWindow", "New Entry"))
+        self.project_data_add_new_button.setText(_translate("MainWindow", "New Entry"))
         self.delete_all_project_data_button.setText(
             _translate("MainWindow", "Delete ALL Project Data")
         )
@@ -399,8 +385,21 @@ class DataViewerView(QtWidgets.QWidget):
             _translate("MainWindow", "Delete Entry")
         )
 
-    def update_data_table(self, project_data: list[str], headers: list[str]):
+    def database_project_directory(self):
+        project_directory_location = QtWidgets.QFileDialog.getExistingDirectory(
+            caption="Select Export Location", dir="../../"
+        )
 
+        if not project_directory_location:
+            return None
+
+        self.database_project_directory_line_edit.setText(project_directory_location)
+
+        self.project_data_change_check(
+            self.database_project_directory_line_edit, "directory"
+        )
+
+    def update_data_table(self, project_data: list[str], headers: list[str]):
         # if not project_data:
         #     return
 
@@ -414,7 +413,6 @@ class DataViewerView(QtWidgets.QWidget):
         self.update()
 
     def display_data_as_table(self, project_data: list[str], headers: list[str]):
-
         self.database_viewer_table.setSortingEnabled(False)
         self.database_viewer_table.setRowCount(0)
         table_widget_item = QtWidgets.QTableWidgetItem
@@ -453,15 +451,13 @@ class DataViewerView(QtWidgets.QWidget):
         for row in range(self.database_viewer_table.rowCount()):
             for column in range(self.database_viewer_table.columnCount()):
                 try:
-                    item_text = self.database_viewer_table.item(
-                        row, column).text()
+                    item_text = self.database_viewer_table.item(row, column).text()
                     if search_term.lower() in item_text.lower():
                         # If the search term is found, show the entire row and break out of the column loop
                         self.database_viewer_table.setRowHidden(row, False)
                         # Show all cells in the row
                         for column in range(self.database_viewer_table.columnCount()):
-                            self.database_viewer_table.setColumnHidden(
-                                column, False)
+                            self.database_viewer_table.setColumnHidden(column, False)
                         row_count += 1
                         break
                 except AttributeError:
@@ -470,3 +466,125 @@ class DataViewerView(QtWidgets.QWidget):
         # if theres data in filtered results, and a row is chosen, enable the delete button
         # if row_count > 0 and self.project_data_loaded_id is not None:
         #     self.database_delete_project_data_button.setEnabled(True)
+
+    def set_data_viewer_index(self, index: int):
+        self.database_viewer_table.setCurrentIndex(index)
+
+    def clear_project_data_fields(self):
+        self.database_project_number_line_edit.setText("")
+        self.database_project_directory_line_edit.setText("")
+        self.database_project_email_subject_line_edit.setText("")
+        self.database_email_to_list_widget.clear()
+        self.database_email_cc_list_widget.clear()
+        self.database_email_bcc_list_widget.clear()
+
+    def project_data_discard_check(self):
+        if self._project_data_changed:
+             # Create a popup asking if user wants to discard changes
+            message_box_window_title = "Discard Changes"
+            severity_icon = QtWidgets.QMessageBox.Warning
+            text_body = f"Are you sure you want to discard changes?"
+            buttons = ["Discard", "Cancel"]
+            button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+            callback = [
+                self.handle_project_data_update,
+                self.reset_database_current_active_id,
+            ]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback,
+            }
+
+            self.view_model.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        else:
+            self.handle_project_data_update()
+
+    def reset_database_current_active_id(self):
+        self._project_data_changed = False
+        self.database_viewer_table.setCurrentIndex(self._current_index)
+        self.database_viewer_table.active(self._current_index)
+        self._project_data_changed = True
+
+    def handle_project_data_update(self):
+        # First get view model to ask user if they want to discard changes
+        # Discard button only enabled if changes are made so no need to double check
+        
+        self.clear_project_data_fields()
+
+        current_row = self.database_viewer_table.currentRow()
+        self._current_index = self.database_viewer_table.selectionModel().currentIndex()
+        self._project_data_loaded_data = {
+            "project_number": self.database_viewer_table.item(current_row, 0).text(),
+            "directory": self.database_viewer_table.item(current_row, 1).text(),
+            "email_to": self.database_viewer_table.item(current_row, 2).text(),
+            "email_cc": self.database_viewer_table.item(current_row, 3).text(),
+            "email_bcc": self.database_viewer_table.item(current_row, 4).text(),
+            "email_subject": self.database_viewer_table.item(current_row, 5).text(),
+        }
+        self.database_populate_project_edit_fields()
+
+    def database_populate_project_edit_fields(self):
+        self._project_data_changed = False
+        self.database_project_number_line_edit.setText(
+            self._project_data_loaded_data["project_number"]
+        )
+        self.database_project_directory_line_edit.setText(
+            self._project_data_loaded_data["directory"]
+        )
+        self.database_project_email_subject_line_edit.setText(
+            self._project_data_loaded_data["email_subject"]
+        )
+
+        for index, widget in zip(
+            ["email_to", "email_cc", "email_bcc"],
+            [
+                self.database_email_to_list_widget,
+                self.database_email_cc_list_widget,
+                self.database_email_bcc_list_widget,
+            ],
+        ):
+            email_addresses = self._project_data_loaded_data[index].split(";")
+            email_addresses = [address.strip() for address in email_addresses]
+            for email_address in email_addresses:
+                # Dont add blank emails to list (sometimes users add rogue ; to email list)
+                if email_address is None or email_address == "":
+                    continue
+                email_address_item = QtWidgets.QListWidgetItem(email_address)
+                email_address_item.setFlags(
+                    email_address_item.flags() | QtCore.Qt.ItemIsEditable
+                )
+                widget.addItem(email_address_item)
+
+    def project_data_change_check(self, widget, project_data_type):
+        # Multiple widgets need to be checked so if the passed widget is a QtLineEdit then just get the text
+        # If it is a QtListWidget then it is the e-mail field, so join each list item together into a string
+        # to compare to the database/table result
+        if isinstance(widget, QtWidgets.QLineEdit):
+            new_text = widget.text()
+        else:
+            item_texts = []
+            for i in range(widget.count()):
+                if widget.item(i).text():
+                    item_texts.append(widget.item(i).text())
+            new_text = "; ".join(item_texts)
+
+        # If there isn't any loaded data yet then user is entering new data. Check if field has any value as well.
+        # If they do, then dont set project_data_changed because no data has been changed, we are creating new data
+        # Check new_text first to short circuit check
+        if new_text and self._project_data_loaded_data.get(project_data_type) is None:
+            self.database_discard_edited_project_data_button.setEnabled(False)
+            self.database_save_edited_project_data_button.setEnabled(False)
+        elif self._project_data_loaded_data.get(project_data_type) != new_text:
+            self._project_data_changed = True
+            self.database_discard_edited_project_data_button.setEnabled(True)
+            self.database_save_edited_project_data_button.setEnabled(True)
+
+    def discard_project_data_changes(self):
+        self.database_discard_edited_project_data_button.setEnabled(False)
+        self.database_save_edited_project_data_button.setEnabled(False)
+        self.clear_project_data_fields()
+        self.handle_project_data_update()
