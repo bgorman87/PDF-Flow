@@ -125,7 +125,7 @@ class SettingsViewModel(QtCore.QObject):
         if current_profile_file_name:
             message_box_window_title = "File Name Pattern Already Found"
             severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"Existing file name pattern found:\
+            text_body = f"Overwrite current pattern?\
                     \n \
                     \n{current_profile_file_name} \
                     \n "
