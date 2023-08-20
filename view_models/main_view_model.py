@@ -140,6 +140,9 @@ class MainViewModel(QtCore.QObject):
     def fetch_all_project_data(self) -> list[str]:
         return self.main_model.fetch_all_project_data()
     
+    def fetch_project_data_by_project_number(self, project_number: str) -> list[str]:
+        return self.main_model.fetch_project_data_by_project_number(project_number=project_number)
+    
     def fetch_project_data_table_headers(self) -> list[str]:
         return self.main_model.fetch_project_data_table_headers()
 
@@ -237,4 +240,12 @@ class MainViewModel(QtCore.QObject):
     
     def fetch_parameter_regex_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
         return self.main_model.fetch_parameter_regex_by_parameter_name_and_profile_id(profile_id=profile_id, parameter_name=parameter_name)
+    
+    def delete_project_data_entry_by_project_number(self, project_number: str) -> None:
+        return self.main_model.delete_project_data_entry_by_project_number(project_number=project_number)
+    
+    def update_project_data_entry(self, old_data: dict, new_data: dict) -> str:
+        return self.main_model.update_project_data_entry(old_data, new_data)
 
+    def add_new_project_data(self, project_data: dict) -> str:
+        return self.main_model.add_new_project_data(new_data=project_data)
