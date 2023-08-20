@@ -10,6 +10,7 @@ class DataViewerViewModel(QtCore.QObject):
     export_project_data_button_enabled = QtCore.Signal(int)
     data_table_index_update = QtCore.Signal(int)
     data_table_update = QtCore.Signal()
+    project_data_entry_deleted = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -190,6 +191,76 @@ class DataViewerViewModel(QtCore.QObject):
             return
         self.main_view_model.add_console_text(f"Delete {error_message}")
 
+    def delete_project_data_entry_verification(self, project_data: dict):
+        message_box_window_title = "Delete Project Data"
+        severity_icon = QtWidgets.QMessageBox.Warning
+        text_body = f"Are you sure you want to delete project data for project: {project_data['project_number']}?"
+        buttons = ["Delete", "Cancel"]
+        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+        callback = [lambda: self.delete_project_data_entry(project_data), None]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback,
+        }
+
+        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+
+    def delete_project_data_entry(self, project_data: dict):
+        result = self.main_view_model.delete_project_data_entry_by_project_number(project_data["project_number"])
+
+        if result is not None:
+            message_box_window_title = "Delete Project Data"
+            severity_icon = QtWidgets.QMessageBox.Warning
+            text_body = f"There was an error deleting project data for project: {project_data['project_number']}\n\n{result}"
+            buttons = ["Close"]
+            button_roles = [QtWidgets.QMessageBox.YesRole]
+            callback = [None]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback,
+            }
+
+            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        else:
+            self.project_data_entry_deleted.emit()
+            self.update_data_table()
+
+    def get_next_visible_row_index(self, current_row_index: int, table_widget: QtWidgets.QTableWidget) -> int:
+        """Get the next visible row index from the current index, with priority to previous row. Takes into account active filter.
+
+        Args:
+            current_index (int): current row index
+            table_widget (QtWidgets.QTableWidget): Table widget to check
+
+        Returns:
+            int: row index
+        """        
+
+        total_rows = table_widget.rowCount()
+
+        # Find closest visible row by checking row visibility from current row to start of table
+        # If no visible rows found, check from current row to end of table
+        for i in range(current_row_index - 1, -1, -1):
+            if table_widget.isRowHidden(i):
+                continue
+            return i
+        
+        for i in range(current_row_index + 1, total_rows):
+            if table_widget.isRowHidden(i):
+                continue
+            return i
+
+        return -1
+
+
     def database_populate_project_edit_fields(self, data_table: QtWidgets.QTableWidget):
         # self.database_save_edited_project_data_button.setText("Save Changes")
         # self.database_save_edited_project_data_button.clicked.disconnect()
@@ -231,57 +302,67 @@ class DataViewerViewModel(QtCore.QObject):
         # if project data not changed then load data
         # self.database_discard_edited_project_data()
 
-    def database_save_edited_project_data(self):
-        # check each field to validate input data
-        # Look into QValidator
+    def database_save_edited_project_data(self, old_data: dict ,project_data: dict):
 
-        # If selected row is same as one already loaded, do nothing
+        update_return = self.main_view_model.update_project_data_entry(old_data, project_data)
 
-        # whichever ones arent valid, notify user and return data as is
+        if update_return is not None:
+            message_box_window_title = "Update Project Data Error"
+            severity_icon = QtWidgets.QMessageBox.Warning
+            text_body = f"There was an error updating project data for project: {project_data['project_number']}\n\n{update_return}"
+            buttons = ["Close"]
+            button_roles = [QtWidgets.QMessageBox.YesRole]
+            callback = [None]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback,
+            }
 
-        # If all is valid, send to data_handler to update the row
-        new_project_data = {}
+            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        else:
+            self.update_data_table()
 
-        for col_name, widget in zip(
-            ["email_to", "email_cc", "email_bcc"],
-            [
-                self.database_email_to_list_widget,
-                self.database_email_cc_list_widget,
-                self.database_email_bcc_list_widget,
-            ],
-        ):
-            item_texts = []
-            for i in range(widget.count()):
-                if widget.item(i).text():
-                    item_texts.append(widget.item(i).text())
-            new_text = "; ".join(item_texts)
-            new_project_data[col_name] = new_text
+    def database_save_new_project_data(self, project_data: dict):
+        insert_return = self.main_view_model.add_new_project_data(project_data)
 
-        new_project_data[
-            "project_number"
-        ] = self.database_project_number_line_edit.text()
-        new_project_data[
-            "directory"
-        ] = self.database_project_directory_line_edit.text().replace("\\", "/")
-        new_project_data[
-            "email_subject"
-        ] = self.database_project_email_subject_line_edit.text()
+        if insert_return is not None:
+            message_box_window_title = "Insert Project Data Error"
+            severity_icon = QtWidgets.QMessageBox.Warning
+            text_body = f"There was an error inserting project data for project: {project_data['project_number']}\n\n{insert_return}"
+            buttons = ["Close"]
+            button_roles = [QtWidgets.QMessageBox.YesRole]
+            callback = [None]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback,
+            }
 
-        update_return = update_project_data(
-            self.project_data_loaded_data, new_project_data
-        )
+            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        else:
+            self.update_data_table()
 
-        if update_return is None:
-            self.database_fetch("project_data")
-            self.database_discard_edited_project_data()
-            return
+    def display_warning_message(self, message: str):
+        message_box_window_title = "Warning"
+        severity_icon = QtWidgets.QMessageBox.Warning
+        text_body = f"{message}"
+        buttons = ["Close"]
+        button_roles = [QtWidgets.QMessageBox.YesRole]
+        callback = [None]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback,
+        }
 
-        # Return any errors and display to user, leaving data as is if any occurs
-        update_error_dialog = QtWidgets.QMessageBox()
-        update_error_dialog.setIcon(QtWidgets.QMessageBox.Warning)
-        update_error_dialog.setWindowTitle("Project Data Update Error")
-        update_error_dialog.setText(
-            f"Error occured updating project data\n\n \
-            {update_return}"
-        )
-        update_error_dialog.exec()
+        self.main_view_model.display_message_box(message_box_dict=message_box_dict)

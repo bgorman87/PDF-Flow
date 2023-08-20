@@ -431,13 +431,28 @@ class MainModel(QtCore.QObject):
         return headers
 
     def fetch_all_project_data(self) -> list[str]:
-        """Fetcehs all database results from project data table"""
-        data = None
+        """Fetches all database results from project data table"""
+
         with self.db_connection(self.database_path) as connection:
             # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
             query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data;"""
             try:
                 database_fetch_results = connection.cursor().execute(query).fetchall()
+                if not database_fetch_results:
+                    database_fetch_results = []
+            except sqlite3.DatabaseError as e:
+                print(e)
+
+        return database_fetch_results
+    
+    def fetch_project_data_by_project_number(self, project_number: str) -> list[str]:
+        """Fetches all database results from project data table"""
+
+        with self.db_connection(self.database_path) as connection:
+
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data WHERE project_number=?;"""
+            try:
+                database_fetch_results = connection.cursor().execute(query, (project_number,)).fetchone()
                 if not database_fetch_results:
                     database_fetch_results = []
             except sqlite3.DatabaseError as e:
@@ -537,7 +552,8 @@ class MainModel(QtCore.QObject):
 
         return msg
 
-    def add_new_project_data(self, new_data):
+    def add_new_project_data(self, new_data: dict) -> str:
+        """Adds new project data to database"""
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
