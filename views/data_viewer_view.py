@@ -494,7 +494,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_email_cc_list_widget.clear()
         self.database_email_bcc_list_widget.clear()
 
-    def save_button_reset(self):
+    def save_button_reset_change_entry(self):
         self._adding_new_entry = False
         self.database_save_edited_project_data_button.setText("Save Changes")
         self.database_save_edited_project_data_button.clicked.disconnect()
@@ -511,6 +511,16 @@ class DataViewerView(QtWidgets.QWidget):
         )
 
     def project_data_discard_check(self):
+        # If user presses new entry, but then selects an existing entry, and the new entry fields are blank
+        # then user is not adding a new entry, and just wants the selected entry to display
+        if self._adding_new_entry:
+            has_non_empty_fields = any(widget.text() != "" for widget in [
+                self.database_project_number_line_edit,
+                self.database_project_directory_line_edit,
+                self.database_project_email_subject_line_edit,
+            ])
+            if not has_non_empty_fields:
+                self._adding_new_entry = False
 
         if self._project_data_changed or self._adding_new_entry:
              # Create a popup asking if user wants to discard changes
@@ -540,7 +550,7 @@ class DataViewerView(QtWidgets.QWidget):
         if self._adding_new_entry:
             self.clear_project_data_fields()
             return
-        self.save_button_reset()
+        self.save_button_reset_change_entry()
         self.database_viewer_table.currentItemChanged.disconnect()
         self.database_viewer_table.setCurrentIndex(self._current_index)
         self.database_viewer_table.currentItemChanged.connect(
@@ -564,9 +574,10 @@ class DataViewerView(QtWidgets.QWidget):
 
     def handle_project_data_update(self):
 
-        # If adding a new entry, this is called from discarding changes. So just clear fields and return
+        # If adding a new entry, this function is only called from discarding changes dialog. So just clear fields and return
         if self._adding_new_entry:
             self._adding_new_entry = False
+            self._project_data_changed = False
             self.clear_project_data_fields()
             self.database_discard_edited_project_data_button.setEnabled(False)
             self.database_save_edited_project_data_button.setEnabled(False)
@@ -575,6 +586,7 @@ class DataViewerView(QtWidgets.QWidget):
         # First get view model to ask user if they want to discard changes
         # Discard button only enabled if changes are made so no need to double check
         self.database_viewer_table.currentItemChanged.disconnect()
+        self.save_button_reset_change_entry()
         self.database_discard_edited_project_data_button.setEnabled(False)
         self.database_save_edited_project_data_button.setEnabled(False)
         self.clear_project_data_fields()
@@ -655,16 +667,19 @@ class DataViewerView(QtWidgets.QWidget):
         # If there is no data loaded yet, a user hasn't selected a cell yet. So if theres new text, they are adding a new entry
         if not self._project_data_loaded_data and new_text:
             self._adding_new_entry = True
+            self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
         
         # If user is adding new entry and there is text, then enable save/discard buttons
         elif self._adding_new_entry and new_text:
+            self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
 
         # If user presses new entry, loaded data gets changed to None,   
         elif new_text and self._project_data_loaded_data.get(project_data_type) is None:
+            self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
 
@@ -672,10 +687,12 @@ class DataViewerView(QtWidgets.QWidget):
         # user is changing the data. 
         elif new_text and self._project_data_loaded_data.get(project_data_type) is not None and self._project_data_loaded_data.get(project_data_type) != new_text:
             self._project_data_changed = True
+            self.save_button_reset_change_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
 
         else:
+            self.save_button_reset_change_entry()
             self.database_discard_edited_project_data_button.setEnabled(False)
             self.database_save_edited_project_data_button.setEnabled(False)
 
