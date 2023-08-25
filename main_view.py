@@ -101,11 +101,11 @@ def main():
     app.setStyle("Fusion")
 
     palette = QtGui.QPalette()
-    palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.white))  # type: ignore
+    palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))  # type: ignore
     app.setPalette(palette)
     QtGui.QFontDatabase.addApplicationFont(utils.resource_path("assests/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel()))
-    window.setWindowTitle("PDF Processor")
+    window.setWindowTitle("PDF Flow")
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
     app.exec()
