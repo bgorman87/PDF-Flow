@@ -73,6 +73,10 @@ QListWidget::item:selected:editable, .email-list::item:selected:editable {
     color: #fff;
 }
 
+QListWidget::item {
+    height: 20px;
+}
+
 QPushButton:hover {
     background-color: #66bb6a;
 }
@@ -167,7 +171,7 @@ QListWidget {
 
 QTextEdit {
     background-color: #9c9c9c;
-    color: black;
+    color: white;
     border: 1px solid #2a2a2a;
     border-radius: 2px;
 }
