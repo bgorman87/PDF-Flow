@@ -1,14 +1,14 @@
 from PySide6 import QtWidgets, QtCore
-from view_models import settings_view_model
+from view_models import file_name_view_model
 from widgets import utility_widgets, email_widget
 
 
-class SettingsView(QtWidgets.QWidget):
-    def __init__(self, view_model: settings_view_model.SettingsViewModel):
+class FileNameView(QtWidgets.QWidget):
+    def __init__(self, view_model: file_name_view_model.FileNameViewModel):
         super().__init__()
         self.view_model = view_model
         self.main_layout = QtWidgets.QVBoxLayout()
-        self.setObjectName("settings_stack_item")
+        self.setObjectName("file_name_stack_item")
 
         self.settings_profile_choices_label_layout = QtWidgets.QHBoxLayout()
 
@@ -138,32 +138,32 @@ class SettingsView(QtWidgets.QWidget):
             self.settings_profile_naming_scheme_example_line_edit
         )
 
-        # signature text edit
-        self.settings_email_text_edit = email_widget.EmailWidget()
-        self.settings_email_text_edit.setObjectName("settings_email_text_edit")
-        self.main_layout.addWidget(self.settings_email_text_edit)
-        self.main_layout.setStretch(
-            self.main_layout.indexOf(self.settings_email_text_edit), 1
-        )
+        # # signature text edit
+        # self.settings_email_text_edit = email_widget.EmailWidget()
+        # self.settings_email_text_edit.setObjectName("settings_email_text_edit")
+        # self.main_layout.addWidget(self.settings_email_text_edit)
+        # self.main_layout.setStretch(
+        #     self.main_layout.indexOf(self.settings_email_text_edit), 1
+        # )
         self.setLayout(self.main_layout)
         self.translate_ui()
 
     def translate_ui(self):
         _translate = QtCore.QCoreApplication.translate
         self.settings_profile_naming_scheme_label.setText(
-            _translate("SettingsView", "File Name Template:")
+            _translate("FileNameView", "File Name Template:")
         )
         self.settings_profile_naming_scheme_example_label.setText(
-            _translate("SettingsView", "File Name Preview:")
+            _translate("FileNameView", "File Name Preview:")
         )
         self.settings_profile_parameters_label.setText(
-            _translate("SettingsView", "Available Profile Parameters:")
+            _translate("FileNameView", "Available Profile Parameters:")
         )
         self.settings_profile_template_label.setText(
-            _translate("SettingsView", "Choose Profile:")
+            _translate("FileNameView", "Choose Profile:")
         )
         self.settings_profile_naming_scheme_button.setText(
-            _translate("SettingsView", "Save File Name Pattern")
+            _translate("FileNameView", "Save File Name Pattern")
         )
 
     def update_profile_list(self):

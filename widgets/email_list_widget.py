@@ -39,7 +39,7 @@ class EmailListWidget(QtWidgets.QListWidget):
                 item = self.itemAt(event.pos())
                 if item is None:
 
-                    # If list is empty just add blank itme without checking last item
+                    # If list is empty just add blank item without checking last item
                     # Do this before checking last items text as well since it'll throw error otherwise
                     if self.count() == 0:
                         new_item = QtWidgets.QListWidgetItem()

@@ -22,8 +22,11 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.template_nav_button = QtWidgets.QPushButton()
         self.template_nav_button.setText("Template")
 
-        self.settings_nav_button = QtWidgets.QPushButton()
-        self.settings_nav_button.setText("Settings")
+        self.file_name_nav_button = QtWidgets.QPushButton()
+        self.file_name_nav_button.setText("File Name")
+
+        self.email_nav_button = QtWidgets.QPushButton()
+        self.email_nav_button.setText("E-Mail")
 
         self.loaded_files_button = QtWidgets.QPushButton()
         self.loaded_files_button.setText("Loaded Files: 0")
@@ -41,7 +44,8 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.addWidget(self.console_nav_button)
         self.addWidget(self.data_viewer_nav_button)
         self.addWidget(self.template_nav_button)
-        self.addWidget(self.settings_nav_button)
+        self.addWidget(self.file_name_nav_button)
+        self.addWidget(self.email_nav_button)
 
         self.addStretch()
 
@@ -57,16 +61,20 @@ class NavigationView(QtWidgets.QVBoxLayout):
             "id", self.indexOf(self.console_nav_button))
         self.data_viewer_nav_button.setProperty(
             "id", self.indexOf(self.data_viewer_nav_button))
-        self.settings_nav_button.setProperty(
-            "id", self.indexOf(self.settings_nav_button))
         self.template_nav_button.setProperty(
             "id", self.indexOf(self.template_nav_button))
+        self.file_name_nav_button.setProperty(
+            "id", self.indexOf(self.file_name_nav_button))
+        self.email_nav_button.setProperty(
+            "id", self.indexOf(self.email_nav_button))
+        
 
         self.process_nav_button.setProperty("class", "nav-button")
         self.console_nav_button.setProperty("class", "nav-button")
         self.data_viewer_nav_button.setProperty("class", "nav-button")
-        self.settings_nav_button.setProperty("class", "nav-button")
+        self.file_name_nav_button.setProperty("class", "nav-button")
         self.template_nav_button.setProperty("class", "nav-button")
+        self.email_nav_button.setProperty("class", "nav-button")
 
         self.process_nav_button.clicked.connect(
             lambda: self.view_model.stacked_item_change(self.process_nav_button.property("id")))
@@ -76,8 +84,10 @@ class NavigationView(QtWidgets.QVBoxLayout):
             lambda: self.view_model.stacked_item_change(self.data_viewer_nav_button.property("id")))
         self.template_nav_button.clicked.connect(
             lambda: self.view_model.stacked_item_change(self.template_nav_button.property("id")))
-        self.settings_nav_button.clicked.connect(
-            lambda: self.view_model.stacked_item_change(self.settings_nav_button.property("id")))
+        self.file_name_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.file_name_nav_button.property("id")))
+        self.email_nav_button.clicked.connect(
+            lambda: self.view_model.stacked_item_change(self.email_nav_button.property("id")))
 
         self.main_view_model.console_alerts_update.connect(
             lambda: self.console_nav_button.setText(f"Console ({self.main_view_model.console_alerts})"))
