@@ -22,3 +22,5 @@ test_files/
 
 # Database exported file
 *.csv
+
+signatures/
