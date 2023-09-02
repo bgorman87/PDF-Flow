@@ -402,11 +402,13 @@ class EmailWidget(QtWidgets.QWidget):
         dialog.show()
 
     def set_html(self, html: str):
+        self.text_edit_area.textChanged.disconnect()
         self.text_edit_area.clear()
         self.text_edit_area.setHtml(html)
+        self.text_edit_area.textChanged.connect(lambda: self.text_changed.emit())
 
     def get_html(self) -> str:
-        return self.text_edit_area.toPlainText()
+        return self.text_edit_area.toHtml()
     
     def clear(self):
         self.text_edit_area.clear()
