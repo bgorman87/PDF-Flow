@@ -3,7 +3,7 @@ from PySide6 import QtCore, QtWidgets
 from view_models import main_view_model
 
 
-class SettingsViewModel(QtCore.QObject):
+class FileNameViewModel(QtCore.QObject):
     file_name_update = QtCore.Signal()
     file_name_example_update = QtCore.Signal()
     parameter_update_list = QtCore.Signal()

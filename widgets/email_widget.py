@@ -1,10 +1,12 @@
-from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt
+from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QPainter, QPen,
                            QPixmap, QTextBlockFormat, QTextCharFormat,
                            QTextFormat, QTextImageFormat)
 from PySide6 import QtWidgets
 from utils import utils
 class EmailWidget(QtWidgets.QWidget):
+    text_changed = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -169,13 +171,14 @@ class EmailWidget(QtWidgets.QWidget):
         # This will make it so that whether or not the user clicks or uses arrow keys
         # The buttons will update with whatever formatting is present on that character/line
         self.text_edit_area.cursorPositionChanged.connect(self.updateFormatting)
+        self.text_edit_area.textChanged.connect(lambda: self.text_changed.emit())
         self.widget_layout.addWidget(self.text_edit_area)
 
         self.show()
 
 
     # Whenever the cursor changes position, update all of the formatting options to where the cursor is placed
-    # Only do this if the user has already typed, and if the user is not currently just sleecting text
+    # Only do this if the user has already typed, and if the user is not currently just selecting text
     def updateFormatting(self):
         if self.has_typed:
             # Get the current cursor position
@@ -397,6 +400,16 @@ class EmailWidget(QtWidgets.QWidget):
         # Create an instance of the HyperlinkDialog and show it
         dialog = HyperlinkDialog(self)
         dialog.show()
+
+    def set_html(self, html: str):
+        self.text_edit_area.clear()
+        self.text_edit_area.setHtml(html)
+
+    def get_html(self) -> str:
+        return self.text_edit_area.toPlainText()
+    
+    def clear(self):
+        self.text_edit_area.clear()
 
 
 class HyperlinkDialog(QtWidgets.QDialog):
