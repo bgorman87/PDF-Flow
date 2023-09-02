@@ -101,7 +101,7 @@ def main():
     app.setStyle("Fusion")
 
     palette = QtGui.QPalette()
-    palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))  # type: ignore
+    palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))
     app.setPalette(palette)
     QtGui.QFontDatabase.addApplicationFont(utils.resource_path("assests/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel()))
