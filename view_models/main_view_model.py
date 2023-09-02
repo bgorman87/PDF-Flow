@@ -1,4 +1,5 @@
 import typing
+import os
 
 from PySide6 import QtCore, QtWidgets
 from typing import Any
@@ -22,6 +23,7 @@ class MainViewModel(QtCore.QObject):
     window_size_update = QtCore.Signal()
     profile_update_list = QtCore.Signal()
     parameter_update_list = QtCore.Signal()
+    email_profiles_updated = QtCore.Signal(list)
 
     def __init__(self, main_model: main_model.MainModel):
         super().__init__()
@@ -37,6 +39,7 @@ class MainViewModel(QtCore.QObject):
         self.process_progress_value = 0
         self.process_button_state = True
         self.process_button_count = 0
+
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
@@ -249,3 +252,13 @@ class MainViewModel(QtCore.QObject):
 
     def add_new_project_data(self, project_data: dict) -> str:
         return self.main_model.add_new_project_data(new_data=project_data)
+    
+    def update_email_profile_names(self, email_profile_names: list[str]) -> None:
+        self.email_profiles_updated.emit(email_profile_names)
+        return 
+
+    def get_email_directory(self) -> os.path:
+        relative_directory = "signatures"
+        if not os.path.exists(relative_directory):
+            os.makedirs(relative_directory)
+        return os.path.abspath(relative_directory)
