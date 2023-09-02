@@ -1,7 +1,7 @@
 from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QPainter, QPen,
                            QPixmap, QTextBlockFormat, QTextCharFormat,
-                           QTextFormat, QTextImageFormat)
+                           QTextFormat, QTextImageFormat, QPalette)
 from PySide6 import QtWidgets
 from utils import utils
 class EmailWidget(QtWidgets.QWidget):
@@ -166,6 +166,12 @@ class EmailWidget(QtWidgets.QWidget):
         font_family = self.font_combo_box.currentText()
         self.text_edit_area.setCurrentFont(QFont(font_family))
         self.text_edit_area.setFontPointSize(12.0)
+
+        text_edit_palette = QPalette()
+        text_edit_palette.setColor(
+            QPalette.Highlight, QColor(200, 200, 200, 255)
+        )
+        self.text_edit_area.setPalette(text_edit_palette)
 
         # Anytime the cursor changes, update the formatting buttons/dropdowns
         # This will make it so that whether or not the user clicks or uses arrow keys
@@ -402,13 +408,14 @@ class EmailWidget(QtWidgets.QWidget):
         dialog.show()
 
     def set_html(self, html: str):
-        self.text_edit_area.textChanged.disconnect()
         self.text_edit_area.clear()
         self.text_edit_area.setHtml(html)
-        self.text_edit_area.textChanged.connect(lambda: self.text_changed.emit())
 
     def get_html(self) -> str:
         return self.text_edit_area.toHtml()
+    
+    def get_plain_text(self) -> str:
+        return self.text_edit_area.toPlainText()
     
     def clear(self):
         self.text_edit_area.clear()
