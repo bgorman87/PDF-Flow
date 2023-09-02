@@ -1,5 +1,6 @@
 from PySide6 import QtCore, QtWidgets
 import os
+import shutil
 
 from view_models import main_view_model
 
@@ -9,6 +10,7 @@ class EmailViewModel(QtCore.QObject):
     email_text_update = QtCore.Signal()
     clear_email_text = QtCore.Signal()
     email_list_update = QtCore.Signal()
+    set_current_index_signal = QtCore.Signal(int)
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -17,6 +19,7 @@ class EmailViewModel(QtCore.QObject):
         self._email_profile_names = []
         self.email_raw_html = ""
         self._loaded_email_index = 0
+        self._loaded_raw_html = ""
 
     def set_current_index(self, index: int):
         self._loaded_email_index = index
@@ -26,17 +29,24 @@ class EmailViewModel(QtCore.QObject):
     
     def get_current_profile_name(self):
         return self._email_profile_names[self._loaded_email_index]
+    
+    def get_text_changed(self):
+        return self._text_changed
+    
+    def set_loaded_raw_html(self, raw_html: str):
+        self._loaded_raw_html = raw_html
         
     def save_email(self):
         # If theres a loaded index, then save changes to that profile
         if self._loaded_email_index != 0:
-            print("save changes")
-            pass
+            self.save_changes_button_dialog(self._loaded_email_index)
         else:
             # If there is no loaded index, then prompt user to save new profile
-            self.save_button_dialog()
+            self.save_new_button_dialog()
 
-    def save_button_dialog(self):
+        return
+
+    def save_new_button_dialog(self):
         # Display a dialog box so the user can enter a name for the new profile
         # If the user clicks ok, then save the new profile
         # If the user clicks cancel, then do nothing
@@ -72,6 +82,51 @@ class EmailViewModel(QtCore.QObject):
             else:
                 break
 
+    def save_changes_button_dialog(self, index: int):
+        # Display a dialog box so asking the user if they want to save changes
+        # If the user clicks yes, then save the changes by overwriting the existing profile
+        # If the user clicks no, then do nothing
+        message_box_window_title = "Save Changes"
+        severity_icon = QtWidgets.QMessageBox.Information
+        text_body = f"Save changes to '{self._email_profile_names[self._loaded_email_index]}'?"
+        buttons = [QtWidgets.QPushButton("Save Changes"), QtWidgets.QPushButton("Discard Changes"), QtWidgets.QPushButton("Cancel")]
+        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole, QtWidgets.QMessageBox.RejectRole]
+        callback = [lambda: self.save_changes(index), lambda: self.discard_changes(index), lambda: self.set_current_index_signal.emit(self._loaded_email_index)]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback
+        }
+
+        self.main_view_model.display_message_box(message_box_dict)
+        return
+    
+    def save_changes(self, index: int):
+        # Overwrite the existing profile with the new changes
+        # Update the email profile names
+        # Update the email profile combo box
+        directory = self.main_view_model.get_email_directory()
+        email_folder = os.path.join(directory, self._email_profile_names[self._loaded_email_index])
+        email_html_file = os.path.join(email_folder, "email.html")
+        with open(email_html_file, "w") as f:
+            f.write(self.email_raw_html)
+        
+        self._text_changed = False
+        self._loaded_raw_html = self.email_raw_html
+        self._loaded_email_index = index
+        self.load_email_profile(self._email_profile_names[index])
+
+        return
+    
+    def discard_changes(self, index: int):
+        self.set_current_index(index)
+        self.load_email_profile(self._email_profile_names[index])
+        self.set_current_index_signal.emit(index)
+        
+
     def save_new_profile(self, profile_name: str):
         # Create a new directory in the signatures folder
         # Save the html data to the new directory
@@ -81,7 +136,27 @@ class EmailViewModel(QtCore.QObject):
         # Create the new directory
         directory = self.main_view_model.get_email_directory()
         new_directory = os.path.join(directory, profile_name)
-        os.mkdir(new_directory)
+        try:
+            os.mkdir(new_directory)
+        except OSError as e:
+            message_box_window_title = "Email Creation Error"
+            severity_icon = QtWidgets.QMessageBox.Information
+            text_body = f"Email creation error. Most likely invalid folder/file name: {profile_name}"
+            buttons = [QtWidgets.QPushButton("Close")]
+            button_roles = [QtWidgets.QMessageBox.RejectRole]
+            callback = [None,]
+            message_box_dict = {
+                "title": message_box_window_title,
+                "icon": severity_icon,
+                "text": text_body,
+                "buttons": buttons,
+                "button_roles": button_roles,
+                "callback": callback
+            }
+
+            self.main_view_model.display_message_box(message_box_dict)
+
+            return
 
         # Save the html data to the new directory
         html_file = os.path.join(new_directory, "email.html")
@@ -89,18 +164,27 @@ class EmailViewModel(QtCore.QObject):
             f.write(self.email_raw_html)
         
         # Update the email profile names
+        self._text_changed = False
         self._email_profile_names.append(profile_name)
-        self._loaded_email_index = len(self._email_profile_names) - 1
         self.email_profiles_updated.emit(self._email_profile_names)
+        self.set_current_index(self._email_profile_names.index(profile_name))
         self.email_list_update.emit()
+        
 
 
-    def email_text_changed(self, text: str):
-        self._text_changed = bool(text)
-        self.email_raw_html = text
-        print("text changed")
+    def email_text_changed(self, raw_html: str, plain_text: str):
+        self.email_raw_html = raw_html
+        if self._loaded_email_index == 0 or self._loaded_email_index == -1:
+            self._text_changed = self._loaded_raw_html != plain_text
+        else:
+            self._text_changed = self._loaded_raw_html != self.email_raw_html
+        print(f"text changed {self._text_changed}") 
 
     def get_email_profiles(self):
+        current_name = ""
+        if len(self._email_profile_names) > 0 and self._loaded_email_index != 0:
+            current_name = self._email_profile_names[self._loaded_email_index]
+
         # Email data i.e. signatures are stored in individual subdirectories of the signatures directory
         # The name of the subdirectory is the name of the email profile
         # The signatures folder is to be created when the user first runs the program
@@ -112,6 +196,14 @@ class EmailViewModel(QtCore.QObject):
         else:
             emails = [""] + emails
 
+        # New entries can be added here as program runs, so indexing can become off
+        # If the current name is in the updated list, then set the loaded index to that index
+        if current_name:
+            try:
+                self._loaded_email_index = emails.index(current_name)
+            except ValueError:
+                self._loaded_email_index = 0
+
         self._email_profile_names = emails
         self.email_profiles_updated.emit(emails)
         return emails
@@ -121,10 +213,9 @@ class EmailViewModel(QtCore.QObject):
         if index == self._loaded_email_index:
             return
         
-        # If user selects an existing profile, and text has been changed 
-        # from a current profile, prompt user to save changes
-        if self._text_changed and index != 0:
-            print("save changes?")
+        # If there is a loaded profile, and text has been changed, prompt user to save changes
+        if self._text_changed and self._loaded_email_index != 0:
+            self.save_changes_button_dialog(index)
             return
 
         # If user selects an existing profile, and text has been changed, but there is no current profile
@@ -137,7 +228,7 @@ class EmailViewModel(QtCore.QObject):
                 "Save New"), QtWidgets.QPushButton("Cancel")]
             button_roles = [QtWidgets.QMessageBox.YesRole,
                             QtWidgets.QMessageBox.RejectRole]
-            callback = [self.save_button_dialog, None]
+            callback = [self.save_new_button_dialog, None]
             message_box_dict = {
                 "title": message_box_window_title,
                 "icon": severity_icon,
@@ -151,10 +242,13 @@ class EmailViewModel(QtCore.QObject):
 
         # If text has not been changed, and user selects index 0, empty the email box
         if not self._text_changed and index == 0:
-            self.clear_email_text.emit()
+            self.set_current_index(index)
+            self._loaded_raw_html = ""
+            self.clear_email_text.emit()            
             return
 
         # If text has not been changed, load whatever profile the user selects
+        self.set_current_index(index)
         self.load_email_profile(self._email_profile_names[index])
 
     def load_email_profile(self, profile_name: str) :
@@ -173,6 +267,56 @@ class EmailViewModel(QtCore.QObject):
         with open(email_html_file, "r") as f:
             self.email_raw_html = f.read()
 
+        self._loaded_raw_html = self.email_raw_html
         self.email_text_update.emit()
+
+        return
+    
+    def delete_email_profile_dialog(self):
+        # Display a dialog box so asking the user if they want to delete the profile
+        # If the user clicks yes, then delete the profile
+        # If the user clicks no, then do nothing
+        message_box_window_title = "Delete Email Profile"
+        severity_icon = QtWidgets.QMessageBox.Information
+        text_body = f"Delete email template '{self._email_profile_names[self._loaded_email_index]}'?"
+        buttons = [QtWidgets.QPushButton("Delete"), QtWidgets.QPushButton("Cancel")]
+        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
+        callback = [self.delete_email_profile, None]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback
+        }
+
+        self.main_view_model.display_message_box(message_box_dict)
+        return
+    
+    def delete_email_profile(self):
+        profile_name = self._email_profile_names[self._loaded_email_index]
+        email_folder = os.path.join(self.main_view_model.get_email_directory(), profile_name)
+        if not os.path.exists(email_folder):
+            self.main_view_model.add_console_text(f"Email deletion error: Email folder {email_folder} does not exist")
+            self.main_view_model.add_console_alerts(1)
+            return
+        
+        try:
+            shutil.rmtree(email_folder)
+        except OSError as e:
+            self.main_view_model.add_console_text(f"Email deletion error: {e}")
+            self.main_view_model.add_console_alerts(1)
+            return
+        
+        self._email_profile_names.pop(self._loaded_email_index)
+        self._text_changed = False
+        self._loaded_raw_html = ""
+        self.set_current_index(0)
+
+        self.set_current_index_signal.emit(0)
+        self.email_profiles_updated.emit(self._email_profile_names)
+        self.email_list_update.emit()
+        self.clear_email_text.emit()
 
         return
