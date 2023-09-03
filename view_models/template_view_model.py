@@ -436,6 +436,7 @@ class TemplateViewModel(QtCore.QObject):
         self.paint_existing_data_rects(profile_id=profile_id)
         # TODO: add function here to update parameter list  in settings if currently
         # selected profile in settings is the one being updated.
+        # self.main_view_model.parameter_update_list.emit(profile_id)
 
     def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_view_model.add_new_profile(
