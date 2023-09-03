@@ -11,6 +11,7 @@ class DataViewerViewModel(QtCore.QObject):
     data_table_index_update = QtCore.Signal(int)
     data_table_update = QtCore.Signal()
     project_data_entry_deleted = QtCore.Signal()
+    email_profile_list_update = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -18,6 +19,10 @@ class DataViewerViewModel(QtCore.QObject):
         self._project_data = None
         self._project_data_headers = None
         self._project_data_loaded_id = None
+        self._email_profiles_list = None
+        self.main_view_model.email_profiles_updated.connect(
+            self.set_email_profile_list
+        )
 
     def update_data_table(self):
         self._project_data = self.main_view_model.fetch_all_project_data()
@@ -37,6 +42,10 @@ class DataViewerViewModel(QtCore.QObject):
     @property
     def project_data_headers(self) -> list[str]:
         return self._project_data_headers
+    
+    @property
+    def project_data_loaded_id(self) -> int:
+        return self._project_data_loaded_id
 
     def get_project_data_import_file(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -366,3 +375,14 @@ class DataViewerViewModel(QtCore.QObject):
         }
 
         self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+
+    def set_email_profile_list(self, email_profiles: list[str]) -> None:
+        """Sets the email profile list"""
+        self._email_profile_list = email_profiles
+        self.email_profile_list_update.emit()
+
+    @property
+    def email_profile_list(self):
+        return self._email_profile_list
+    
+    

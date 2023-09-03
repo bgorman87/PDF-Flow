@@ -7,19 +7,32 @@ class FileNameViewModel(QtCore.QObject):
     file_name_update = QtCore.Signal()
     file_name_example_update = QtCore.Signal()
     parameter_update_list = QtCore.Signal()
+    email_profile_name_update = QtCore.Signal(str)
+    email_profile_list_update = QtCore.Signal()
+    profile_list_update = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
         self.main_view_model = main_view_model
         self._active_parameter_data = None
         self._active_parameter_list_items = None
-        self._active_paramaters_examples = None
+        self._active_parameters_examples = None
         self._active_file_naming_scheme = ""
         self._process_profile_file_name = ""
         self._process_profile_file_name_cursor_position = 0
         self._settings_profile_naming_scheme_example_text = ""
         self._profile_id = None
         self._active_parameters = None
+        self._email_profile_list = None
+        self.main_view_model.email_profiles_updated.connect(
+            self.set_email_profile_list
+        )
+        self.main_view_model.profile_update_list.connect(
+            lambda: self.profile_list_update.emit()
+        )
+        self.main_view_model.parameter_update_list.connect(
+            lambda: self.parameter_update_list.emit()
+        )
 
     def format_file_profile_list(self) -> list[str]:
         """Transforms profiles into a list with profile name and identifier text. profiles list comes from fetch_file_profiles from data_handler.
@@ -34,7 +47,7 @@ class FileNameViewModel(QtCore.QObject):
                               for result in results]
         return dropdown_items
 
-    def display_active_parameters_from_item(self, file_profile_item) -> None:
+    def display_active_parameters_from_item(self, file_profile_item: QtWidgets.QListWidgetItem) -> None:
         """Fills in active parameters list based off the currently chosen file_profile dropdown item.
 
         Args:
@@ -47,17 +60,19 @@ class FileNameViewModel(QtCore.QObject):
             file_profile_text.split(" - ")[0])
         self._active_parameters = self.main_view_model.fetch_active_parameters_by_profile_id(
             self._profile_id)
-        self._active_paramaters_examples = ["01"]
+        self._active_parameters_examples = ["01"]
         self._active_parameter_list_items = []
         active_param_list_item = QtWidgets.QListWidgetItem("doc_num")
         self._active_parameter_list_items.append(active_param_list_item)
         for parameter in self._active_parameters[1:]:
-            self._active_paramaters_examples.append(
+            self._active_parameters_examples.append(
                 self.main_view_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=self._profile_id, parameter=parameter))
             active_param_list_item = QtWidgets.QListWidgetItem(parameter)
             self._active_parameter_list_items.append(active_param_list_item)
         self._active_file_naming_scheme = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             self._profile_id)
+        self._email_profile_name = self.main_view_model.fetch_email_profile_name_by_profile_id(self._profile_id)
+        self.email_profile_name_update.emit(self._email_profile_name)
         self.main_view_model.parameter_update_list.emit()
 
     @property
@@ -103,7 +118,7 @@ class FileNameViewModel(QtCore.QObject):
 
     def display_example_file_name(self, line_edit_text: str) -> None:
         replace_result = line_edit_text
-        for param_name, example in zip(self._active_parameters, self._active_paramaters_examples):
+        for param_name, example in zip(self._active_parameters, self._active_parameters_examples):
             replace_result = replace_result.replace(
                 "".join(["{", param_name, "}"]), example
             )
@@ -114,15 +129,15 @@ class FileNameViewModel(QtCore.QObject):
     def settings_profile_naming_scheme_example_text(self):
         return self._settings_profile_naming_scheme_example_text
 
-    def check_profile_file_name_pattern(self, list_widget_text: str) -> None:
+    def check_profile_file_name_pattern(self, list_widget_text: str, email_profile_name: str) -> None:
         profile_name = list_widget_text.split(" - ")[0]
         profile_id = self.main_view_model.fetch_profile_id_by_profile_name(profile_name=profile_name)
         current_profile_file_name = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             profile_id=profile_id)
 
-        # Check current profile file nameing scheme to see if one exists
+        # Check current profile file naming scheme to see if one exists
         # Ask user if they want to overwrite if so then call update function
-        if current_profile_file_name:
+        if current_profile_file_name and current_profile_file_name != profile_name:
             message_box_window_title = "File Name Pattern Already Found"
             severity_icon = QtWidgets.QMessageBox.Warning
             text_body = f"Overwrite current pattern?\
@@ -134,7 +149,7 @@ class FileNameViewModel(QtCore.QObject):
             button_roles = [QtWidgets.QMessageBox.YesRole,
                             QtWidgets.QMessageBox.RejectRole,]
             callback = [lambda: self.apply_file_name_pattern(
-                profile_name=profile_name), None]
+                profile_name=profile_name, email_profile_name=email_profile_name), None]
             message_box_dict = {
                 "title": message_box_window_title,
                 "icon": severity_icon,
@@ -146,12 +161,58 @@ class FileNameViewModel(QtCore.QObject):
 
             self.main_view_model.display_message_box(message_box_dict=message_box_dict)
         else:
-            self.apply_file_name_pattern(profile_name=profile_name)
+            self.apply_file_name_pattern(profile_name=profile_name, email_profile_name=email_profile_name)
 
-    def apply_file_name_pattern(self, profile_name: str) -> None:
+    def apply_file_name_pattern(self, profile_name: str, email_profile_name: str) -> None:
         """Handles the saving of a file profile's file naming pattern to the database"""
 
         self.main_view_model.update_template_profile_file_name_pattern(
             profile_name=profile_name, profile_file_name_pattern=self._process_profile_file_name)
+        self.main_view_model.set_email_profile_by_profile_name(
+            profile_name=profile_name, email_profile_name=email_profile_name
+        )
         self.main_view_model.add_console_text(new_text=f"Updated file name pattern for profile '{profile_name}' to: {self._process_profile_file_name}")
         self.main_view_model.add_console_alerts(alerts=1)
+        message_box_window_title = "File Name Pattern Updated"
+        severity_icon = QtWidgets.QMessageBox.Information
+        text_body = f"Data for profile '{profile_name}' updated:\
+                \n"
+        
+        if self._process_profile_file_name:
+            text_body += f"\nFile name pattern set to '{self._process_profile_file_name}'"
+        if email_profile_name:
+            text_body += f"\nEmail profile set to '{email_profile_name}'"
+
+        buttons = [
+            "Ok",]
+        button_roles = [QtWidgets.QMessageBox.YesRole,]
+        callback = [None,]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback
+        }
+
+        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+
+
+    def set_email_profile(self, combo_box_text: str) -> None:
+        """Sets the email profile based off the combo box text"""
+        email_profile_name = combo_box_text
+        self.main_view_model.set_email_profile(profile_id=self._profile_id, email_profile_name=email_profile_name)
+
+    def set_email_profile_list(self, email_profiles: list[str]) -> None:
+        """Sets the email profile list"""
+        self._email_profile_list = email_profiles
+        self.email_profile_list_update.emit()
+
+    @property
+    def email_profile_list(self):
+        return self._email_profile_list
+    
+    @property
+    def profile_id(self):
+        return self._profile_id
