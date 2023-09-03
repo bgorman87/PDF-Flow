@@ -101,6 +101,7 @@ class MainModel(QtCore.QObject):
                         y_1 REAL,
                         y_2 REAL,
                         file_naming_format TEXT,
+                        email_profile_name TEXT DEFAULT '',
                         count INT DEFAULT 0
                         );"""
                     connection.cursor().execute(database_initialization)
@@ -132,7 +133,8 @@ class MainModel(QtCore.QObject):
                             email_to TEXT,
                             email_cc TEXT,
                             email_bcc TEXT,
-                            email_subject TEXT
+                            email_subject TEXT,
+                            email_profile_name TEXT DEFAULT ''
                             );"""
                     connection.cursor().execute(database_initialization)
 
@@ -182,10 +184,11 @@ class MainModel(QtCore.QObject):
         x_2: int,
         y_1: int,
         y_2: int,
+        email_profile_name: str=None,
     ):
         with self.db_connection(self.database_path) as connection:
-            add_data = """INSERT INTO profiles(profile_identifier_text, unique_profile_name, x_1, x_2, y_1, y_2) VALUES(?,?,?,?,?,?)"""
-            data = (profile_identifier, profile_name, x_1, x_2, y_1, y_2)
+            add_data = """INSERT INTO profiles(profile_identifier_text, unique_profile_name, x_1, x_2, y_1, y_2, email_profile_name) VALUES(?,?,?,?,?,?,?)"""
+            data = (profile_identifier, profile_name, x_1, x_2, y_1, y_2, email_profile_name)
             connection.cursor().execute(add_data, data)
             connection.commit()
 
@@ -411,11 +414,11 @@ class MainModel(QtCore.QObject):
         return project_directories
 
     def fetch_project_data_table_headers(self) -> list[str]:
-        """Fetcehs all database headers from project data table"""
+        """Fetches all database headers from project data table"""
         headers = None
         with self.db_connection(self.database_path) as connection:
             # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data;"""
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
             try:
                 cursor = connection.cursor()
                 results = cursor.execute(query).fetchone()
@@ -435,7 +438,7 @@ class MainModel(QtCore.QObject):
 
         with self.db_connection(self.database_path) as connection:
             # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data;"""
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
             try:
                 database_fetch_results = connection.cursor().execute(query).fetchall()
                 if not database_fetch_results:
@@ -450,7 +453,7 @@ class MainModel(QtCore.QObject):
 
         with self.db_connection(self.database_path) as connection:
 
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject FROM project_data WHERE project_number=?;"""
+            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data WHERE project_number=?;"""
             try:
                 database_fetch_results = connection.cursor().execute(query, (project_number,)).fetchone()
                 if not database_fetch_results:
@@ -532,7 +535,7 @@ class MainModel(QtCore.QObject):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
-                update_statement = """UPDATE project_data SET project_number=?, directory=?, email_to=?, email_cc=?, email_bcc=?, email_subject=? WHERE project_number=?;"""
+                update_statement = """UPDATE project_data SET project_number=?, directory=?, email_to=?, email_cc=?, email_bcc=?, email_subject=?, email_profile_name=? WHERE project_number=?;"""
                 data = [
                     new_data[key]
                     for key in [
@@ -542,6 +545,7 @@ class MainModel(QtCore.QObject):
                         "email_cc",
                         "email_bcc",
                         "email_subject",
+                        "email_profile_name",
                     ]
                 ]
                 data.append(old_data["project_number"])
@@ -557,7 +561,7 @@ class MainModel(QtCore.QObject):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
-                new_data_query = """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject) VALUES(?,?,?,?,?,?);"""
+                new_data_query = """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?);"""
                 data = [
                     new_data[key]
                     for key in [
@@ -567,6 +571,7 @@ class MainModel(QtCore.QObject):
                         "email_cc",
                         "email_bcc",
                         "email_subject",
+                        "email_profile_name",
                     ]
                 ]
                 connection.cursor().execute(new_data_query, data)
@@ -622,6 +627,32 @@ class MainModel(QtCore.QObject):
 
     def update_progress_widget(self, value: int):
         self.progress_popup.update_val(value=value)
+
+    def fetch_email_profile_name_by_profile_id(self, profile_id: int) -> str:
+        with self.db_connection(self.database_path) as connection:
+            profile_query = """SELECT email_profile_name FROM profiles WHERE profile_id=?;"""
+            profile_data = (
+                connection.cursor().execute(profile_query, (profile_id,)).fetchone()
+            )
+        if profile_data:
+            profile_data = profile_data[0]
+        else:
+            profile_data = ""
+        return profile_data
+    
+    def update_email_profile_by_profile_id(self, profile_id: int, email_profile_name: str):
+        with self.db_connection(self.database_path) as connection:
+            profile_query = """UPDATE profiles SET email_profile_name=? WHERE profile_id=?;"""
+            connection.cursor().execute(profile_query, (email_profile_name, profile_id))
+            connection.commit()
+        return
+    
+    def update_email_profile_by_project_id(self, project_id: int, email_profile_name: str):
+        with self.db_connection(self.database_path) as connection:
+            profile_query = """UPDATE project_data SET email_profile_name=? WHERE id=?;"""
+            connection.cursor().execute(profile_query, (email_profile_name, project_id))
+            connection.commit()
+        return
 
 
 class ImportProjectDataThread(QtCore.QRunnable):
