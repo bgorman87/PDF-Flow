@@ -166,7 +166,7 @@ class EmailViewModel(QtCore.QObject):
         # Update the email profile names
         self._text_changed = False
         self._email_profile_names.append(profile_name)
-        self.email_profiles_updated.emit(self._email_profile_names)
+        self.main_view_model.update_email_profile_names(self._email_profile_names)
         self.set_current_index(self._email_profile_names.index(profile_name))
         self.email_list_update.emit()
         
@@ -205,7 +205,7 @@ class EmailViewModel(QtCore.QObject):
                 self._loaded_email_index = 0
 
         self._email_profile_names = emails
-        self.email_profiles_updated.emit(emails)
+        self.main_view_model.update_email_profile_names(emails)
         return emails
     
     def email_profile_changed(self, index: int):
@@ -315,7 +315,7 @@ class EmailViewModel(QtCore.QObject):
         self.set_current_index(0)
 
         self.set_current_index_signal.emit(0)
-        self.email_profiles_updated.emit(self._email_profile_names)
+        self.main_view_model.update_email_profile_names(self._email_profile_names)
         self.email_list_update.emit()
         self.clear_email_text.emit()
 

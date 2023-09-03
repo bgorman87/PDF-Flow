@@ -262,3 +262,14 @@ class MainViewModel(QtCore.QObject):
         if not os.path.exists(relative_directory):
             os.makedirs(relative_directory)
         return os.path.abspath(relative_directory)
+    
+    def set_email_profile_by_profile_name(self, profile_name: str, email_profile_name: str) -> None:
+        profile_id = self.fetch_profile_id_by_profile_name(profile_name=profile_name)
+        self.set_email_profile(profile_id=profile_id, email_profile_name=email_profile_name)
+
+    def set_email_profile(self, profile_id: int, email_profile_name: str) -> None:
+        self.main_model.update_email_profile_by_profile_id(profile_id=profile_id, email_profile_name=email_profile_name)
+
+    def fetch_email_profile_name_by_profile_id(self, profile_id: int) -> str:
+        return self.main_model.fetch_email_profile_name_by_profile_id(profile_id=profile_id)
+    

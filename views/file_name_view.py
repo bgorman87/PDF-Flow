@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets, QtCore
 from view_models import file_name_view_model
-from widgets import utility_widgets, email_widget
+from widgets import utility_widgets
 
 
 class FileNameView(QtWidgets.QWidget):
@@ -46,7 +46,10 @@ class FileNameView(QtWidgets.QWidget):
             self.view_model.format_file_profile_list()
         )
         self.settings_profile_templates_list_widget.itemClicked.connect(
-            self.view_model.display_active_parameters_from_item
+            self.profile_clicked
+        )
+        self.view_model.profile_list_update.connect(
+            self.update_profile_list
         )
         self.settings_profile_choices_layout.addWidget(
             self.settings_profile_templates_list_widget
@@ -60,7 +63,7 @@ class FileNameView(QtWidgets.QWidget):
 
         self.view_model.main_view_model.parameter_update_list.connect(
             lambda: self.update_parameter_list(
-                paramater_items=self.view_model.active_parameter_items,
+                parameter_items=self.view_model.active_parameter_items,
                 file_naming_scheme=self.view_model.active_file_naming_scheme,
             )
         )
@@ -105,19 +108,6 @@ class FileNameView(QtWidgets.QWidget):
             self.settings_profile_naming_scheme_line_edit
         )
 
-        # Button to sanem file naming scheme to database
-        self.settings_profile_naming_scheme_button = QtWidgets.QPushButton()
-        self.settings_profile_naming_scheme_button.setObjectName(
-            "settings_profile_naming_scheme_button"
-        )
-        self.settings_profile_naming_scheme_button.clicked.connect(
-            lambda: self.view_model.check_profile_file_name_pattern(
-                self.settings_profile_templates_list_widget.currentItem().text())
-        )
-        self.settings_file_name_pattern_layout.addWidget(
-            self.settings_profile_naming_scheme_button
-        )
-
         self.main_layout.addLayout(self.settings_file_name_pattern_layout)
 
         # Label for file rename example output
@@ -138,13 +128,52 @@ class FileNameView(QtWidgets.QWidget):
             self.settings_profile_naming_scheme_example_line_edit
         )
 
-        # # signature text edit
-        # self.settings_email_text_edit = email_widget.EmailWidget()
-        # self.settings_email_text_edit.setObjectName("settings_email_text_edit")
-        # self.main_layout.addWidget(self.settings_email_text_edit)
-        # self.main_layout.setStretch(
-        #     self.main_layout.indexOf(self.settings_email_text_edit), 1
-        # )
+        self.profile_email_layout = QtWidgets.QHBoxLayout()
+        # Label for dropdown menu
+        self.profile_email_label = QtWidgets.QLabel()
+        self.profile_email_label.setObjectName(
+            "profile_email_label"
+        )
+        self.main_layout.addWidget(self.profile_email_label)
+
+        # Dropdown menu containing e-mail profiles
+        self.profile_email_combo_box = QtWidgets.QComboBox()
+        self.profile_email_combo_box.setObjectName(
+            "profile_email_combo_box"
+        )
+        self.profile_email_combo_box.currentIndexChanged.connect(
+            self.update_email_combo_box_state
+        )
+        self.profile_email_combo_box.setEnabled(False)
+        self.profile_email_layout.addWidget(self.profile_email_combo_box)
+
+        self.profile_email_layout.setStretch(
+            self.profile_email_layout.indexOf(self.profile_email_combo_box), 6
+        )
+        self.main_layout.addLayout(self.profile_email_layout)
+
+        self.line = utility_widgets.HorizontalLine()
+        self.main_layout.addWidget(self.line)
+
+        # Button to save profile file/email data to database
+        self.settings_profile_naming_scheme_button = QtWidgets.QPushButton()
+        self.settings_profile_naming_scheme_button.setObjectName(
+            "settings_profile_naming_scheme_button"
+        )
+        self.settings_profile_naming_scheme_button.clicked.connect(
+            self.save_profile_data
+        )
+        self.main_layout.addWidget(
+            self.settings_profile_naming_scheme_button
+        )
+
+        self.view_model.email_profile_name_update.connect(
+            self.set_current_email_index_from_name
+        )
+        self.view_model.email_profile_list_update.connect(
+            self.handle_email_profile_list_update
+        )
+        
         self.setLayout(self.main_layout)
         self.translate_ui()
 
@@ -163,8 +192,21 @@ class FileNameView(QtWidgets.QWidget):
             _translate("FileNameView", "Choose Profile:")
         )
         self.settings_profile_naming_scheme_button.setText(
-            _translate("FileNameView", "Save File Name Pattern")
+            _translate("FileNameView", "Save Profile File Name and Email")
         )
+        self.profile_email_label.setText(
+            _translate("FileNameView", "File Email Profile:")
+        )
+
+    def save_profile_data(self):
+        self.view_model.check_profile_file_name_pattern(
+            self.settings_profile_templates_list_widget.currentItem().text(),
+            self.profile_email_combo_box.currentText()
+        )
+
+    def profile_clicked(self, item: QtWidgets.QListWidgetItem):
+        self.view_model.display_active_parameters_from_item(item)
+        self.update_email_combo_box_state()
 
     def update_profile_list(self):
         self.settings_profile_templates_list_widget.clear()
@@ -173,14 +215,14 @@ class FileNameView(QtWidgets.QWidget):
         )
 
     def update_parameter_list(
-        self, paramater_items: list[QtWidgets.QListWidgetItem], file_naming_scheme: str
+        self, parameter_items: list[QtWidgets.QListWidgetItem], file_naming_scheme: str
     ) -> None:
         self.settings_profile_parameters_list_widget.clear()
         self.settings_profile_naming_scheme_line_edit.clear()
 
         self.settings_profile_naming_scheme_line_edit.setText(
             file_naming_scheme)
-        for param_list_item in paramater_items:
+        for param_list_item in parameter_items:
             self.settings_profile_parameters_list_widget.addItem(
                 param_list_item)
 
@@ -193,3 +235,34 @@ class FileNameView(QtWidgets.QWidget):
     def update_file_name_example_line_edit(self, new_example_text: str) -> None:
         self.settings_profile_naming_scheme_example_line_edit.setText(
             new_example_text)
+        
+    def save_email(self):
+        self.view_model.set_email_profile(
+            self.profile_email_combo_box.currentText()
+        )
+
+    def set_current_email_index_from_name(self, email_profile_name: str) -> None:
+        index = self.profile_email_combo_box.findText(email_profile_name)
+        if index > 0:
+            self.profile_email_combo_box.setCurrentIndex(index)
+        else:
+            self.profile_email_combo_box.setCurrentIndex(0)
+
+    def update_email_combo_box_state(self) -> None:
+        if self.view_model.profile_id and self.profile_email_combo_box.count() > 1:
+            self.profile_email_combo_box.setEnabled(True)
+        else:
+            self.profile_email_combo_box.setEnabled(False)
+
+    def handle_email_profile_list_update(self):
+        email_list = self.view_model.email_profile_list
+        current_email_name = self.profile_email_combo_box.currentText()
+        self.profile_email_combo_box.currentIndexChanged.disconnect()
+        self.profile_email_combo_box.clear()
+        self.profile_email_combo_box.addItems(email_list)
+        self.profile_email_combo_box.setCurrentIndex(
+            self.profile_email_combo_box.findText(current_email_name)
+        )
+        self.profile_email_combo_box.currentIndexChanged.connect(
+            self.update_email_combo_box_state
+        )
