@@ -205,6 +205,34 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.main_layout.addLayout(self.project_data_email_subject_layout)
 
+        self.profile_email_layout = QtWidgets.QHBoxLayout()
+        # Label for dropdown menu
+        self.profile_email_label = QtWidgets.QLabel()
+        self.profile_email_label.setObjectName(
+            "profile_email_label"
+        )
+        self.profile_email_layout.addWidget(self.profile_email_label)
+
+        # Dropdown menu containing e-mail profiles
+        self.profile_email_combo_box = QtWidgets.QComboBox()
+        self.profile_email_combo_box.setObjectName(
+            "profile_email_combo_box"
+        )
+        self.view_model.email_profile_list_update.connect(
+            self.handle_email_profile_list_update
+        )
+        self.profile_email_combo_box.currentIndexChanged.connect(
+            lambda: self.project_data_change_check(
+                self.profile_email_combo_box, "email_profile_name"
+            )
+        )
+        self.profile_email_layout.addWidget(self.profile_email_combo_box)
+
+        self.profile_email_layout.setStretch(
+            self.profile_email_layout.indexOf(self.profile_email_combo_box), 6
+        )
+        self.main_layout.addLayout(self.profile_email_layout)
+
         self.project_data_email_lists_layout = QtWidgets.QHBoxLayout()
         self.project_data_email_to_layout = QtWidgets.QVBoxLayout()
 
@@ -295,6 +323,12 @@ class DataViewerView(QtWidgets.QWidget):
             self.project_data_email_bcc_layout
         )
         self.main_layout.addLayout(self.project_data_email_lists_layout)
+
+        # Line above buttons
+        self.cta_button_line_layout = QtWidgets.QHBoxLayout()
+        self.cta_button_line = utility_widgets.HorizontalLine()
+        self.cta_button_line_layout.addWidget(self.cta_button_line)
+        self.main_layout.addLayout(self.cta_button_line_layout)
 
         self.project_data_bottom_cta_layout = QtWidgets.QHBoxLayout()
 
@@ -387,6 +421,9 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.database_delete_project_data_button.setText(
             _translate("MainWindow", "Delete Entry")
+        )
+        self.profile_email_label.setText(
+            _translate("MainWindow", "Project Email Profile:")
         )
 
     def database_project_directory(self):
@@ -493,6 +530,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_email_to_list_widget.clear()
         self.database_email_cc_list_widget.clear()
         self.database_email_bcc_list_widget.clear()
+        self.profile_email_combo_box.setCurrentIndex(0)
 
     def save_button_reset_change_entry(self):
         self._adding_new_entry = False
@@ -611,6 +649,7 @@ class DataViewerView(QtWidgets.QWidget):
             "email_cc": self.database_viewer_table.item(current_row, 3).text(),
             "email_bcc": self.database_viewer_table.item(current_row, 4).text(),
             "email_subject": self.database_viewer_table.item(current_row, 5).text(),
+            "email_profile_name": self.database_viewer_table.item(current_row, 6).text(),
         }
         self.database_populate_project_edit_fields()
         self.database_viewer_table.currentItemChanged.connect(
@@ -650,6 +689,14 @@ class DataViewerView(QtWidgets.QWidget):
                     email_address_item.flags() | QtCore.Qt.ItemIsEditable
                 )
                 widget.addItem(email_address_item)
+        
+        # Set the email profile combo box to the correct profile
+        email_profile_name = self._project_data_loaded_data["email_profile_name"]
+        index = self.profile_email_combo_box.findText(email_profile_name)
+        if index != -1:
+            self.profile_email_combo_box.setCurrentIndex(index)
+        else:
+            self.profile_email_combo_box.setCurrentIndex(0)
 
     def project_data_change_check(self, widget, project_data_type):
         # Multiple widgets need to be checked so if the passed widget is a QtLineEdit then just get the text
@@ -657,12 +704,14 @@ class DataViewerView(QtWidgets.QWidget):
         # to compare to the database/table result
         if isinstance(widget, QtWidgets.QLineEdit):
             new_text = widget.text()
-        else:
+        elif isinstance(widget, QtWidgets.QListWidget):
             item_texts = []
             for i in range(widget.count()):
                 if widget.item(i).text():
                     item_texts.append(widget.item(i).text())
             new_text = "; ".join(item_texts)
+        elif isinstance(widget, QtWidgets.QComboBox):
+            new_text = widget.currentText()
 
         # If there is no data loaded yet, a user hasn't selected a cell yet. So if theres new text, they are adding a new entry
         if not self._project_data_loaded_data and new_text:
@@ -736,6 +785,9 @@ class DataViewerView(QtWidgets.QWidget):
         new_project_data[
             "email_subject"
         ] = self.database_project_email_subject_line_edit.text()
+        new_project_data[
+            "email_profile_name"
+        ] = self.profile_email_combo_box.currentText()
         
         return new_project_data
 
@@ -761,6 +813,7 @@ class DataViewerView(QtWidgets.QWidget):
             "email_cc": None,
             "email_bcc": None,
             "email_subject": None,
+            "email_profile_name": None,
         }
         self._adding_new_entry = True
         self._project_data_changed = False
@@ -787,3 +840,12 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_save_edited_project_data_button.setEnabled(False)
         self.view_model.database_save_new_project_data(new_project_data)
         self.view_model.update_data_table()
+
+    def handle_email_profile_list_update(self):
+        email_list = self.view_model.email_profile_list
+        current_email_name = self.profile_email_combo_box.currentText()
+        self.profile_email_combo_box.clear()
+        self.profile_email_combo_box.addItems(email_list)
+        self.profile_email_combo_box.setCurrentIndex(
+            self.profile_email_combo_box.findText(current_email_name)
+        )
