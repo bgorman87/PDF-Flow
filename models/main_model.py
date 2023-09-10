@@ -403,6 +403,8 @@ class MainModel(QtCore.QObject):
             project_numbers = (
                 connection.cursor().execute(project_numbers_query).fetchall()
             )
+        if project_numbers:
+            project_numbers = [project_number[0] for project_number in project_numbers]
         return project_numbers
 
     def fetch_all_project_directories(self) -> list[str]:
@@ -411,6 +413,10 @@ class MainModel(QtCore.QObject):
             project_directories = (
                 connection.cursor().execute(project_directories_query).fetchall()
             )
+        if project_directories:
+            project_directories = [
+                project_directory[0] for project_directory in project_directories
+            ]
         return project_directories
 
     def fetch_project_data_table_headers(self) -> list[str]:
@@ -640,6 +646,18 @@ class MainModel(QtCore.QObject):
             profile_data = ""
         return profile_data
     
+    def fetch_email_profile_name_by_project_number(self, project_number: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            profile_query = """SELECT email_profile_name FROM project_data WHERE project_number=?;"""
+            profile_data = (
+                connection.cursor().execute(profile_query, (project_number,)).fetchone()
+            )
+        if profile_data:
+            profile_data = profile_data[0]
+        else:
+            profile_data = ""
+        return profile_data
+    
     def update_email_profile_by_profile_id(self, profile_id: int, email_profile_name: str):
         with self.db_connection(self.database_path) as connection:
             profile_query = """UPDATE profiles SET email_profile_name=? WHERE profile_id=?;"""
@@ -653,6 +671,18 @@ class MainModel(QtCore.QObject):
             connection.cursor().execute(profile_query, (email_profile_name, project_id))
             connection.commit()
         return
+    
+    def fetch_email_template_info_by_email_template_name(self, email_template_name: str) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            profile_query = """SELECT email_subject, email_body FROM email_templates WHERE email_template_name=?;"""
+            profile_data = (
+                connection.cursor().execute(profile_query, (email_template_name,)).fetchone()
+            )
+        if profile_data:
+            profile_data = profile_data
+        else:
+            profile_data = []
+        return profile_data
 
 
 class ImportProjectDataThread(QtCore.QRunnable):

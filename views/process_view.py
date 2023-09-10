@@ -1,7 +1,9 @@
-from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets
+from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets, QtGui
 
 from view_models import process_view_model
 from widgets import utility_widgets
+from utils.utils import resource_path
+from utils.enums import EmailProvider
 
 
 class ProcessView(QtWidgets.QWidget):
@@ -31,7 +33,7 @@ class ProcessView(QtWidgets.QWidget):
 
         # Action button to start email process
         self.email_button = QtWidgets.QPushButton()
-        # self.email_button.clicked.connect(self.email_button_handler)
+        self.email_button.clicked.connect(self.get_email_provider)
         self.email_button.setObjectName("email_button")
         self.email_button.setEnabled(False)
         self.input_tab_action_buttons.addWidget(self.email_button)
@@ -96,7 +98,7 @@ class ProcessView(QtWidgets.QWidget):
 
         # Action button to call rename function
         self.file_rename_button = QtWidgets.QPushButton()
-        # self.file_rename_button.clicked.connect(self.file_rename_button_handler)
+        self.file_rename_button.clicked.connect(self.file_rename_button_handler)
         self.file_rename_button.setObjectName("file_rename_button")
         self.file_rename_layout.addWidget(self.file_rename_button)
         self.file_rename_layout.setStretch(
@@ -198,3 +200,85 @@ class ProcessView(QtWidgets.QWidget):
 
     def add_processed_list_widget_item(self, list_item: QtWidgets.QListWidgetItem):
         self.processed_files_list_widget.addItem(list_item)
+        self.email_button_handler()
+
+    def file_rename_button_handler(self):
+        current_item = self.processed_files_list_widget.currentItem()
+        current_name = current_item.text()
+        new_name = self.file_rename_line_edit.text()
+
+        if new_name == current_name:
+            return
+        
+        file_data = current_item.data(QtCore.Qt.UserRole)
+
+        source_path = file_data["source"]
+        renamed_source_path = source_path.replace(current_name, new_name)
+        renamed = self.view_model.rename_file(source_path, renamed_source_path)
+
+        if renamed:
+            file_data["source"] = renamed_source_path
+
+        project_data_path = file_data["project_data"]
+        renamed_project_data_path = project_data_path.replace(current_name, new_name)
+        renamed = self.view_model.rename_file(project_data_path, renamed_project_data_path)
+
+        if renamed:
+            file_data["project_data"] = renamed_project_data_path
+
+        self.processed_files_list_widget.currentItem().setText(
+            self.file_rename_line_edit.text()
+        )
+        self.processed_files_list_widget.currentItem().setData(
+            QtCore.Qt.UserRole, file_data
+        )
+
+    def email_button_handler(self):
+        if self.processed_files_list_widget.count() == 0:
+            self.email_button.setEnabled(False)
+            return
+        else:
+            self.email_button.setEnabled(True)
+            return
+        
+    def email_processed_files(self, email_provider: EmailProvider):
+        email_items = []
+        for index in range(self.processed_files_list_widget.count()):
+            email_items.append(self.processed_files_list_widget.item(index))
+        self.view_model.email_files(email_items, email_provider)
+
+    def get_email_provider(self):
+        # Display a popup to choose between outlook or gmail with the logos
+        # the two buttons should be vertically stacked
+
+        popup = QtWidgets.QDialog()
+        popup.setWindowTitle("Choose Email Provider")
+    
+        popup_layout = QtWidgets.QVBoxLayout()
+        popup.setLayout(popup_layout)
+
+        outlook_button = QtWidgets.QPushButton()
+        outlook_button.setIcon(
+            QtGui.QIcon(resource_path("assets/icons/outlook.png"))
+        )
+        outlook_button.setIconSize(QtCore.QSize(215, 41))
+        outlook_button.clicked.connect(lambda: self.email_handler(EmailProvider.OUTLOOK))
+        outlook_button.clicked.connect(popup.accept)
+        popup_layout.addWidget(outlook_button)
+
+        gmail_button = QtWidgets.QPushButton()
+        gmail_button.setIcon(
+            QtGui.QIcon(resource_path("assets/icons/gmail.png"))
+        )
+        gmail_button.setIconSize(QtCore.QSize(215, 46))
+        gmail_button.clicked.connect(lambda: self.email_handler(EmailProvider.GMAIL))
+        gmail_button.clicked.connect(popup.accept)
+        popup_layout.addWidget(gmail_button)
+
+        popup.exec()
+
+    def email_handler(self, email_provider: EmailProvider):
+        if email_provider == EmailProvider.OUTLOOK and self.view_model.get_outlook_token():
+            self.email_processed_files(EmailProvider.OUTLOOK)
+        elif email_provider == EmailProvider.GMAIL and self.view_model.get_gmail_token():
+            self.email_processed_files(EmailProvider.GMAIL)
