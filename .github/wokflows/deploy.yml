@@ -1,0 +1,46 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Package Application Windows
+      uses: JackMcKew/pyinstaller-action-windows@main
+      with:
+        path: src
+
+    - name: PyInstaller Linux
+      uses: JackMcKew/pyinstaller-action-linux@python3.10
+      with:
+        path: src
+
+    - name: List Linux Build Artifacts
+      run: |
+        ls src/dist/linux/
+      working-directory: .
+
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli
+      if: runner.os == 'Linux'
+
+    - name: Deploy to S3
+      run: |
+        aws s3 cp "src/dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
+        aws s3 cp "src/dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
+      working-directory: .
