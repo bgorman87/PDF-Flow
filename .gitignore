@@ -12,7 +12,6 @@ venv/
 # PyInstaller Files
 build/
 dist/
-*.spec
 
 # Database
 database/
