@@ -87,7 +87,20 @@ class ProcessViewModel(QtCore.QObject):
     def process_files(self):
         """Processes the selected files"""
         self.main_view_model.set_process_progress_bar_text("Processing... %p%")
+
         # For each file create a new thread to increase performance
+        # Threads come with a cost though so we don't want to create too many
+        # 50% of the total seems to be a good balance
+        # Processing data comparison (Avg of 5 runs)
+        # 100% Threads - 18 Files: 132s
+        # 80% Threads - 18 Files: 9.6s
+        # 70% Threads - 18 Files: 4.6s
+        # 60% Threads - 18 Files: 3.0s
+        # 50% Threads - 18 Files: 2.8s
+        # 25% Threads - 18 Files: 4.9s
+        max_threads = int(os.cpu_count() * 0.5)
+        self._thread_pool.setMaxThreadCount(max_threads)
+
         for file_name in self._file_names:
             self.analyze_worker = utils.WorkerAnalyzeThread(
                 file_name=file_name, main_view_model=self.main_view_model
@@ -99,6 +112,7 @@ class ProcessViewModel(QtCore.QObject):
                 self.evt_analyze_complete
             )
             self._thread_pool.start(self.analyze_worker)
+
             self.evt_analyze_progress(10)
         self.main_view_model.set_process_button_count(0)
 
@@ -143,7 +157,7 @@ class ProcessViewModel(QtCore.QObject):
         self.main_view_model.set_process_progress_bar_value(
             int(self._progress / len(self._file_names))
         )
-        if self._progress >= 100:
+        if int(self._progress / len(self._file_names)) >= 100:
             self.main_view_model.set_process_progress_bar_text("Processing Complete.")
 
     def evt_analyze_complete(self, results: list[str]):
@@ -235,7 +249,7 @@ class ProcessViewModel(QtCore.QObject):
             self._token = result["access_token"]
             return True
 
-    def get_gmail_token(self):
+    def get_gmail_token(self) -> bool:
         SCOPES = ['https://www.googleapis.com/auth/gmail.compose']
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
