@@ -69,7 +69,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     @QtCore.Slot()
     def run(self):
-        # debugpy.debug_this_thread()
+        debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True)
@@ -92,7 +92,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             file_title = self.file.replace(
                 self.file_dir_path, "").replace(".pdf", "")
             print_string = f"No profile found for: {file_title}.pdf"
-            returns = [print_string, file_title, self.file, None]
+            returns = [print_string, file_title, self.file, None, None, file_type]
             self.signals.analysis_progress.emit(90)
             self.signals.analysis_result.emit(returns)
             return
@@ -122,7 +122,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         file_pattern = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             file_type)
 
-        # If no file pattern just add each paramater value seperated by hyphen
+        # If no file pattern just add each parameter value separated by hyphen
         # else format according to supplied pattern
         if file_pattern is None:
             new_file_name = f"{doc_number}"
@@ -164,14 +164,15 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 else:
                     self.main_view_model.add_console_text(f"Error copying {file_name} to project directory: {rename_path_project_dir}")
                 self.main_view_model.add_console_alerts(1)
+            except shutil.SameFileError as e:
+                pass
 
 
-        rename_project_data_path = os.path.abspath(
-            os.path.join(rename_path_project_dir, new_file_name + ".pdf"))
+        rename_project_data_path = os.path.join(rename_path_project_dir, new_file_name + ".pdf")
         prev_file_name = self.file.split("/")[-1]
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [print_string, new_file_name,
-                   rename_path, rename_project_data_path]
+                   rename_path, rename_project_data_path, project_number, file_type]
         self.signals.analysis_progress.emit(90)
         self.signals.analysis_result.emit(returns)
 
@@ -244,9 +245,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()
 
-# TODO : Look at speeding this up. Big time sink when folders have hundreds of files and analyzing multiple files at once.
-
-
+# TODO : Look at speeding this up. Big time sink when folders have hundreds of files and analyzing multiple files at once.\
+# Chances
 def detect_package_number(file_path: str, project_file_path: str) -> str:
     """Checks project_file_path directory for all pdf files to determine the current document number. If unable it'll resort to checking file_path.
 
