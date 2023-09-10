@@ -21,16 +21,16 @@ jobs:
     - name: Package Application Windows
       uses: JackMcKew/pyinstaller-action-windows@main
       with:
-        path: src
+        path: .
 
     - name: PyInstaller Linux
       uses: JackMcKew/pyinstaller-action-linux@python3.10
       with:
-        path: src
+        path: .
 
     - name: List Linux Build Artifacts
       run: |
-        ls src/dist/linux/
+        ls dist/linux/
       working-directory: .
 
     - name: Install AWS CLI
@@ -41,6 +41,6 @@ jobs:
 
     - name: Deploy to S3
       run: |
-        aws s3 cp "src/dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
-        aws s3 cp "src/dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
+        aws s3 cp "dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
+        aws s3 cp "dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
       working-directory: .
