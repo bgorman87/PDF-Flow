@@ -385,4 +385,23 @@ class DataViewerViewModel(QtCore.QObject):
     def email_profile_list(self):
         return self._email_profile_list
     
+    def display_tooltip(self, text: str):
+        message_box_window_title = "Email Information"
+        severity_icon = QtWidgets.QMessageBox.Information
+        text_body = f"{text}"
+        buttons = ["Close"]
+        button_roles = [QtWidgets.QMessageBox.YesRole]
+        callback = [None]
+        message_box_dict = {
+            "title": message_box_window_title,
+            "icon": severity_icon,
+            "text": text_body,
+            "buttons": buttons,
+            "button_roles": button_roles,
+            "callback": callback,
+        }
+        
+        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+
+    
     
