@@ -4,12 +4,10 @@ import requests
 import msal
 import mimetypes
 
-from google.auth.transport.requests import Request
 from google.auth.exceptions import GoogleAuthError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 from email.message import EmailMessage
 from email.mime.audio import MIMEAudio
@@ -19,10 +17,11 @@ from email.mime.text import MIMEText
 
 from PySide6 import QtCore, QtWidgets
 
-from functions import analysis
+
 from view_models import main_view_model
 from utils.enums import EmailProvider
-from utils.utils import FauxResponse
+from utils import utils
+
 
 
 class ProcessViewModel(QtCore.QObject):
@@ -90,7 +89,7 @@ class ProcessViewModel(QtCore.QObject):
         self.main_view_model.set_process_progress_bar_text("Processing... %p%")
         # For each file create a new thread to increase performance
         for file_name in self._file_names:
-            self.analyze_worker = analysis.WorkerAnalyzeThread(
+            self.analyze_worker = utils.WorkerAnalyzeThread(
                 file_name=file_name, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_progress.connect(
@@ -108,7 +107,7 @@ class ProcessViewModel(QtCore.QObject):
 
         file_dirs = list_widget_item.data(QtCore.Qt.UserRole)
         source_dir = file_dirs["source"].replace("\\", "/")
-        # TODO: If doesnt exist remove from list widget and add
+        # TODO: If doesn't exist remove from list widget and add
         # notice to the console
         # if not os.path.exists(source_dir):
         # self.processed_files_list_widget.takeItem(
@@ -482,9 +481,9 @@ class ProcessViewModel(QtCore.QObject):
             }
             service.users().drafts().create(userId='me', body=draft_body).execute()
 
-            return FauxResponse(201, "success")
+            return utils.FauxResponse(201, "success")
         except Exception as e:
-            return FauxResponse(500, e)
+            return utils.FauxResponse(500, e)
 
     def build_file_part(self, file):
         """Creates a MIME part for a file.
@@ -516,3 +515,5 @@ class ProcessViewModel(QtCore.QObject):
         filename = os.path.basename(file)
         msg.add_header('Content-Disposition', 'attachment', filename=filename)
         return msg
+    
+
