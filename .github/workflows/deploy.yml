@@ -18,10 +18,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli
+      if: runner.os == 'Linux'
+
     - name: Package Application Windows
       uses: JackMcKew/pyinstaller-action-windows@main
       with:
         path: .
+
+    - name: Deploy Windows to S3
+      run: |
+        aws s3 cp "dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
+      working-directory: .
 
     - name: PyInstaller Linux
       uses: JackMcKew/pyinstaller-action-linux@python3.10
@@ -33,14 +44,7 @@ jobs:
         ls dist/linux/
       working-directory: .
 
-    - name: Install AWS CLI
+    - name: Deploy Linux to S3
       run: |
-        sudo apt-get update
-        sudo apt-get install awscli
-      if: runner.os == 'Linux'
-
-    - name: Deploy to S3
-      run: |
-        aws s3 cp "dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
         aws s3 cp "dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
       working-directory: .
