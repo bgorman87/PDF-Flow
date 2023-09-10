@@ -5,7 +5,6 @@ import regex as re
 from PySide6 import QtCore
 from pdf2image import convert_from_path
 import io
-import debugpy
 import random
 import shutil
 import pytesseract
@@ -94,7 +93,6 @@ class AnalysisSignals(QtCore.QObject):
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
 
-
     def __init__(self, file_name: str, main_view_model, template: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
@@ -105,7 +103,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     @QtCore.Slot()
     def run(self):
-        debugpy.debug_this_thread()
+        # debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True)

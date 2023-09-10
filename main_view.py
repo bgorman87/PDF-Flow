@@ -61,7 +61,7 @@ class MainView(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(screen.width() // 2, screen.height())
         self.main_view_model.window_size_update.connect(self.resize)
-        self.center_application(screen)
+        # self.center_application(screen)
 
     def show_message_alert(self, message_box_dict: dict):
         self.message_box = message_box_view.MessageBoxView(

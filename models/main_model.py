@@ -4,7 +4,7 @@ import os
 import sqlite3
 import typing
 
-import debugpy
+# import debugpy
 from PySide6 import QtCore
 from widgets import loading_widget
 
@@ -24,7 +24,7 @@ class MainModel(QtCore.QObject):
         self.database_path = resource_path("database/db.sqlite3")
         self.database_folder = resource_path(
             "database"
-        )  # I dont feel like splitting database_path
+        )
         self.import_data = None
         self._thread_pool = QtCore.QThreadPool()
 
