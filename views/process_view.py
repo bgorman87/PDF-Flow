@@ -176,7 +176,7 @@ class ProcessView(QtWidgets.QWidget):
         self.file_rename_line_edit.setText(pdf_name)
 
     def rename_file_handler(self):
-        """Closes persistant editor if open"""
+        """Closes persistent editor if open"""
 
         if self.processed_files_list_widget.isPersistentEditorOpen(
             self.processed_files_list_widget.currentItem()
