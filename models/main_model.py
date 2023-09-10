@@ -8,7 +8,7 @@ import debugpy
 from PySide6 import QtCore
 from widgets import loading_widget
 
-from utils import utils
+from utils.utils import resource_path
 
 
 class MainModel(QtCore.QObject):
@@ -21,8 +21,8 @@ class MainModel(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
-        self.database_path = utils.resource_path("database/db.sqlite3")
-        self.database_folder = utils.resource_path(
+        self.database_path = resource_path("database/db.sqlite3")
+        self.database_folder = resource_path(
             "database"
         )  # I dont feel like splitting database_path
         self.import_data = None

@@ -40,7 +40,6 @@ class MainViewModel(QtCore.QObject):
         self.process_button_state = True
         self.process_button_count = 0
 
-
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
         self.console_text_update.emit()

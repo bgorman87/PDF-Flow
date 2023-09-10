@@ -5,7 +5,7 @@ from typing import NamedTuple
 import pdf2image
 from PySide6 import QtCore, QtWidgets
 
-from functions import analysis
+from utils import utils
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
@@ -51,7 +51,7 @@ class TemplateViewModel(QtCore.QObject):
             self.progress_popup = loading_widget.LoadingWidget(
                 title="Template Check", text="Comparing file to existing profiles..."
             )
-            self.analyze_worker = analysis.WorkerAnalyzeThread(
+            self.analyze_worker = utils.WorkerAnalyzeThread(
                 file_name=self._file_profile_path,
                 template=True,
                 main_view_model=self.main_view_model
@@ -117,7 +117,7 @@ class TemplateViewModel(QtCore.QObject):
         self._image_jpeg = pdf2image.convert_from_path(
             self._file_profile_path,
             fmt="jpeg",
-            poppler_path=analysis.poppler_path,
+            poppler_path=utils.poppler_path,
             single_file=True,
         )
         self._img_byte_arr = io.BytesIO()
