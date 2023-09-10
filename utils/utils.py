@@ -13,3 +13,8 @@ def resource_path(relative_path: str) -> str:
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath('.'), relative_path)
+
+class FauxResponse():
+    def __init__(self, status_code: int, text: str):
+        self.status_code = status_code
+        self.text = text

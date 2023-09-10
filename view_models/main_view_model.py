@@ -72,8 +72,8 @@ class MainViewModel(QtCore.QObject):
     def fetch_parameter_id_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> int:
         return self.main_model.fetch_parameter_id_by_name(profile_id=profile_id, parameter_name=parameter_name)
 
-    def set_emailed_files_update_count(self, emailed_files_count: int) -> None:
-        self.emailed_files_count = emailed_files_count
+    def update_emailed_files_update_count(self, emailed_files_count: int) -> None:
+        self.emailed_files_count += emailed_files_count
         self.emailed_files_count_update.emit()
 
     def set_process_progress_bar_text(self, text: str) -> None:
@@ -273,3 +273,8 @@ class MainViewModel(QtCore.QObject):
     def fetch_email_profile_name_by_profile_id(self, profile_id: int) -> str:
         return self.main_model.fetch_email_profile_name_by_profile_id(profile_id=profile_id)
     
+    def fetch_email_profile_name_by_project_number(self, project_number: str) -> str:
+        return self.main_model.fetch_email_profile_name_by_project_number(project_number=project_number)
+    
+    def fetch_email_template_info_by_email_template_name(self, email_template_name: str) -> list[str]:
+        return self.main_model.fetch_email_template_info_by_email_template_name(email_template_name=email_template_name)

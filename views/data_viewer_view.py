@@ -2,6 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from view_models import data_viewer_view_model
 from widgets import email_list_widget, utility_widgets
+from utils import utils
 
 
 class DataViewerView(QtWidgets.QWidget):
@@ -218,6 +219,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.profile_email_combo_box.setObjectName(
             "profile_email_combo_box"
         )
+    
         self.view_model.email_profile_list_update.connect(
             self.handle_email_profile_list_update
         )
@@ -227,6 +229,25 @@ class DataViewerView(QtWidgets.QWidget):
             )
         )
         self.profile_email_layout.addWidget(self.profile_email_combo_box)
+
+        self.profile_email_combo_box_helper = QtWidgets.QPushButton()
+        self.profile_email_combo_box_helper.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(utils.resource_path(u"assets/icons/tooltip.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.profile_email_combo_box_helper.setIcon(icon)
+        self.profile_email_combo_box_helper.setProperty("class", "invert-icon")
+        self.profile_email_combo_box_helper.setIconSize(QtCore.QSize(12, 12))
+
+        self.profile_email_combo_box_helper.setObjectName(
+            "profile_email_combo_box_helper"
+        )
+        self.profile_email_combo_box_helper.setToolTip(
+            "Tip: Defined project specific email template will take precedence over profile email template."
+        )
+        self.profile_email_combo_box_helper.clicked.connect(
+            self.display_tooltip
+        )
+        self.profile_email_layout.addWidget(self.profile_email_combo_box_helper)
 
         self.profile_email_layout.setStretch(
             self.profile_email_layout.indexOf(self.profile_email_combo_box), 6
@@ -849,3 +870,9 @@ class DataViewerView(QtWidgets.QWidget):
         self.profile_email_combo_box.setCurrentIndex(
             self.profile_email_combo_box.findText(current_email_name)
         )
+
+    def display_tooltip(self):
+        text = "If an email template is chosen for a project, it will take precedence over the specific file type email template defined in the 'File Name' tab.\n"\
+        "\nLeave this blank to use the specific file type email template."
+
+        self.view_model.display_tooltip(text=text)
