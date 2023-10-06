@@ -94,20 +94,6 @@ QPushButton:disabled {
     background-color: #5c5c5c;
 }
 
-QPushButton.chosen-nav-button {
-    background-color: #6a6a6a !important;
-    color: white;
-    padding: 10px;
-    padding-bottom: 5px;
-    padding-top: 5px;
-    margin: 0;
-    border: 0px;
-    border-left: 10px solid #66bb6a !important;
-    border-radius: 0;
-    text-align: left;
-    width: 100%;
-}
-
 QPushButton.nav-button {
     background-color: #4a4a4a;
     color: white;
@@ -129,6 +115,21 @@ QPushButton.nav-button:hover {
     background-color: #6a6a6a;
     border-left: 10px solid #66bb6a;
 }
+
+QPushButton.nav-button-active {
+    background-color: #6a6a6a;
+    color: white;
+    padding: 10px;
+    padding-bottom: 5px;
+    padding-top: 5px;
+    margin: 0;
+    border: 0px;
+    border-radius: 0;
+    text-align: left;
+    width: 100%;
+    border-left: 10px solid #66bb6a;
+}
+
 
 QComboBox {
     background-color: #4c4c4c;
