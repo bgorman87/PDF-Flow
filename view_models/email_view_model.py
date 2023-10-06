@@ -1,7 +1,11 @@
-from PySide6 import QtCore, QtWidgets
 import os
 import shutil
+import uuid
+import base64
 
+from io import BytesIO
+from lxml import html
+from PySide6 import QtCore, QtWidgets
 from view_models import main_view_model
 
 
@@ -110,9 +114,7 @@ class EmailViewModel(QtCore.QObject):
         # Update the email profile combo box
         directory = self.main_view_model.get_email_directory()
         email_folder = os.path.join(directory, self._email_profile_names[self._loaded_email_index])
-        email_html_file = os.path.join(email_folder, "email.html")
-        with open(email_html_file, "w") as f:
-            f.write(self.email_raw_html)
+        self.save_email_signature(email_folder)
         
         self._text_changed = False
         self._loaded_raw_html = self.email_raw_html
@@ -159,9 +161,10 @@ class EmailViewModel(QtCore.QObject):
             return
 
         # Save the html data to the new directory
-        html_file = os.path.join(new_directory, "email.html")
-        with open(html_file, "w") as f:
-            f.write(self.email_raw_html)
+        self.save_email_signature(new_directory)
+        # html_file = os.path.join(new_directory, "email.html")
+        # with open(html_file, "w") as f:
+        #     f.write(self.email_raw_html)
         
         # Update the email profile names
         self._text_changed = False
@@ -169,7 +172,57 @@ class EmailViewModel(QtCore.QObject):
         self.main_view_model.update_email_profile_names(self._email_profile_names)
         self.set_current_index(self._email_profile_names.index(profile_name))
         self.email_list_update.emit()
+
+    def save_email_signature(self, new_directory: str):
+        """Parses the email html and saves all images to the new directory and updates the src attribute to point to the new image location.
+
+        Args:
+            new_directory (str): Path to the signature directory
+        """        
+
+        root = html.fromstring(self.email_raw_html)
+
+        for img_tag in root.xpath('//img'):
+            src = img_tag.get('src')
+            
+            # Check if the image is base64 encoded
+            if src.startswith("data:image/"):
+                # Extracting the file type and base64 data
+                file_type = src.split(";")[0].split("/")[-1]
+                base64_data = src.split(",")[1]
+                
+                # Decoding the base64 data to get the image
+                image_data = base64.b64decode(base64_data)
+                
+                # Generating a random filename with the identified file type
+                random_filename = f"{uuid.uuid4()}.{file_type}"
+                new_img_path = os.path.join(new_directory, random_filename)
+                
+                # Saving the image to the new directory
+                with open(new_img_path, 'wb') as f:
+                    f.write(image_data)
+                
+                # Update the src attribute to point to the new image location
+                img_tag.set('src', new_img_path)
+
+            # If the image is not base64 encoded
+            elif not "://" in src: # This ensures it's a local path and not an external URL
+                # Generate a random filename while preserving the image's extension
+                extension = os.path.splitext(src)[1]
+                random_filename = f"{uuid.uuid4()}{extension}"
+                new_img_path = os.path.join(new_directory, random_filename)
+
+                # Copy the image to the new directory
+                shutil.copy2(src, new_img_path)
+
+                # Update the src attribute to point to the new image location
+                img_tag.set('src', new_img_path)
+
+        self.email_raw_html = html.tostring(root, encoding="unicode")
         
+        html_file = os.path.join(new_directory, "email.html")
+        with open(html_file, "w") as f:
+            f.write(self.email_raw_html)
 
 
     def email_text_changed(self, raw_html: str, plain_text: str):
