@@ -84,16 +84,11 @@ class TemplateWidget(QtWidgets.QWidget):
             for data in self.data_info:
                 data_rect = QtCore.QRect(QtCore.QPoint(int(data[0]*self.width_ratio), int(
                     data[2]*self.height_ratio)), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[3]*self.height_ratio)))
-                text_rect = QtCore.QRectF(QtCore.QPoint(int(data[0]*self.width_ratio), int(
-                    data[2]*self.height_ratio)-20), QtCore.QPoint(int(data[1]*self.width_ratio), int(data[2]*self.height_ratio)))
-                data_pen = QtGui.QPen(QtGui.QColor(
-                    255, 165, 0), 3, QtCore.Qt.DashLine)
-                painter.setPen(data_pen)
-                painter.drawRect(data_rect)
-                text_option = QtGui.QTextOption(
-                    QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                text_option.setWrapMode(QtGui.QTextOption.NoWrap)
-                painter.drawText(text_rect, data[-1], text_option)
+                text_height = 20  # or any other value that fits your text size
+                text_rect = QtCore.QRectF(
+                    QtCore.QPoint(int(data[0]*self.width_ratio), int(data[2]*self.height_ratio) - text_height),
+                    QtCore.QPoint(int(data[1]*self.width_ratio), int(data[2]*self.height_ratio)))
+                self.paint_box_and_text(painter, data_rect, text_rect, data[-1], QtGui.QColor(255, 165, 0))
         if self.profile_rect_info != None:
             data_rect = QtCore.QRect(
                 QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
@@ -107,20 +102,44 @@ class TemplateWidget(QtWidgets.QWidget):
                 QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
                     self.profile_rect_info[2]*self.height_ratio))
             )
-            data_pen = QtGui.QPen(QtGui.QColor(
-                255, 125, 125), 3, QtCore.Qt.DashLine)
-            painter.setPen(data_pen)
-            painter.drawRect(data_rect)
-            text_option = QtGui.QTextOption(
-                QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            text_option.setWrapMode(QtGui.QTextOption.NoWrap)
-            painter.drawText(text_rect, f"Profile: " +
-                             self.profile_rect_info[-1], text_option)
+            profile_text = f"Profile: {self.profile_rect_info[-1]}"
+            self.paint_box_and_text(painter, data_rect, text_rect, profile_text, QtGui.QColor(255, 125, 125))
         if not self.begin.isNull() and not self.end.isNull():
             rect = QtCore.QRect(self.begin, self.end)
             pen = QtGui.QPen(QtCore.Qt.red, 3, QtCore.Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(rect)
+
+    def paint_box_and_text(self, painter: QtGui.QPainter, data_bounds: QtCore.QRect, text_bounds: QtCore.QRect, text: str, pen_color: QtGui.QColor):
+        
+        painter.setPen(QtCore.Qt.NoPen) 
+        painter.setBrush(QtCore.Qt.NoBrush)
+
+        # Draw the bounding box of the data
+        data_pen = QtGui.QPen(pen_color, 3, QtCore.Qt.DashLine)
+        painter.setPen(data_pen)
+        painter.drawRect(data_bounds)
+        
+        # Get font size and generate transparent backdrop
+        font_metrics = QtGui.QFontMetrics(painter.font())
+        text_width = font_metrics.boundingRect(text).width()
+        text_bounds.setRight(text_bounds.left() + text_width + 10)               
+        background_color = QtGui.QColor(0, 0, 0, 128)  # semi-transparent black
+        text_pen = QtGui.QPen(QtGui.QColor(255, 255, 255))
+        painter.setBrush(background_color)
+        painter.setPen(QtCore.Qt.NoPen)  # no border for the background rectangle
+        painter.drawRect(text_bounds)
+
+        # Add margin to text bounds and draw text
+        text_bounds.setLeft(text_bounds.left() + 5)  # add a left margin to the text
+        painter.setPen(text_pen)  # reset to the desired text color
+        text_option = QtGui.QTextOption(
+            QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        text_option.setWrapMode(QtGui.QTextOption.NoWrap)
+        painter.drawText(text_bounds, text, text_option)
+
+        painter.setPen(QtCore.Qt.NoPen) 
+        painter.setBrush(QtCore.Qt.NoBrush)
 
     def mousePressEvent(self, event):
         """Handles starting the creation of a new bounding box."""
