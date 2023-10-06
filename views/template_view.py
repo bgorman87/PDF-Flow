@@ -130,8 +130,8 @@ class TemplateView(QtWidgets.QWidget):
         self.template_display = file_template_creation.TemplateWidget(
             img_byte_arr, image)
         self.main_layout.addWidget(self.template_display)
-        self.update()
+        self.template_display.style().polish(self.template_display)
 
     def paint_existing_data_rects(self, parameter_rects: list[str], profile_rect: list[str]):
         self.template_display.set_data_info(parameter_rects, profile_rect)
-        self.template_display.update()
+        self.template_display.style().polish(self.template_display)
