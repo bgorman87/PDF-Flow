@@ -152,6 +152,8 @@ class ProcessView(QtWidgets.QWidget):
         self.translate_ui()
 
     def translate_ui(self):
+        """Translates UI"""
+        
         _translate = QtCore.QCoreApplication.translate
         self.select_files.setText(
             _translate("SettingsView", "Select Files")
@@ -167,11 +169,15 @@ class ProcessView(QtWidgets.QWidget):
             _translate("SettingsView", "File Previewer"))
 
     def display_pdf_preview(self):
+        """Displays PDF preview in webview"""
+
         pdf_dir = self.view_model.selected_file_dir
         self.file_preview.load(QtCore.QUrl(f"file:{pdf_dir}"))
         self.file_preview.show()
 
     def display_file_name(self):
+        """Displays file name in line edit"""
+        
         pdf_name = self.view_model.selected_file_name
         self.file_rename_line_edit.setText(pdf_name)
 
@@ -189,6 +195,11 @@ class ProcessView(QtWidgets.QWidget):
         )
 
     def process_button_text_update(self, value: int) -> None:
+        """Updates process button text
+
+        Args:
+            value (int): Number of files available to process
+        """
         if value == 0:
             button_text = "Process"
         elif value == 1:
@@ -199,10 +210,17 @@ class ProcessView(QtWidgets.QWidget):
         self.process_button.setText(button_text)
 
     def add_processed_list_widget_item(self, list_item: QtWidgets.QListWidgetItem):
+        """Adds item to list widget
+
+        Args:
+            list_item (QtWidgets.QListWidgetItem): Item to add to list widget
+        """
         self.processed_files_list_widget.addItem(list_item)
         self.email_button_handler()
 
     def file_rename_button_handler(self):
+        """Renames file in list widget and on disk"""
+        
         current_item = self.processed_files_list_widget.currentItem()
         current_name = current_item.text()
         new_name = self.file_rename_line_edit.text()
@@ -234,6 +252,8 @@ class ProcessView(QtWidgets.QWidget):
         )
 
     def email_button_handler(self):
+        """Enables email button if there are files to email, disables if not"""
+
         if self.processed_files_list_widget.count() == 0:
             self.email_button.setEnabled(False)
             return
@@ -242,12 +262,19 @@ class ProcessView(QtWidgets.QWidget):
             return
         
     def email_processed_files(self, email_provider: EmailProvider):
+        """Emails processed files
+
+        Args:
+            email_provider (EmailProvider): Email provider chosen by user
+        """
         email_items = []
         for index in range(self.processed_files_list_widget.count()):
             email_items.append(self.processed_files_list_widget.item(index))
         self.view_model.email_files(email_items, email_provider)
 
     def get_email_provider(self):
+        """Displays a popup for user to choose email client to send emails with"""
+        
         # Display a popup to choose between outlook or gmail with the logos
         # the two buttons should be vertically stacked
 
@@ -275,10 +302,26 @@ class ProcessView(QtWidgets.QWidget):
         gmail_button.clicked.connect(popup.accept)
         popup_layout.addWidget(gmail_button)
 
+        local_button = QtWidgets.QPushButton()
+        local_button.setIcon(
+            QtGui.QIcon(resource_path(self.view_model.get_local_email_icon_path()))
+        )
+        local_button.setIconSize(QtCore.QSize(215, 41))
+        local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL))
+        local_button.clicked.connect(popup.accept)
+        popup_layout.addWidget(local_button)
+
         popup.exec()
 
     def email_handler(self, email_provider: EmailProvider):
+        """Handles which email provider to use to send emails
+
+        Args:
+            email_provider (EmailProvider): Email provider chosen by user
+        """
         if email_provider == EmailProvider.OUTLOOK and self.view_model.get_outlook_token():
             self.email_processed_files(EmailProvider.OUTLOOK)
         elif email_provider == EmailProvider.GMAIL and self.view_model.get_gmail_token():
             self.email_processed_files(EmailProvider.GMAIL)
+        elif email_provider == EmailProvider.LOCAL:
+            self.email_processed_files(EmailProvider.LOCAL)
