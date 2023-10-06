@@ -39,6 +39,8 @@ class MainViewModel(QtCore.QObject):
         self.process_progress_value = 0
         self.process_button_state = True
         self.process_button_count = 0
+        self.os = os.sys.platform
+        self.version = "1.0.0"
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
