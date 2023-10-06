@@ -63,6 +63,19 @@ QPushButton {
     border-radius: 2px;
 }
 
+QPushButton.stats-button, QPushButton.program-info-button {
+    background-color: #4a4a4a;
+    color: white;
+    padding: 10px;
+    padding-bottom: 5px;
+    padding-top: 5px;
+    margin: 0;
+    border: 0px;
+    border-radius: 0;
+    text-align: left;
+    width: 100%;
+}
+
 QListWidget::item:selected:!editable, .email-list::item:selected:!editable {
     background-color: #66bb6a;
     color: #fff;
@@ -79,6 +92,10 @@ QListWidget::item {
 
 QPushButton:hover {
     background-color: #66bb6a;
+}
+
+QPushButton.stats-button:hover {
+    background-color: #4a4a4a;
 }
 
 QPushButton:pressed {

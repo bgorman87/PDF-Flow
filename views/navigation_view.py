@@ -101,6 +101,13 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.file_name_nav_button.setProperty("class", "nav-button")
         self.template_nav_button.setProperty("class", "nav-button")
         self.email_nav_button.setProperty("class", "nav-button")
+
+        self.processed_files_button.setProperty("class", "stats-button")
+        self.loaded_files_button.setProperty("class", "stats-button")
+        self.emailed_files_button.setProperty("class", "stats-button")
+
+        self.version_button.setProperty("class", "program-info-button")
+        self.feedback_button.setProperty("class", "program-info-button")
         
 
         self.process_nav_button.clicked.connect(
