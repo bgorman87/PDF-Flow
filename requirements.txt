@@ -18,7 +18,7 @@ idna==3.4
 lxml==4.9.3
 msal==1.23.0
 mypy-extensions==1.0.0
-numpy==1.24.1
+numpy==1.21.6
 oauthlib==3.2.2
 opencv-python==4.7.0.68
 packaging==23.0
