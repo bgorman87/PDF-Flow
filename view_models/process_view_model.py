@@ -27,7 +27,7 @@ from typing import List
 
 from view_models import main_view_model
 from utils.enums import EmailProvider
-from utils import utils
+from utils import image_utils, general_utils, path_utils
 
 
 
@@ -111,7 +111,7 @@ class ProcessViewModel(QtCore.QObject):
         self._thread_pool.setMaxThreadCount(max_threads)
 
         for file_name in self._file_names:
-            self.analyze_worker = utils.WorkerAnalyzeThread(
+            self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=file_name, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_progress.connect(
@@ -241,24 +241,17 @@ class ProcessViewModel(QtCore.QObject):
                 f"Email Authentication Error: {result['error']}"
             )
             self.main_view_model.add_console_alerts(1)
-            message_box_window_title = "Email Authentication Error"
-            severity_icon = QtWidgets.QMessageBox.Critical
-            text_body = f"Authentication Error: {result['error']}\nDescription: {result['error_description']}"
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [
+            message_box = general_utils.MessageBox()
+            message_box.title = "Email Authentication Error"
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.text = f"Authentication Error: {result['error']}\nDescription: {result['error_description']}"
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [
                 None,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
-
-            self.main_view_model.display_message_box(message_box_dict)
+            
+            self.main_view_model.display_message_box(message_box=message_box)
             return False
         else:
             self._token = result["access_token"]
@@ -281,24 +274,17 @@ class ProcessViewModel(QtCore.QObject):
                 f"Email Authentication Error: {e}"
             )
             self.main_view_model.add_console_alerts(1)
-            message_box_window_title = "Email Authentication Error"
-            severity_icon = QtWidgets.QMessageBox.Critical
-            text_body = f"Authentication Error: {e}"
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [
+            message_box = general_utils.MessageBox()
+            message_box.title = "Email Authentication Error"
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.text = f"Authentication Error: {e}"
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [
                 None,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
 
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box)
             return False
                 
         if credentials:
@@ -309,24 +295,17 @@ class ProcessViewModel(QtCore.QObject):
                 f"Email Authentication Error: Unexpected error occurred while confirming gmail credentials."
             )
             self.main_view_model.add_console_alerts(1)
-            message_box_window_title = "Email Authentication Error"
-            severity_icon = QtWidgets.QMessageBox.Critical
-            text_body = f"Authentication Error: Unexpected error occurred while confirming gmail credentials."
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [
+            message_box = general_utils.MessageBox()
+            message_box.title = "Email Authentication Error"
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.text = f"Authentication Error: Unexpected error occurred while confirming gmail credentials."
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [
                 None,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
-
-            self.main_view_model.display_message_box(message_box_dict)
+            
+            self.main_view_model.display_message_box(message_box)
             return False
 
     def email_files(self, email_items: List[QtWidgets.QListWidgetItem], email_provider: EmailProvider):
@@ -531,7 +510,7 @@ class ProcessViewModel(QtCore.QObject):
         bcc_recipients: List[str] = None,
         attachments: List[str] = None,
         email_template: str = None,
-    ) -> utils.FauxResponse:
+    ) -> general_utils.FauxResponse:
         """Creates a draft email in local mail client
 
         Args:
@@ -544,7 +523,7 @@ class ProcessViewModel(QtCore.QObject):
             email_template (str, optional): Name of email template used. Defaults to None.
 
         Returns:
-            utils.FauxResponse: Fake response mimicking requests.Response
+            general_utils.FauxResponse: Fake response mimicking requests.Response
         """
 
         if self.main_view_model.os == "win32":
@@ -561,16 +540,16 @@ class ProcessViewModel(QtCore.QObject):
                     mail.Attachments.Add(attachment)
                 mail.Save()
 
-                return utils.FauxResponse(201, "success")
+                return general_utils.FauxResponse(201, "success")
             except Exception as e:
-                return utils.FauxResponse(500, e)
+                return general_utils.FauxResponse(500, e)
         elif self.main_view_model.os == "linux":
             cmd = ["which", "thunderbird"]
             try:
                 # Check if thunderbird is installed
                 subprocess.run(cmd)
             except Exception:
-                return utils.FauxResponse(500, "Thunderbird installation not found. Please install Thunderbird to use this feature on this platform. Please notify the developer if you would like to see support for additional mail clients on this platform.")
+                return general_utils.FauxResponse(500, "Thunderbird installation not found. Please install Thunderbird to use this feature on this platform. Please notify the developer if you would like to see support for additional mail clients on this platform.")
             compose_str = f"to='{','.join(recipients)}',subject='{subject}'"
             # compose_str += f",message='{body_content}'"
             if cc_recipients:
@@ -582,9 +561,9 @@ class ProcessViewModel(QtCore.QObject):
 
             cmd = ["thunderbird", "-compose", compose_str]
             subprocess.run(cmd)
-            return utils.FauxResponse(201, "success")
+            return general_utils.FauxResponse(201, "success")
         else:
-            return utils.FauxResponse(500, "Local email not supported on this platform. Supported platforms are Windows and Linux. Please notify the developer if you would like to see support for this platform.")
+            return general_utils.FauxResponse(500, "Local email not supported on this platform. Supported platforms are Windows and Linux. Please notify the developer if you would like to see support for this platform.")
         
 
     def create_gmail_draft_email(
@@ -596,7 +575,7 @@ class ProcessViewModel(QtCore.QObject):
         bcc_recipients: List[str] = None,
         attachments: List[str] = None,
         email_template: str = None,
-    ) -> utils.FauxResponse:
+    ) -> general_utils.FauxResponse:
         """Creates a draft email in Gmail
 
         Args:
@@ -609,7 +588,7 @@ class ProcessViewModel(QtCore.QObject):
             email_template (str, optional): Name of email template used. Defaults to None.
 
         Returns:
-            utils.FauxResponse: Fake response mimicking requests.Response
+            general_utils.FauxResponse: Fake response mimicking requests.Response
         """
 
         # Create the Gmail API client
@@ -706,9 +685,9 @@ class ProcessViewModel(QtCore.QObject):
             }
             service.users().drafts().create(userId='me', body=draft_body).execute()
 
-            return utils.FauxResponse(201, "success")
+            return general_utils.FauxResponse(201, "success")
         except Exception as e:
-            return utils.FauxResponse(500, e)
+            return general_utils.FauxResponse(500, e)
 
     
     def get_local_email_icon_path(self) -> str:

@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from view_models import data_viewer_view_model
 from widgets import email_list_widget, utility_widgets
-from utils import utils
+from utils import path_utils
 
 
 class DataViewerView(QtWidgets.QWidget):
@@ -233,7 +233,7 @@ class DataViewerView(QtWidgets.QWidget):
         self.profile_email_combo_box_helper = QtWidgets.QPushButton()
         self.profile_email_combo_box_helper.setMaximumSize(QtCore.QSize(28, 28))
         icon = QtGui.QIcon()
-        icon.addFile(utils.resource_path(u"assets/icons/tooltip.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addFile(path_utils.resource_path(u"assets/icons/tooltip.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.profile_email_combo_box_helper.setIcon(icon)
         self.profile_email_combo_box_helper.setProperty("class", "invert-icon")
         self.profile_email_combo_box_helper.setIconSize(QtCore.QSize(12, 12))
@@ -583,7 +583,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         if self._project_data_changed or self._adding_new_entry:
              # Create a popup asking if user wants to discard changes
-            message_box_window_title = "Discard Changes"
+            message_box.title = "Discard Changes"
             severity_icon = QtWidgets.QMessageBox.Warning
             text_body = f"Are you sure you want to discard changes?"
             buttons = ["Discard", "Cancel"]
@@ -592,16 +592,9 @@ class DataViewerView(QtWidgets.QWidget):
                 self.handle_project_data_update,
                 self.reset_database_current_active_id,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
+            
 
-            self.view_model.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            self.view_model.main_view_model.display_message_box(message_box=message_box)
         else:
             self.handle_project_data_update()
 

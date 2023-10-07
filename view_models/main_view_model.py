@@ -5,13 +5,14 @@ from PySide6 import QtCore, QtWidgets
 from typing import Any
 from models import main_model
 from widgets import loading_widget
+from utils.general_utils import MessageBox
 
 
 class MainViewModel(QtCore.QObject):
 
     console_text_update = QtCore.Signal()
     stack_item_change_id = QtCore.Signal()
-    message_box_alert = QtCore.Signal(dict)
+    message_box_alert = QtCore.Signal(MessageBox)
     console_alerts_update = QtCore.Signal()
     loaded_files_count_update = QtCore.Signal()
     processed_files_update = QtCore.Signal()
@@ -113,8 +114,8 @@ class MainViewModel(QtCore.QObject):
     ) -> list[str]:
         return self.main_model.fetch_active_parameters_by_profile_id(profile_id=profile_id)
 
-    def display_message_box(self, message_box_dict: dict):
-        self.message_box_alert.emit(message_box_dict)
+    def display_message_box(self, message_box: dict):
+        self.message_box_alert.emit(message_box)
 
     def update_profile_used_count_by_profile_id(self, profile_id: int) -> None:
         self.main_model.update_profile_used_count_by_profile_id(

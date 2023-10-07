@@ -1,6 +1,7 @@
 from PySide6 import QtCore, QtWidgets
 
 from view_models import main_view_model
+from utils import general_utils
 
 
 class FileNameViewModel(QtCore.QObject):
@@ -138,28 +139,21 @@ class FileNameViewModel(QtCore.QObject):
         # Check current profile file naming scheme to see if one exists
         # Ask user if they want to overwrite if so then call update function
         if current_profile_file_name and current_profile_file_name != profile_name:
-            message_box_window_title = "File Name Pattern Already Found"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"Overwrite current pattern?\
+            message_box = general_utils.MessageBox()
+            message_box.title = "File Name Pattern Already Found"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"Overwrite current pattern?\
                     \n \
                     \n{current_profile_file_name} \
                     \n "
-            buttons = [
+            message_box.buttons = [
                 "Overwrite", "Cancel"]
-            button_roles = [QtWidgets.QMessageBox.YesRole,
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole,
                             QtWidgets.QMessageBox.RejectRole,]
-            callback = [lambda: self.apply_file_name_pattern(
+            message_box.callback = [lambda: self.apply_file_name_pattern(
                 profile_name=profile_name, email_profile_name=email_profile_name), None]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
 
-            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
         else:
             self.apply_file_name_pattern(profile_name=profile_name, email_profile_name=email_profile_name)
 
@@ -173,30 +167,23 @@ class FileNameViewModel(QtCore.QObject):
         )
         self.main_view_model.add_console_text(new_text=f"Updated file name pattern for profile '{profile_name}' to: {self._process_profile_file_name}")
         self.main_view_model.add_console_alerts(alerts=1)
-        message_box_window_title = "File Name Pattern Updated"
-        severity_icon = QtWidgets.QMessageBox.Information
-        text_body = f"Data for profile '{profile_name}' updated:\
+        message_box = general_utils.MessageBox()
+        message_box.title = "File Name Pattern Updated"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = f"Data for profile '{profile_name}' updated:\
                 \n"
         
         if self._process_profile_file_name:
-            text_body += f"\nFile name pattern set to '{self._process_profile_file_name}'"
+            message_box.text += f"\nFile name pattern set to '{self._process_profile_file_name}'"
         if email_profile_name:
-            text_body += f"\nEmail profile set to '{email_profile_name}'"
+            message_box.text += f"\nEmail profile set to '{email_profile_name}'"
 
-        buttons = [
+        message_box.buttons = [
             "Ok",]
-        button_roles = [QtWidgets.QMessageBox.YesRole,]
-        callback = [None,]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback
-        }
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole,]
+        message_box.callback = [None,]
 
-        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        self.main_view_model.display_message_box(message_box=message_box)
 
 
     def set_email_profile(self, combo_box_text: str) -> None:

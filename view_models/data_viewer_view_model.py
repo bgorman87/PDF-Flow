@@ -4,6 +4,7 @@ from PySide6 import QtCore, QtWidgets
 
 from view_models import main_view_model
 from widgets import loading_widget
+from utils import general_utils
 
 
 class DataViewerViewModel(QtCore.QObject):
@@ -65,28 +66,21 @@ class DataViewerViewModel(QtCore.QObject):
                     data_to_import.append(row)
             self.import_project_data(data_to_import=data_to_import)
         except csv.Error as e:
-            message_box_window_title = "Invalid Import File"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = f"File unable to be read as a csv.\n\n{e}"
-            buttons = [
+            message_box = general_utils.MessageBox()
+            message_box.title = "Invalid Import File"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = f"File unable to be read as a csv.\n\n{e}"
+            message_box.buttons = [
                 "Okay",
             ]
-            button_roles = [
+            message_box.button_roles = [
                 QtWidgets.QMessageBox.RejectRole,
             ]
-            callback = [
+            message_box.callback = [
                 None,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
 
-            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
 
     def import_project_data(self, data_to_import: list[str]):
         # remove headers if present
@@ -165,23 +159,16 @@ class DataViewerViewModel(QtCore.QObject):
         self.main_view_model.add_console_text(f"Export {error_message}")
 
     def delete_all_project_data_verification(self):
-        message_box_window_title = "Delete Project Data"
-        severity_icon = QtWidgets.QMessageBox.Warning
-        text_body = f"It is advised to backup your project data via exporting before deleting.\n\n\
+        message_box = general_utils.MessageBox()
+        message_box.title = "Delete Project Data"
+        message_box.icon = QtWidgets.QMessageBox.Warning
+        message_box.text = f"It is advised to backup your project data via exporting before deleting.\n\n\
         Are you sure you want to delete all project data?"
-        buttons = ["Delete", "Cancel"]
-        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
-        callback = [self.delete_all_project_data, None]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback,
-        }
+        message_box.buttons = ["Delete", "Cancel"]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+        message_box.callback = [self.delete_all_project_data, None]
 
-        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        self.main_view_model.display_message_box(message_box=message_box)
 
     def delete_all_project_data(self):
         self.main_view_model.main_model.delete_result.connect(
@@ -201,43 +188,29 @@ class DataViewerViewModel(QtCore.QObject):
         self.main_view_model.add_console_text(f"Delete {error_message}")
 
     def delete_project_data_entry_verification(self, project_data: dict):
-        message_box_window_title = "Delete Project Data"
-        severity_icon = QtWidgets.QMessageBox.Warning
-        text_body = f"Are you sure you want to delete project data for project: {project_data['project_number']}?"
-        buttons = ["Delete", "Cancel"]
-        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
-        callback = [lambda: self.delete_project_data_entry(project_data), None]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback,
-        }
+        message_box = general_utils.MessageBox()
+        message_box.title = "Delete Project Data"
+        message_box.icon = QtWidgets.QMessageBox.Warning
+        message_box.text = f"Are you sure you want to delete project data for project: {project_data['project_number']}?"
+        message_box.buttons = ["Delete", "Cancel"]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+        message_box.callback = [lambda: self.delete_project_data_entry(project_data), None]
 
-        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        self.main_view_model.display_message_box(message_box=message_box)
 
     def delete_project_data_entry(self, project_data: dict):
         result = self.main_view_model.delete_project_data_entry_by_project_number(project_data["project_number"])
 
         if result is not None:
-            message_box_window_title = "Delete Project Data"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"There was an error deleting project data for project: {project_data['project_number']}\n\n{result}"
-            buttons = ["Close"]
-            button_roles = [QtWidgets.QMessageBox.YesRole]
-            callback = [None]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
+            message_box = general_utils.MessageBox()
+            message_box.title = "Delete Project Data"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"There was an error deleting project data for project: {project_data['project_number']}\n\n{result}"
+            message_box.buttons = ["Close"]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+            message_box.callback = [None]
 
-            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
         else:
             self.project_data_entry_deleted.emit()
             self.update_data_table()
@@ -316,22 +289,15 @@ class DataViewerViewModel(QtCore.QObject):
         update_return = self.main_view_model.update_project_data_entry(old_data, project_data)
 
         if update_return is not None:
-            message_box_window_title = "Update Project Data Error"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"There was an error updating project data for project: {project_data['project_number']}\n\n{update_return}"
-            buttons = ["Close"]
-            button_roles = [QtWidgets.QMessageBox.YesRole]
-            callback = [None]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
+            message_box = general_utils.MessageBox()
+            message_box.title = "Update Project Data Error"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"There was an error updating project data for project: {project_data['project_number']}\n\n{update_return}"
+            message_box.buttons = ["Close"]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+            message_box.callback = [None]
 
-            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
         else:
             self.update_data_table()
 
@@ -339,42 +305,28 @@ class DataViewerViewModel(QtCore.QObject):
         insert_return = self.main_view_model.add_new_project_data(project_data)
 
         if insert_return is not None:
-            message_box_window_title = "Insert Project Data Error"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"There was an error inserting project data for project: {project_data['project_number']}\n\n{insert_return}"
-            buttons = ["Close"]
-            button_roles = [QtWidgets.QMessageBox.YesRole]
-            callback = [None]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback,
-            }
-
-            self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+            message_box = general_utils.MessageBox()
+            message_box.title = "Insert Project Data Error"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"There was an error inserting project data for project: {project_data['project_number']}\n\n{insert_return}"
+            message_box.buttons = ["Close"]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+            message_box.callback = [None]
+            
+            self.main_view_model.display_message_box(message_box=message_box)
         else:
             self.update_data_table()
 
     def display_warning_message(self, message: str):
-        message_box_window_title = "Warning"
-        severity_icon = QtWidgets.QMessageBox.Warning
-        text_body = f"{message}"
-        buttons = ["Close"]
-        button_roles = [QtWidgets.QMessageBox.YesRole]
-        callback = [None]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback,
-        }
+        message_box = general_utils.MessageBox()
+        message_box.title = "Warning"
+        message_box.icon = QtWidgets.QMessageBox.Warning
+        message_box.text = f"{message}"
+        message_box.buttons = ["Close"]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+        message_box.callback = [None]
 
-        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        self.main_view_model.display_message_box(message_box=message_box)
 
     def set_email_profile_list(self, email_profiles: list[str]) -> None:
         """Sets the email profile list"""
@@ -386,22 +338,15 @@ class DataViewerViewModel(QtCore.QObject):
         return self._email_profile_list
     
     def display_tooltip(self, text: str):
-        message_box_window_title = "Email Information"
-        severity_icon = QtWidgets.QMessageBox.Information
-        text_body = f"{text}"
-        buttons = ["Close"]
-        button_roles = [QtWidgets.QMessageBox.YesRole]
-        callback = [None]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback,
-        }
-        
-        self.main_view_model.display_message_box(message_box_dict=message_box_dict)
+        message_box = general_utils.MessageBox()
+        message_box.title = "Email Information"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = f"{text}"
+        message_box.buttons = ["Close"]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+        message_box.callback = [None]
+
+        self.main_view_model.display_message_box(message_box=message_box)
 
     
     

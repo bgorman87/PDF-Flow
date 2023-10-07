@@ -5,7 +5,7 @@ from typing import NamedTuple
 import pdf2image
 from PySide6 import QtCore, QtWidgets
 
-from utils import utils
+from utils import image_utils, general_utils
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
@@ -51,7 +51,7 @@ class TemplateViewModel(QtCore.QObject):
             self.progress_popup = loading_widget.LoadingWidget(
                 title="Template Check", text="Comparing file to existing profiles..."
             )
-            self.analyze_worker = utils.WorkerAnalyzeThread(
+            self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=self._file_profile_path,
                 template=True,
                 main_view_model=self.main_view_model
@@ -117,7 +117,7 @@ class TemplateViewModel(QtCore.QObject):
         self._image_jpeg = pdf2image.convert_from_path(
             self._file_profile_path,
             fmt="jpeg",
-            poppler_path=utils.poppler_path,
+            poppler_path=image_utils.poppler_path,
             single_file=True,
         )
         self._img_byte_arr = io.BytesIO()
@@ -181,64 +181,42 @@ class TemplateViewModel(QtCore.QObject):
 
         # If a pdf file isnt opened, then warn user and return
         if not self._profile_file_loaded:
+            message_box = general_utils.MessageBox()
+            message_box.title = "No Profile Loaded"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = "You must first select a template file to open."
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [None,]
 
-            message_box_window_title = "No Profile Loaded"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = "You must first select a template file to open."
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [None,]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
-
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
             return False
 
         # If there is no bounding box, let user know to draw one
         if template_display.begin.isNull():
-            message_box_window_title = "Select Identifier"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = "Use the mouse to click and drag a bounding box around the desired profile identifier."
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [None,]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
+            message_box = general_utils.MessageBox()
+            message_box.title = "Select Identifier"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = "Use the mouse to click and drag a bounding box around the desired profile identifier."
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [None,]
 
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
             return False
 
         # Bounding box can be too small and cause issues when analyzing text
         # If width and height less than 5 pixels, warn user and return
         if template_display.image_area_too_small:
-            message_box_window_title = "Area Too Small"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = "Data area too small. Please choose a larger area."
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [None,]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
+            message_box = general_utils.MessageBox()
+            message_box.title = "Area Too Small"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = "Data area too small. Please choose a larger area."
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [None,]
 
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box)
             return False
 
         return True
@@ -285,29 +263,23 @@ class TemplateViewModel(QtCore.QObject):
         # Check if user filled in profile_name and if its not already used
         # if so display message to user and use this function as a callback to bring it back up
         if name == "" or db_id is not None or ("project_number" == name.lower() and property_type != "project_number"):
+            message_box = general_utils.MessageBox()
             if name == "":
-                message_box_window_title = "No Name"
-                text_body = "Please enter a description/name."
+                message_box.title = "No Name"
+                message_box.text = "Please enter a description/name."
             elif db_id is not None:
-                message_box_window_title = "Name Not Unique"
-                text_body = "Description/name already used for this profile. Please enter a unique value."
+                message_box.title = "Name Not Unique"
+                message_box.text = "Description/name already used for this profile. Please enter a unique value."
             else:
-                message_box_window_title = "Reserved Name"
-                text_body = "project_number is a reserved template keyword. To set the project_number paramater, use the 'Apply Project Number' button."
-            severity_icon = QtWidgets.QMessageBox.Critical
-            buttons = ["Close",]
-            button_roles = [QtWidgets.QMessageBox.RejectRole,]
-            callback = [lambda: self.apply_template_property(
+                message_box.title = "Reserved Name"
+                message_box.text = "project_number is a reserved template keyword. To set the project_number paramater, use the 'Apply Project Number' button."
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.buttons = ["Close",]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.callback = [lambda: self.apply_template_property(
                 property_type=property_type, template_display=template_display),]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
-            self.main_view_model.display_message_box(message_box_dict)
+
+            self.main_view_model.display_message_box(message_box)
             return
 
         [x_1, x_2, y_1, y_2] = template_display.true_coords()
@@ -385,20 +357,20 @@ class TemplateViewModel(QtCore.QObject):
 
         # If identifer text found and intersects warn user
         if indentifier_text_found and identifier_intersects:
-
-            message_box_window_title = "Problematic Text and Location"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"Potential profile conflict:\
+            message_box = general_utils.MessageBox()
+            message_box.title = "Problematic Text and Location"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"Potential profile conflict:\
                     \n\nThe location you chose produces identifying text '{identifier}'.\
                     \nExisting profile with name '{name}' has identidying text '{unique_text}' near the same location.\
                     \n\nIf you continue, these profiles may get mistaken for eachother during normal processing\
                     \n\nSelect Continue to add entry into database anyways \
                     \nSelect Cancel to choose another unique identifier"
-            buttons = [QtWidgets.QPushButton(
+            message_box.buttons = [QtWidgets.QPushButton(
                 "Continue"), QtWidgets.QPushButton("Cancel")]
-            button_roles = [QtWidgets.QMessageBox.YesRole,
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole,
                             QtWidgets.QMessageBox.RejectRole]
-            callback = [
+            message_box.callback = [
                 lambda: self.add_new_profile(
                     profile_identifier=identifier,
                     profile_name=name,
@@ -409,15 +381,8 @@ class TemplateViewModel(QtCore.QObject):
                 ),
                 None,
             ]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
-            self.main_view_model.display_message_box(message_box_dict)
+
+            self.main_view_model.display_message_box(message_box)
             return True
 
         return False

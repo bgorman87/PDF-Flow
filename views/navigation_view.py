@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui, QtCore
 
 from view_models import main_view_model, navigation_view_model
 
@@ -8,7 +8,8 @@ class NavigationView(QtWidgets.QVBoxLayout):
         super().__init__()
         self.main_view_model = main_view_model
         self.view_model = navigation_view_model.NavigationViewModel(
-            self.main_view_model)
+            self.main_view_model
+        )
 
         self.navigation_title = QtWidgets.QLabel()
         self.navigation_title.setText("Navigation")
@@ -49,13 +50,14 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         self.version_button = QtWidgets.QPushButton()
         self.version_button.setText(f"Version {self.main_view_model.version}")
+        self.version_button.clicked.connect(self.open_documentation_link)
 
         self.feedback_button = QtWidgets.QPushButton()
         self.feedback_button.setText("Feedback")
         # Add a click event to open a mailto link to send feedback
         self.feedback_button.clicked.connect(
-            lambda: self.view_model.open_feedback_link())
-        
+            lambda: self.view_model.open_feedback_link()
+        )
 
         self.setSpacing(5)
         self.setContentsMargins(0, 100, 0, 0)
@@ -81,19 +83,18 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.addWidget(self.version_button)
         self.addWidget(self.feedback_button)
 
-        self.process_nav_button.setProperty(
-            "id", self.indexOf(self.process_nav_button))
-        self.console_nav_button.setProperty(
-            "id", self.indexOf(self.console_nav_button))
+        self.process_nav_button.setProperty("id", self.indexOf(self.process_nav_button))
+        self.console_nav_button.setProperty("id", self.indexOf(self.console_nav_button))
         self.data_viewer_nav_button.setProperty(
-            "id", self.indexOf(self.data_viewer_nav_button))
+            "id", self.indexOf(self.data_viewer_nav_button)
+        )
         self.template_nav_button.setProperty(
-            "id", self.indexOf(self.template_nav_button))
+            "id", self.indexOf(self.template_nav_button)
+        )
         self.file_name_nav_button.setProperty(
-            "id", self.indexOf(self.file_name_nav_button))
-        self.email_nav_button.setProperty(
-            "id", self.indexOf(self.email_nav_button))        
-        
+            "id", self.indexOf(self.file_name_nav_button)
+        )
+        self.email_nav_button.setProperty("id", self.indexOf(self.email_nav_button))
 
         self.process_nav_button.setProperty("class", "nav-button-active")
         self.console_nav_button.setProperty("class", "nav-button")
@@ -108,41 +109,63 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         self.version_button.setProperty("class", "program-info-button")
         self.feedback_button.setProperty("class", "program-info-button")
-        
 
         self.process_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.process_nav_button))
+            lambda: self.handle_nav_change(self.process_nav_button)
+        )
         self.console_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.console_nav_button))
+            lambda: self.handle_nav_change(self.console_nav_button)
+        )
         self.data_viewer_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.data_viewer_nav_button))
+            lambda: self.handle_nav_change(self.data_viewer_nav_button)
+        )
         self.template_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.template_nav_button))
+            lambda: self.handle_nav_change(self.template_nav_button)
+        )
         self.file_name_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.file_name_nav_button))
+            lambda: self.handle_nav_change(self.file_name_nav_button)
+        )
         self.email_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.email_nav_button))
+            lambda: self.handle_nav_change(self.email_nav_button)
+        )
 
         self.main_view_model.console_alerts_update.connect(
-            lambda: self.console_nav_button.setText(f"Console ({self.main_view_model.console_alerts})"))
-        self.main_view_model.loaded_files_count_update.connect(lambda: self.loaded_files_button.setText(
-            f"Loaded Files: {self.main_view_model.loaded_files_count}"))
-        self.main_view_model.processed_files_update.connect(lambda: self.processed_files_button.setText(
-            f"Processed Files: {self.main_view_model.processed_files}"))
-        self.main_view_model.emailed_files_count_update.connect(lambda: self.emailed_files_button.setText(
-            f"Emailed Files: {self.main_view_model.emailed_files_count}"))
-
+            lambda: self.console_nav_button.setText(
+                f"Console ({self.main_view_model.console_alerts})"
+            )
+        )
+        self.main_view_model.loaded_files_count_update.connect(
+            lambda: self.loaded_files_button.setText(
+                f"Loaded Files: {self.main_view_model.loaded_files_count}"
+            )
+        )
+        self.main_view_model.processed_files_update.connect(
+            lambda: self.processed_files_button.setText(
+                f"Processed Files: {self.main_view_model.processed_files}"
+            )
+        )
+        self.main_view_model.emailed_files_count_update.connect(
+            lambda: self.emailed_files_button.setText(
+                f"Emailed Files: {self.main_view_model.emailed_files_count}"
+            )
+        )
 
     def handle_nav_change(self, button: QtWidgets.QPushButton):
         """Handles the logic of switching current stack index"""
 
         self.view_model.currently_active_button.setProperty("class", "nav-button")
-        self.view_model.currently_active_button.style().polish(self.view_model.currently_active_button)
+        self.view_model.currently_active_button.style().polish(
+            self.view_model.currently_active_button
+        )
 
         button.setProperty("class", "nav-button-active")
         button.style().polish(button)
 
         self.view_model.stacked_item_change(button)
-        
 
-        
+    def open_documentation_link(self):
+        """Opens the documentation link in the default browser."""
+
+        QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl("https://pdfflow.godevservices.com/")
+        )

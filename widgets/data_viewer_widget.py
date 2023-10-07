@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets, QtGui, QtCore
 from widgets import email_list_widget, utility_widgets
-from utils import utils
+from utils import image_utils
 
 class DataViewerTableWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -53,7 +53,7 @@ class DataViewerTableWidget(QtWidgets.QWidget):
         self.database_search_layout.addStretch(2)
 
         self.database_search_icon = QtWidgets.QLabel()
-        self.database_search_icon.setPixmap(QtGui.QPixmap(utils.resource_path("assets/icons/search.svg")))
+        self.database_search_icon.setPixmap(QtGui.QPixmap(path_utils.resource_path("assets/icons/search.svg")))
         self.database_search_icon.setScaledContents(True)
 
         self.database_search_bar = QtWidgets.QLineEdit()

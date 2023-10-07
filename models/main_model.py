@@ -8,7 +8,7 @@ import typing
 from PySide6 import QtCore
 from widgets import loading_widget
 
-from utils.utils import resource_path
+from utils.path_utils import resource_path
 
 
 class MainModel(QtCore.QObject):
