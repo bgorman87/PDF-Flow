@@ -11,18 +11,13 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  build_windows:
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install AWS CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install awscli
-      if: runner.os == 'Linux'
+    - name: Install win32com
+      run: pip install pywin32
 
     - name: Package Application Windows
       uses: JackMcKew/pyinstaller-action-windows@python3-10-pyinstaller-5-3
@@ -32,7 +27,16 @@ jobs:
     - name: Deploy Windows to S3
       run: |
         aws s3 cp "dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
-      working-directory: .
+
+  build_linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install AWS CLI and Linux Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli
 
     - name: PyInstaller Linux
       uses: JackMcKew/pyinstaller-action-linux@python3.10
@@ -42,9 +46,7 @@ jobs:
     - name: List Linux Build Artifacts
       run: |
         ls dist/linux/
-      working-directory: .
 
     - name: Deploy Linux to S3
       run: |
         aws s3 cp "dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
-      working-directory: .
