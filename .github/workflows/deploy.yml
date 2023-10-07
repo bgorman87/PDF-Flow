@@ -25,7 +25,7 @@ jobs:
       if: runner.os == 'Linux'
 
     - name: Package Application Windows
-      uses: JackMcKew/pyinstaller-action-windows@main
+      uses: JackMcKew/pyinstaller-action-windows@python3-10-pyinstaller-5-3
       with:
         path: .
 
