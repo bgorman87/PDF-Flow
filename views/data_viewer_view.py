@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from view_models import data_viewer_view_model
 from widgets import email_list_widget, utility_widgets
-from utils import path_utils
+from utils import path_utils, general_utils
 
 
 class DataViewerView(QtWidgets.QWidget):
@@ -582,18 +582,18 @@ class DataViewerView(QtWidgets.QWidget):
                 self._adding_new_entry = False
 
         if self._project_data_changed or self._adding_new_entry:
-             # Create a popup asking if user wants to discard changes
+            # Create a popup asking if user wants to discard changes
+            message_box = general_utils.MessageBox()
             message_box.title = "Discard Changes"
-            severity_icon = QtWidgets.QMessageBox.Warning
-            text_body = f"Are you sure you want to discard changes?"
-            buttons = ["Discard", "Cancel"]
-            button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
-            callback = [
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = f"Are you sure you want to discard changes?"
+            message_box.buttons = ["Discard", "Cancel"]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+            message_box.callback = [
                 self.handle_project_data_update,
                 self.reset_database_current_active_id,
             ]
             
-
             self.view_model.main_view_model.display_message_box(message_box=message_box)
         else:
             self.handle_project_data_update()

@@ -61,13 +61,12 @@ class MainView(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(screen.width() // 2, screen.height())
         self.main_view_model.window_size_update.connect(self.resize)
-        # self.center_application(screen)
 
     def show_message_alert(self, message_box: general_utils.MessageBox):
         """Shows a message box alert to the user from given message box dict.
 
         Args:
-            message_box (MessageBox): _description_
+            message_box (MessageBox): An object that encapsulates attributes and configurations for displaying a message box to the user.
         """
         self.message_box = message_box_view.MessageBoxView(
             message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box)
@@ -75,22 +74,6 @@ class MainView(QtWidgets.QMainWindow):
         result_index = self.message_box.exec_()
         # result = message_box_dict.get("button_roles")[result_index]
         self.main_view_model.message_box_handler(message_box.callback[result_index])
-
-    def center_application(self, screen):
-        # get the size of the main window
-        windowWidth = self.frameGeometry().width()
-        windowHeight = self.frameGeometry().height()
-
-        # calculate the top-left corner of the main window
-        x = screen.width() // 2 - windowWidth // 2
-        y = screen.height() // 2 - windowHeight // 2
-
-        # set the position of the main window
-        self.move(x, y)
-        self.resize(screen.width() // 2, screen.height() / 1.1)
-
-    def resize_window(self, size: tuple):
-        self.resize(size)
 
 
 def main():
