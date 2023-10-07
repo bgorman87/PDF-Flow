@@ -7,6 +7,7 @@ from io import BytesIO
 from lxml import html
 from PySide6 import QtCore, QtWidgets
 from view_models import main_view_model
+from utils import general_utils
 
 
 class EmailViewModel(QtCore.QObject):
@@ -67,22 +68,15 @@ class EmailViewModel(QtCore.QObject):
                     self.save_new_profile(new_profile_name)
                     break
                 else:
-                    message_box_window_title = "Email Profile Name Already Exists"
-                    severity_icon = QtWidgets.QMessageBox.Information
-                    text_body = f"Please choose a different name for the new profile.\n\nIf you would like to edit the existing profile '{new_profile_name}', please select it from the dropdown menu to make your changes."
-                    buttons = [QtWidgets.QPushButton("Close")]
-                    button_roles = [QtWidgets.QMessageBox.RejectRole]
-                    callback = [None,]
-                    message_box_dict = {
-                        "title": message_box_window_title,
-                        "icon": severity_icon,
-                        "text": text_body,
-                        "buttons": buttons,
-                        "button_roles": button_roles,
-                        "callback": callback
-                    }
+                    message_box = general_utils.MessageBox()
+                    message_box.title = "Email Profile Name Already Exists"
+                    message_box.icon = QtWidgets.QMessageBox.Information
+                    message_box.text = f"Please choose a different name for the new profile.\n\nIf you would like to edit the existing profile '{new_profile_name}', please select it from the dropdown menu to make your changes."
+                    message_box.buttons = [QtWidgets.QPushButton("Close")]
+                    message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+                    message_box.callback = [None,]
 
-                    self.main_view_model.display_message_box(message_box_dict)
+                    self.main_view_model.display_message_box(message_box=message_box)
             else:
                 break
 
@@ -90,22 +84,15 @@ class EmailViewModel(QtCore.QObject):
         # Display a dialog box so asking the user if they want to save changes
         # If the user clicks yes, then save the changes by overwriting the existing profile
         # If the user clicks no, then do nothing
-        message_box_window_title = "Save Changes"
-        severity_icon = QtWidgets.QMessageBox.Information
-        text_body = f"Save changes to '{self._email_profile_names[self._loaded_email_index]}'?"
-        buttons = [QtWidgets.QPushButton("Save Changes"), QtWidgets.QPushButton("Discard Changes"), QtWidgets.QPushButton("Cancel")]
-        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole, QtWidgets.QMessageBox.RejectRole]
-        callback = [lambda: self.save_changes(index), lambda: self.discard_changes(index), lambda: self.set_current_index_signal.emit(self._loaded_email_index)]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback
-        }
-
-        self.main_view_model.display_message_box(message_box_dict)
+        message_box = general_utils.MessageBox()
+        message_box.title = "Save Changes"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = f"Save changes to '{self._email_profile_names[self._loaded_email_index]}'?"
+        message_box.buttons = [QtWidgets.QPushButton("Save Changes"), QtWidgets.QPushButton("Discard Changes"), QtWidgets.QPushButton("Cancel")]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole, QtWidgets.QMessageBox.RejectRole]
+        message_box.callback = [lambda: self.save_changes(index), lambda: self.discard_changes(index), lambda: self.set_current_index_signal.emit(self._loaded_email_index)]
+        
+        self.main_view_model.display_message_box(message_box=message_box)
         return
     
     def save_changes(self, index: int):
@@ -141,22 +128,15 @@ class EmailViewModel(QtCore.QObject):
         try:
             os.mkdir(new_directory)
         except OSError as e:
-            message_box_window_title = "Email Creation Error"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = f"Email creation error. Most likely invalid folder/file name: {profile_name}"
-            buttons = [QtWidgets.QPushButton("Close")]
-            button_roles = [QtWidgets.QMessageBox.RejectRole]
-            callback = [None,]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
+            message_box = general_utils.MessageBox()
+            message_box.title = "Email Creation Error"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = f"Email creation error. Most likely invalid folder/file name: {profile_name}"
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.callback = [None,]
 
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box)
 
             return
 
@@ -274,24 +254,17 @@ class EmailViewModel(QtCore.QObject):
         # If user selects an existing profile, and text has been changed, but there is no current profile
         # prompt user to save new profile, then load new profile
         if self._text_changed and self._loaded_email_index == 0:
-            message_box_window_title = "Save Changes"
-            severity_icon = QtWidgets.QMessageBox.Information
-            text_body = f"Save new email before proceeding?"
-            buttons = [QtWidgets.QPushButton(
+            message_box = general_utils.MessageBox()
+            message_box.title = "Save Changes"
+            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.text = f"Save new email before proceeding?"
+            message_box.buttons = [QtWidgets.QPushButton(
                 "Save New"), QtWidgets.QPushButton("Cancel")]
-            button_roles = [QtWidgets.QMessageBox.YesRole,
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole,
                             QtWidgets.QMessageBox.RejectRole]
-            callback = [self.save_new_button_dialog, None]
-            message_box_dict = {
-                "title": message_box_window_title,
-                "icon": severity_icon,
-                "text": text_body,
-                "buttons": buttons,
-                "button_roles": button_roles,
-                "callback": callback
-            }
+            message_box.callback = [self.save_new_button_dialog, None]
 
-            self.main_view_model.display_message_box(message_box_dict)
+            self.main_view_model.display_message_box(message_box=message_box)
 
         # If text has not been changed, and user selects index 0, empty the email box
         if not self._text_changed and index == 0:
@@ -329,22 +302,15 @@ class EmailViewModel(QtCore.QObject):
         # Display a dialog box so asking the user if they want to delete the profile
         # If the user clicks yes, then delete the profile
         # If the user clicks no, then do nothing
-        message_box_window_title = "Delete Email Profile"
-        severity_icon = QtWidgets.QMessageBox.Information
-        text_body = f"Delete email template '{self._email_profile_names[self._loaded_email_index]}'?"
-        buttons = [QtWidgets.QPushButton("Delete"), QtWidgets.QPushButton("Cancel")]
-        button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
-        callback = [self.delete_email_profile, None]
-        message_box_dict = {
-            "title": message_box_window_title,
-            "icon": severity_icon,
-            "text": text_body,
-            "buttons": buttons,
-            "button_roles": button_roles,
-            "callback": callback
-        }
+        message_box = general_utils.MessageBox()
+        message_box.title = "Delete Email Profile"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = f"Delete email template '{self._email_profile_names[self._loaded_email_index]}'?"
+        message_box.buttons = [QtWidgets.QPushButton("Delete"), QtWidgets.QPushButton("Cancel")]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
+        message_box.callback = [self.delete_email_profile, None]
 
-        self.main_view_model.display_message_box(message_box_dict)
+        self.main_view_model.display_message_box(message_box=message_box)
         return
     
     def delete_email_profile(self):

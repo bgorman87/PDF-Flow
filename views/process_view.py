@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets, QtGu
 
 from view_models import process_view_model
 from widgets import utility_widgets
-from utils.utils import resource_path
+from utils.image_utils import resource_path
 from utils.enums import EmailProvider
 
 

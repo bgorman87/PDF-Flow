@@ -6,7 +6,7 @@ from models import main_model
 from view_models import main_view_model, message_box_view_model
 from views import message_box_view, navigation_view, stacked_view
 
-from utils import utils
+from utils import path_utils, general_utils
 
 
 class MainView(QtWidgets.QMainWindow):
@@ -63,13 +63,18 @@ class MainView(QtWidgets.QMainWindow):
         self.main_view_model.window_size_update.connect(self.resize)
         # self.center_application(screen)
 
-    def show_message_alert(self, message_box_dict: dict):
+    def show_message_alert(self, message_box: general_utils.MessageBox):
+        """Shows a message box alert to the user from given message box dict.
+
+        Args:
+            message_box (MessageBox): _description_
+        """
         self.message_box = message_box_view.MessageBoxView(
-            message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box_dict)
+            message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box)
         )
         result_index = self.message_box.exec_()
         # result = message_box_dict.get("button_roles")[result_index]
-        self.main_view_model.message_box_handler(message_box_dict["callback"][result_index])
+        self.main_view_model.message_box_handler(message_box.callback[result_index])
 
     def center_application(self, screen):
         # get the size of the main window
@@ -92,7 +97,7 @@ def main():
     app = QtWidgets.QApplication([])
     
     # Open the qss styles file and read in the css-alike styling code
-    style_file_path = utils.resource_path("style/styles.qss")
+    style_file_path = path_utils.resource_path("style/styles.qss")
     with open(style_file_path, "r") as f:
         style = f.read()
 
@@ -103,7 +108,7 @@ def main():
     palette = QtGui.QPalette()
     palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))
     app.setPalette(palette)
-    QtGui.QFontDatabase.addApplicationFont(utils.resource_path("assests/Roboto-Regular.ttf"))
+    QtGui.QFontDatabase.addApplicationFont(path_utils.resource_path("assests/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel()))
     window.setWindowTitle("PDF Flow")
     window.navigation_view.setProperty("class", "nav-widget")
