@@ -21,10 +21,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install awscli
 
-    # Package for Windows
-    - name: Install win32com (for Windows build)
-      run: pip install pywin32
-
     - name: Package Application Windows
       uses: JackMcKew/pyinstaller-action-windows@python3-10-pyinstaller-5-3
       with:
