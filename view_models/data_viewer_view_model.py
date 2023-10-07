@@ -1,7 +1,7 @@
 import csv
 
 from PySide6 import QtCore, QtWidgets
-
+from typing import List
 from view_models import main_view_model
 from widgets import loading_widget
 from utils import general_utils
@@ -21,11 +21,10 @@ class DataViewerViewModel(QtCore.QObject):
         self._project_data_headers = None
         self._project_data_loaded_id = None
         self._email_profiles_list = None
-        self.main_view_model.email_profiles_updated.connect(
-            self.set_email_profile_list
-        )
+        self.main_view_model.email_profiles_updated.connect(self.set_email_profile_list)
 
-    def update_data_table(self):
+    def update_data_table(self) -> None:
+        """Updates the data table with the latest project data."""
         self._project_data = self.main_view_model.fetch_all_project_data()
         self._project_data_headers = (
             self.main_view_model.fetch_project_data_table_headers()
@@ -38,17 +37,21 @@ class DataViewerViewModel(QtCore.QObject):
 
     @property
     def project_data(self) -> list[str]:
+        """List[str]: Returns the current project data."""
         return self._project_data
 
     @property
     def project_data_headers(self) -> list[str]:
+        """List[str]: Returns the headers for the current project data."""
         return self._project_data_headers
-    
+
     @property
     def project_data_loaded_id(self) -> int:
+        """int: Returns the loaded project data's ID."""
         return self._project_data_loaded_id
 
-    def get_project_data_import_file(self):
+    def get_project_data_import_file(self) -> None:
+        """Opens a file dialog for the user to select a CSV file and initiates its import."""
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
             caption="Open Project Data File",
             dir="../../",
@@ -82,8 +85,12 @@ class DataViewerViewModel(QtCore.QObject):
 
             self.main_view_model.display_message_box(message_box=message_box)
 
-    def import_project_data(self, data_to_import: list[str]):
-        # remove headers if present
+    def import_project_data(self, data_to_import: List[str]) -> None:
+        """Imports the project data and initiates necessary threads to handle the import.
+
+        Args:
+            data_to_import (List[str]): Data rows to be imported.
+        """
         while "project_number" in data_to_import[0]:
             data_to_import = data_to_import[1:]
 
@@ -95,14 +102,19 @@ class DataViewerViewModel(QtCore.QObject):
             project_data=valid_data_to_import
         )
 
-    def import_data_handler(self, error_message: str):
+    def import_data_handler(self, error_message: str) -> None:
+        """Handles the result of the data import process.
+
+        Args:
+            error_message (str): Any error messages received from the import process.
+        """
         if not error_message:
             self.update_data_table()
             return
         self.main_view_model.add_console_alerts(1)
         self.main_view_model.add_console_text(f"Import {error_message}")
 
-    def evt_import_complete(self, results):
+    def evt_import_complete(self, results) -> None:
         """Displays error message to user if one is present in results otherwise does nothing.
 
         Args:
@@ -130,7 +142,8 @@ class DataViewerViewModel(QtCore.QObject):
             self.progress_popup.setValue(100)
             self.database_fetch("project_data")
 
-    def get_project_data_export_location(self):
+    def get_project_data_export_location(self) -> None:
+        """Opens a file dialog for user to select a location to export the project data to."""
         export_location = QtWidgets.QFileDialog.getSaveFileName(
             caption="Export Project Data",
             dir="../../",
@@ -146,11 +159,13 @@ class DataViewerViewModel(QtCore.QObject):
 
         self.export_project_data(export_location=export_location)
 
-    def export_project_data(self, export_location: str):
+    def export_project_data(self, export_location: str) -> None:
+        """Initiates the export of the project data to the specified location."""
         self.main_view_model.main_model.export_result.connect(self.export_data_handler)
         self.main_view_model.export_project_data_thread(export_location=export_location)
 
-    def export_data_handler(self, error_message: str):
+    def export_data_handler(self, error_message: str) -> None:
+        """Handles the result of the data export process."""
         self.main_view_model.add_console_alerts(1)
         if not error_message:
             self.main_view_model.add_console_text(f"Export Complete.")
@@ -158,26 +173,34 @@ class DataViewerViewModel(QtCore.QObject):
 
         self.main_view_model.add_console_text(f"Export {error_message}")
 
-    def delete_all_project_data_verification(self):
+    def delete_all_project_data_verification(self) -> None:
+        """Verifies that the user wants to delete all project data."""
+
         message_box = general_utils.MessageBox()
         message_box.title = "Delete Project Data"
         message_box.icon = QtWidgets.QMessageBox.Warning
         message_box.text = f"It is advised to backup your project data via exporting before deleting.\n\n\
         Are you sure you want to delete all project data?"
         message_box.buttons = ["Delete", "Cancel"]
-        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
+        message_box.button_roles = [
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
+        ]
         message_box.callback = [self.delete_all_project_data, None]
 
         self.main_view_model.display_message_box(message_box=message_box)
 
-    def delete_all_project_data(self):
+    def delete_all_project_data(self) -> None:
+        """Initiates the deletion of all project data."""
+
         self.main_view_model.main_model.delete_result.connect(
             self.delete_all_project_data_handler
         )
         self.main_view_model.delete_all_project_data_thread()
 
-    def delete_all_project_data_handler(self, error_message: str):
-        print("hit")
+    def delete_all_project_data_handler(self, error_message: str) -> None:
+        """Handles the result of the data deletion process."""
+
         self.main_view_model.add_console_alerts(1)
         if not error_message:
             self.main_view_model.add_console_text(
@@ -187,19 +210,31 @@ class DataViewerViewModel(QtCore.QObject):
             return
         self.main_view_model.add_console_text(f"Delete {error_message}")
 
-    def delete_project_data_entry_verification(self, project_data: dict):
+    def delete_project_data_entry_verification(self, project_data: dict) -> None:
+        """Verifies that the user wants to delete the specified project data entry."""
+
         message_box = general_utils.MessageBox()
         message_box.title = "Delete Project Data"
         message_box.icon = QtWidgets.QMessageBox.Warning
         message_box.text = f"Are you sure you want to delete project data for project: {project_data['project_number']}?"
         message_box.buttons = ["Delete", "Cancel"]
-        message_box.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.NoRole]
-        message_box.callback = [lambda: self.delete_project_data_entry(project_data), None]
+        message_box.button_roles = [
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
+        ]
+        message_box.callback = [
+            lambda: self.delete_project_data_entry(project_data),
+            None,
+        ]
 
         self.main_view_model.display_message_box(message_box=message_box)
 
-    def delete_project_data_entry(self, project_data: dict):
-        result = self.main_view_model.delete_project_data_entry_by_project_number(project_data["project_number"])
+    def delete_project_data_entry(self, project_data: dict) -> None:
+        """Initiates the deletion of the specified project data entry."""
+
+        result = self.main_view_model.delete_project_data_entry_by_project_number(
+            project_data["project_number"]
+        )
 
         if result is not None:
             message_box = general_utils.MessageBox()
@@ -215,7 +250,9 @@ class DataViewerViewModel(QtCore.QObject):
             self.project_data_entry_deleted.emit()
             self.update_data_table()
 
-    def get_next_visible_row_index(self, current_row_index: int, table_widget: QtWidgets.QTableWidget) -> int:
+    def get_next_visible_row_index(
+        self, current_row_index: int, table_widget: QtWidgets.QTableWidget
+    ) -> int:
         """Get the next visible row index from the current index, with priority to previous row. Takes into account active filter.
 
         Args:
@@ -224,7 +261,7 @@ class DataViewerViewModel(QtCore.QObject):
 
         Returns:
             int: row index
-        """        
+        """
 
         total_rows = table_widget.rowCount()
 
@@ -234,7 +271,7 @@ class DataViewerViewModel(QtCore.QObject):
             if table_widget.isRowHidden(i):
                 continue
             return i
-        
+
         for i in range(current_row_index + 1, total_rows):
             if table_widget.isRowHidden(i):
                 continue
@@ -242,8 +279,9 @@ class DataViewerViewModel(QtCore.QObject):
 
         return -1
 
-
-    def database_populate_project_edit_fields(self, data_table: QtWidgets.QTableWidget):
+    def database_populate_project_edit_fields(
+        self, data_table: QtWidgets.QTableWidget
+    ) -> None:
         # self.database_save_edited_project_data_button.setText("Save Changes")
         # self.database_save_edited_project_data_button.clicked.disconnect()
         # self.database_save_edited_project_data_button.clicked.connect(
@@ -284,9 +322,14 @@ class DataViewerViewModel(QtCore.QObject):
         # if project data not changed then load data
         # self.database_discard_edited_project_data()
 
-    def database_save_edited_project_data(self, old_data: dict ,project_data: dict):
+    def database_save_edited_project_data(
+        self, old_data: dict, project_data: dict
+    ) -> None:
+        """Saves the edited project data to the database."""
 
-        update_return = self.main_view_model.update_project_data_entry(old_data, project_data)
+        update_return = self.main_view_model.update_project_data_entry(
+            old_data, project_data
+        )
 
         if update_return is not None:
             message_box = general_utils.MessageBox()
@@ -301,7 +344,9 @@ class DataViewerViewModel(QtCore.QObject):
         else:
             self.update_data_table()
 
-    def database_save_new_project_data(self, project_data: dict):
+    def database_save_new_project_data(self, project_data: dict) -> None:
+        """Saves the new project data to the database."""
+
         insert_return = self.main_view_model.add_new_project_data(project_data)
 
         if insert_return is not None:
@@ -312,12 +357,14 @@ class DataViewerViewModel(QtCore.QObject):
             message_box.buttons = ["Close"]
             message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
             message_box.callback = [None]
-            
+
             self.main_view_model.display_message_box(message_box=message_box)
         else:
             self.update_data_table()
 
-    def display_warning_message(self, message: str):
+    def display_warning_message(self, message: str) -> None:
+        """Displays a warning message to the user."""
+
         message_box = general_utils.MessageBox()
         message_box.title = "Warning"
         message_box.icon = QtWidgets.QMessageBox.Warning
@@ -330,14 +377,19 @@ class DataViewerViewModel(QtCore.QObject):
 
     def set_email_profile_list(self, email_profiles: list[str]) -> None:
         """Sets the email profile list"""
+
         self._email_profile_list = email_profiles
         self.email_profile_list_update.emit()
 
     @property
-    def email_profile_list(self):
+    def email_profile_list(self) -> list[str]:
+        """list[str]: Returns the email profile list"""
+
         return self._email_profile_list
-    
-    def display_tooltip(self, text: str):
+
+    def display_tooltip(self, text: str) -> None:
+        """Displays a tooltip to the user."""
+
         message_box = general_utils.MessageBox()
         message_box.title = "Email Information"
         message_box.icon = QtWidgets.QMessageBox.Information
@@ -347,6 +399,3 @@ class DataViewerViewModel(QtCore.QObject):
         message_box.callback = [None]
 
         self.main_view_model.display_message_box(message_box=message_box)
-
-    
-    
