@@ -1,3 +1,8 @@
+import os
+if os.sys.platform == "win32":
+    from win32com.client import Dispatch  # 'SyntaxError: invalid or missing encoding declaration' if not initialized here and passed down to process_view_model.py
+else:
+    Dispatch=None
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from datetime import date
@@ -18,7 +23,7 @@ class MainView(QtWidgets.QMainWindow):
         self.main_view_model = main_view_model
         self.main_view_model.message_box_alert.connect(self.show_message_alert)
 
-        self.stacked_view = stacked_view.StackedWidget(self.main_view_model)
+        self.stacked_view = stacked_view.StackedWidget(self.main_view_model, Dispatch)
         self.navigation_view = QtWidgets.QWidget()
         self.navigation_view.setLayout(
             navigation_view.NavigationView(self.main_view_model)

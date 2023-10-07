@@ -4,10 +4,8 @@ import requests
 import msal
 import uuid
 import mimetypes
-if os.sys.platform == "win32":
-    import win32com.client as win32
-else:
-    import subprocess
+
+import subprocess
 
 from google.auth.exceptions import GoogleAuthError
 from google.oauth2.credentials import Credentials
@@ -30,13 +28,12 @@ from utils.enums import EmailProvider
 from utils import image_utils, general_utils, path_utils
 
 
-
 class ProcessViewModel(QtCore.QObject):
     processed_files_list_widget_update = QtCore.Signal(QtWidgets.QListWidgetItem)
     display_pdf_preview = QtCore.Signal()
     display_file_name = QtCore.Signal()
 
-    def __init__(self, main_view_model: main_view_model.MainViewModel):
+    def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
         self.main_view_model = main_view_model
         self._file_names = None
@@ -45,6 +42,7 @@ class ProcessViewModel(QtCore.QObject):
         self._progress = 0
         self._thread_pool = QtCore.QThreadPool()
         self._token = ""
+        self.Dispatch = Dispatch
 
     def get_files(self):
         """Opens a file dialog to select files for input"""
@@ -529,7 +527,7 @@ class ProcessViewModel(QtCore.QObject):
         if self.main_view_model.os == "win32":
             # Create draft using local outlook
             try:
-                outlook = win32.Dispatch('outlook.application')
+                outlook = self.Dispatch('outlook.application')
                 mail = outlook.CreateItem(0)
                 mail.To = recipients
                 mail.CC = cc_recipients
