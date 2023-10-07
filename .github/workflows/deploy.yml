@@ -11,12 +11,18 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
-  build_windows:
-    runs-on: windows-latest
+  build:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install win32com
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli
+
+    # Package for Windows
+    - name: Install win32com (for Windows build)
       run: pip install pywin32
 
     - name: Package Application Windows
@@ -28,16 +34,7 @@ jobs:
       run: |
         aws s3 cp "dist/windows/PDF Flow.exe" "s3://pdf-flow/PDF Flow.exe"
 
-  build_linux:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install AWS CLI and Linux Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install awscli
-
+    # Package for Linux
     - name: PyInstaller Linux
       uses: JackMcKew/pyinstaller-action-linux@python3.10
       with:
