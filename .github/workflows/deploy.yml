@@ -40,6 +40,9 @@ jobs:
       run: |
         ls dist/linux/
 
+    - name: Make binary executable
+      run: chmod +x dist/linux/PDF\ Flow
+
     - name: Deploy Linux to S3
       run: |
         aws s3 cp "dist/linux/PDF Flow" "s3://pdf-flow/PDF FLow"
