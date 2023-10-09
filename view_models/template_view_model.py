@@ -36,6 +36,28 @@ class TemplateViewModel(QtCore.QObject):
         self._file_profile_path = ""
         self._profile_file_loaded = False
 
+    def reset_template_view_state(self):
+        self._project_button_enabled = False
+        self._template_id_button_enabled = False
+        self._loaded_profile_label_text = ""
+        self._unique_file_id_button_enabled = False
+        self._parameter_button_enabled = False
+        self._image_jpeg = None
+        self._img_byte_arr = None
+        self._current_file_profile = 0
+        self._parameter_rects = None
+        self._profile_rect = None
+        self._file_profile_path = ""
+        self._profile_file_loaded = False
+
+        self.unique_file_identifier_button_status.emit()
+        self.loaded_profile_label_update.emit()
+        self.project_number_status_update.emit()
+        self.unique_parameter_status_update.emit()
+        self.template_pixmap_update.emit()
+        self.profile_file_loaded_status.emit()
+
+
     def file_profile_template_dialog(self):
         """Opens dialog to choose files"""
         self._current_file_profile = 0
@@ -128,7 +150,7 @@ class TemplateViewModel(QtCore.QObject):
         self._profile_file_loaded = True
 
     def update_window_size_from_widgets(self, template_widget: file_template_creation.TemplateWidget, *widgets: QtWidgets.QWidget):
-        """Scales the window size according to the template widget and any oither vertically aldigned widgets passed to function.
+        """Scales the window size according to the template widget and any other vertically aldigned widgets passed to function.
         """
 
         updated_width = template_widget.scaled_width() + 25
@@ -164,22 +186,19 @@ class TemplateViewModel(QtCore.QObject):
 
     @property
     def pil_image(self):
-        return self._image_jpeg[0]
+        return self._image_jpeg[0] if self._image_jpeg else None
 
     def template_button_guard(self, template_display: file_template_creation.TemplateWidget) -> bool:
-        """Checks if profile identifer can begin to be processed
+        """Checks if profile identifier can begin to be processed
 
         Args:
             template_display (file_template_creation.TemplateWidget): Template widget holding rect and text info
 
         Returns:
-            bool: True if identier can be procssed, False if not
+            bool: True if identifier can be processed, False if not
         """
-        # If there is no rect started then nothing to find
-        if template_display.begin.isNull():
-            return False
 
-        # If a pdf file isnt opened, then warn user and return
+        # If a pdf file isn't opened, then warn user and return
         if not self._profile_file_loaded:
             message_box = general_utils.MessageBox()
             message_box.title = "No Profile Loaded"
@@ -248,7 +267,7 @@ class TemplateViewModel(QtCore.QObject):
             .replace(" ", "_")
         )
 
-        # Get a profile id or paramater id for the input
+        # Get a profile id or parameter id for the input
         # If an id exists then the name given is already in use
         db_id = None
         if property_type == "profile":
@@ -323,12 +342,12 @@ class TemplateViewModel(QtCore.QObject):
             )
 
     def profile_conflict(self, identifier: str, name: str, x_1: int, x_2: int, y_1: int, y_2: int) -> bool:
-        # check if identiying text can be found in any of the existing profiles
+        # check if identifying text can be found in any of the existing profiles
         # taking into account new line chars. New line chars get saved into db as spaces
         # so convert detected text and check against db value
         unique_texts = self.main_view_model.fetch_all_profile_template_info()
 
-        indentifier_text_found = False
+        identifier_text_found = False
         for profile_id, unique_text, profile_name in unique_texts:
             if (
                 identifier.replace(
@@ -339,12 +358,12 @@ class TemplateViewModel(QtCore.QObject):
                 .strip()
                 .lower()
             ):
-                indentifier_text_found = True
+                identifier_text_found = True
                 break
 
         # if identifier already in database, check if current rect bounds intersects with matching profile entry
         identifier_intersects = False
-        if indentifier_text_found:
+        if identifier_text_found:
             [db_x_1, db_x_2, db_y_1, db_y_2] = self.main_view_model.fetch_profile_rectangle_bounds_by_profile_id(
                 profile_id=profile_id)
 
@@ -355,15 +374,15 @@ class TemplateViewModel(QtCore.QObject):
             if self.intersects_or_enclosed(current_box, found_box):
                 identifier_intersects = True
 
-        # If identifer text found and intersects warn user
-        if indentifier_text_found and identifier_intersects:
+        # If identifier text found and intersects warn user
+        if identifier_text_found and identifier_intersects:
             message_box = general_utils.MessageBox()
             message_box.title = "Problematic Text and Location"
             message_box.icon = QtWidgets.QMessageBox.Warning
             message_box.text = f"Potential profile conflict:\
                     \n\nThe location you chose produces identifying text '{identifier}'.\
-                    \nExisting profile with name '{name}' has identidying text '{unique_text}' near the same location.\
-                    \n\nIf you continue, these profiles may get mistaken for eachother during normal processing\
+                    \nExisting profile with name '{name}' has identifying text '{unique_text}' near the same location.\
+                    \n\nIf you continue, these profiles may get mistaken for each other during normal processing\
                     \n\nSelect Continue to add entry into database anyways \
                     \nSelect Cancel to choose another unique identifier"
             message_box.buttons = [QtWidgets.QPushButton(
@@ -425,6 +444,9 @@ class TemplateViewModel(QtCore.QObject):
         self.paint_existing_data_rects(profile_id=profile_id)
 
         self.main_view_model.profile_update_list.emit()
+        self._loaded_profile_label_text = profile_name
+        self.loaded_profile_label_update.emit()
+
 
     def intersects_or_enclosed(self, rec1: NamedTuple, rec2: NamedTuple):
         """Checks whether two bounding boxes intersect or are enclosed by one another.
@@ -434,7 +456,7 @@ class TemplateViewModel(QtCore.QObject):
             rec2 (NamedTuple): second bounding box = namedtuple('RECTANGLE', 'x1 x2 y1 y2')
 
         Returns:
-            boolean: True if intersecting or enclosed by one another, False if completely seperate.
+            boolean: True if intersecting or enclosed by one another, False if completely separate.
         """
 
         # Could simplify all x and y checks into single if statement but easier to read this way
@@ -488,3 +510,60 @@ class TemplateViewModel(QtCore.QObject):
                 return False
 
         return intersects() or enclosed()
+    
+    def handle_template_profile_rename(self):
+        # Create a dialog box to rename the profile
+        self.rename_template_profile_dialog = QtWidgets.QInputDialog()
+        self.rename_template_profile_dialog.setInputMode(
+            QtWidgets.QInputDialog.TextInput)
+        self.rename_template_profile_dialog.setWindowTitle(
+            "Rename Template Profile")
+        self.rename_template_profile_dialog.setLabelText(
+            "Enter a new name for this profile:")
+        self.rename_template_profile_dialog.setTextValue(
+            self._loaded_profile_label_text)
+        self.rename_template_profile_dialog.setOkButtonText("Rename")
+        self.rename_template_profile_dialog.setCancelButtonText("Cancel")
+        
+        if self.rename_template_profile_dialog.exec():
+            self.rename_template_profile(self.rename_template_profile_dialog.textValue())
+
+    def rename_template_profile(self, new_name: str):
+        result = self.main_view_model.rename_template_profile(profile_id=self._current_file_profile, new_name=new_name)
+        if result is not None:
+            self.rename_template_profile_dialog = general_utils.MessageBox()
+            self.rename_template_profile_dialog.title = "Profile Template Rename Error"
+            self.rename_template_profile_dialog.icon = QtWidgets.QMessageBox.Critical
+            self.rename_template_profile_dialog.text = result
+            self.rename_template_profile_dialog.buttons = [QtWidgets.QPushButton("Close")]
+            self.rename_template_profile_dialog.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            self.rename_template_profile_dialog.callback = [None,]
+
+            self.main_view_model.display_message_box(message_box=self.rename_template_profile_dialog)
+            return
+
+        self._loaded_profile_label_text = new_name
+        self.loaded_profile_label_update.emit()
+        self.main_view_model.profile_update_list.emit()
+        self.update_template_pixmap()
+        self.paint_existing_data_rects(profile_id=self._current_file_profile)
+
+
+    def handle_template_profile_deletion(self):
+        self.profile_template_deletion_dialog = general_utils.MessageBox()
+        self.profile_template_deletion_dialog.title = "Delete Template Profile"
+        self.profile_template_deletion_dialog.icon = QtWidgets.QMessageBox.Warning
+        self.profile_template_deletion_dialog.text = f"Are you sure you want to delete the profile for template: {self._loaded_profile_label_text}?"
+        self.profile_template_deletion_dialog.buttons = [QtWidgets.QPushButton("Yes"), QtWidgets.QPushButton("No")]
+        self.profile_template_deletion_dialog.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
+        self.profile_template_deletion_dialog.callback = [self.delete_template_profile, None]
+
+        self.main_view_model.display_message_box(message_box=self.profile_template_deletion_dialog)
+
+    def delete_template_profile(self):
+        if not self._current_file_profile:
+            return
+        
+        self.main_view_model.delete_template_profile(profile_id=self._current_file_profile)
+        self.reset_template_view_state()
+        self.main_view_model.profile_update_list.emit()

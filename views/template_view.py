@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets
 
 from view_models import template_view_model
-from widgets import file_template_creation
+from widgets import file_template_creation, utility_widgets
 
 
 class TemplateView(QtWidgets.QWidget):
@@ -21,13 +21,7 @@ class TemplateView(QtWidgets.QWidget):
         self.file_template_tab_cta_button_layout.addWidget(
             self.select_template_file)
 
-        # Label for profile name
-        self.file_template_profile_name_label = QtWidgets.QLabel()
-        self.view_model.loaded_profile_label_update.connect(
-            lambda: self.file_template_profile_name_label.setText(self.view_model.loaded_profile_label_text))
-        self.file_template_tab_cta_button_layout.addWidget(
-            self.file_template_profile_name_label
-        )
+        
 
         # Button to apply selection as co-ords for unique file identifier
         self.apply_unique_file_identifier_button = QtWidgets.QPushButton()
@@ -64,7 +58,7 @@ class TemplateView(QtWidgets.QWidget):
             self.apply_unique_profile_project_number_button
         )
 
-        # Button to apply selection as co-ords for unique data information
+        # Button to apply selection as coords for unique data information
         self.apply_unique_profile_parameter_button = QtWidgets.QPushButton()
         self.apply_unique_profile_parameter_button.setObjectName(
             "apply_unique_profile_parameter_button"
@@ -86,18 +80,62 @@ class TemplateView(QtWidgets.QWidget):
         )
 
         # Line below action buttons
-        self.file_template_tab_line_below_cta_layout = QtWidgets.QHBoxLayout()
-        self.file_template_tab_line_2 = QtWidgets.QFrame()
-        self.file_template_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
-        self.file_template_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.file_template_tab_line_2.setObjectName("file_template_tab_line_2")
-        self.file_template_tab_line_below_cta_layout.addWidget(
-            self.file_template_tab_line_2
-        )
+        self.file_template_tab_line_below_cta_layout = utility_widgets.HorizontalLine()
 
-        self.main_layout.addLayout(
+        self.main_layout.addWidget(
             self.file_template_tab_line_below_cta_layout
         )
+
+        self.loaded_template_name_layout = QtWidgets.QHBoxLayout()
+        # Label for profile name
+        self.file_template_profile_name_label = QtWidgets.QLabel()
+        self.loaded_template_name_layout.addWidget(
+            self.file_template_profile_name_label
+        )
+        self.file_template_profile_name_input = QtWidgets.QLabel()
+        self.view_model.loaded_profile_label_update.connect(self.new_loaded_profile)
+        self.file_template_profile_name_input.setEnabled(False)
+
+        self.loaded_template_name_layout.addWidget(
+            self.file_template_profile_name_input
+        )
+        self.loaded_template_name_layout.setStretch(
+            self.loaded_template_name_layout.indexOf(self.file_template_profile_name_input), 4
+        )
+
+        self.file_template_profile_name_rename_button = QtWidgets.QPushButton()
+        self.file_template_profile_name_rename_button.clicked.connect(
+            self.view_model.handle_template_profile_rename)
+        self.file_template_profile_name_rename_button.setEnabled(False)
+        self.loaded_template_name_layout.addWidget(
+            self.file_template_profile_name_rename_button
+        )
+        self.loaded_template_name_layout.setStretch(
+            self.loaded_template_name_layout.indexOf(self.file_template_profile_name_rename_button), 1
+        )
+        self.file_template_delete_profile_button = QtWidgets.QPushButton()
+        self.file_template_delete_profile_button.clicked.connect(
+            self.view_model.handle_template_profile_deletion
+        )
+        self.file_template_delete_profile_button.setProperty("class", "delete-button")
+        self.file_template_delete_profile_button.setEnabled(False)
+        self.loaded_template_name_layout.addWidget(
+            self.file_template_delete_profile_button
+        )
+        self.loaded_template_name_layout.setStretch(
+            self.loaded_template_name_layout.indexOf(self.file_template_delete_profile_button), 1
+        )
+        self.main_layout.addLayout(
+            self.loaded_template_name_layout
+        )
+
+        # Line below action buttons
+        self.file_template_tab_line_below_profile_name_layout = utility_widgets.HorizontalLine()
+
+        self.main_layout.addWidget(
+            self.file_template_tab_line_below_profile_name_layout
+        )
+
 
         # Custom template display widget
         self.template_display = file_template_creation.TemplateWidget()
@@ -124,6 +162,12 @@ class TemplateView(QtWidgets.QWidget):
             _translate("TemplateView", "Set Project Number"))
         self.apply_unique_profile_parameter_button.setText(
             _translate("TemplateView", "Add Data Parameter"))
+        self.file_template_profile_name_label.setText(
+            _translate("TemplateView", "Loaded Template:"))
+        self.file_template_profile_name_rename_button.setText(
+            _translate("TemplateView", "Rename"))
+        self.file_template_delete_profile_button.setText(
+            _translate("TemplateView", "Delete"))
 
     def update_template_pixmap(self, img_byte_arr, image):
         self.template_display.deleteLater()
@@ -135,3 +179,17 @@ class TemplateView(QtWidgets.QWidget):
     def paint_existing_data_rects(self, parameter_rects: list[str], profile_rect: list[str]):
         self.template_display.set_data_info(parameter_rects, profile_rect)
         self.template_display.style().polish(self.template_display)
+
+    def new_loaded_profile(self) -> None:
+        """Updates the loaded profile name in the view, and sets enabled state of rename/delete buttons accordingly."""
+
+        self.file_template_profile_name_input.setText(self.view_model.loaded_profile_label_text)
+
+        if self.view_model.loaded_profile_label_text == "": 
+            self.file_template_delete_profile_button.setEnabled(False)
+            self.file_template_profile_name_rename_button.setEnabled(False)
+            return
+        
+        self.file_template_delete_profile_button.setEnabled(True)
+        self.file_template_profile_name_rename_button.setEnabled(True)
+        return

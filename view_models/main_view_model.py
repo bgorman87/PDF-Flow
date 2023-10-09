@@ -151,15 +151,8 @@ class MainViewModel(QtCore.QObject):
     def fetch_project_data_table_headers(self) -> list[str]:
         return self.main_model.fetch_project_data_table_headers()
 
-    def delete_profile_add_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
-        self.main_model.delete_profile_by_name(profile_name=profile_name)
-        self.add_new_profile(profile_identifier=profile_identifier,
-                             profile_name=profile_name,
-                             x_1=x_1,
-                             x_2=x_2,
-                             y_1=y_1,
-                             y_2=y_2
-                             )
+    def delete_template_profile(self, profile_id: int):
+        self.main_model.delete_profile_by_id(profile_id=profile_id)
 
     def import_project_data_thread(self, project_data: list[str]):
         self.main_model.import_project_data_thread(project_data=project_data)
@@ -170,6 +163,8 @@ class MainViewModel(QtCore.QObject):
     def delete_all_project_data_thread(self):
         self.main_model.delete_all_project_data_thread()
 
+    def rename_template_profile(self, profile_id: int, new_name: str) -> str:
+        return self.main_model.rename_template_profile(profile_id=profile_id, new_name=new_name)
 
     def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
         self.main_model.add_new_profile(
