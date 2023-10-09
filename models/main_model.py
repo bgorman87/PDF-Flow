@@ -176,6 +176,33 @@ class MainModel(QtCore.QObject):
             )
             connection.commit()
 
+    def delete_profile_by_id(self, profile_id: int):
+        with self.db_connection(self.database_path) as connection:
+            connection.cursor().execute(
+                """DELETE FROM profiles WHERE profile_id=?""",
+                (profile_id,),
+            )
+            connection.commit()
+
+    def rename_template_profile(self, profile_id: int, new_name: str) -> str:
+
+        with self.db_connection(self.database_path) as connection:
+            try:
+                rename_query = """UPDATE profiles SET unique_profile_name=? WHERE profile_id=?"""
+                connection.cursor().execute(rename_query, (new_name, profile_id))
+                connection.commit()
+                return None
+            except sqlite3.IntegrityError:
+                return "The profile name you provided already exists. Please choose a different name."
+            except sqlite3.OperationalError:
+                return "There was an issue processing your request. Please try again later."
+            except sqlite3.InterfaceError:
+                return "Invalid data provided. Please ensure you're entering the correct information."
+            except sqlite3.DatabaseError:
+                return "Unexpected database issue. Please try again later."
+            except Exception as e:
+                return "An unexpected error occurred. Please try again later."
+
     def add_new_profile(
         self,
         profile_identifier: str,
