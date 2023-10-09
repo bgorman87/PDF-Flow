@@ -76,7 +76,7 @@ class MainView(QtWidgets.QMainWindow):
         self.message_box = message_box_view.MessageBoxView(
             message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box)
         )
-        result_index = self.message_box.exec_()
+        result_index = self.message_box.exec()
         # result = message_box_dict.get("button_roles")[result_index]
         self.main_view_model.message_box_handler(message_box.callback[result_index])
 
