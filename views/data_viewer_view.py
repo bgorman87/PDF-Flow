@@ -1,3 +1,5 @@
+import os
+
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from view_models import data_viewer_view_model
@@ -182,6 +184,29 @@ class DataViewerView(QtWidgets.QWidget):
         self.project_data_directory_layout.setStretch(2, 2)
         self.main_layout.addLayout(self.project_data_directory_layout)
 
+        self.project_data_description_layout = QtWidgets.QHBoxLayout()
+        self.project_data_description_label = QtWidgets.QLabel()
+        self.project_data_description_label.setObjectName(
+            "project_data_description_label"
+        )
+        self.project_data_description_layout.addWidget(
+            self.project_data_description_label
+        )
+        self.project_data_description_line_edit = QtWidgets.QLineEdit()
+        self.project_data_description_line_edit.setObjectName(
+            "project_data_description_line_edit"
+        )
+        self.project_data_description_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.project_data_description_line_edit, "description"
+            )
+        )
+        self.project_data_description_layout.addWidget(
+            self.project_data_description_line_edit
+        )
+
+        self.main_layout.addLayout(self.project_data_description_layout)
+
         self.project_data_email_subject_layout = QtWidgets.QHBoxLayout()
 
         # Label for email subject line edit
@@ -242,7 +267,7 @@ class DataViewerView(QtWidgets.QWidget):
             "profile_email_combo_box_helper"
         )
         self.profile_email_combo_box_helper.setToolTip(
-            "Tip: Defined project specific email template will take precedence over profile email template."
+            "Tip: Project specific email template will take precedence over profile email template."
         )
         self.profile_email_combo_box_helper.clicked.connect(
             self.display_tooltip
@@ -416,6 +441,9 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_project_number_label.setText(
             _translate("MainWindow", "Project Number:")
         )
+        self.project_data_description_label.setText(
+            _translate("MainWindow", "Project Description:")
+        )
         self.database_directory_label.setText(_translate("MainWindow", "Directory:"))
         self.database_email_subject_label.setText(
             _translate("MainWindow", "Email Subject:")
@@ -433,7 +461,6 @@ class DataViewerView(QtWidgets.QWidget):
         self.delete_all_project_data_button.setText(
             _translate("MainWindow", "Delete ALL Project Data")
         )
-
         self.database_discard_edited_project_data_button.setText(
             _translate("MainWindow", "Discard Changes")
         )
@@ -547,6 +574,7 @@ class DataViewerView(QtWidgets.QWidget):
     def clear_project_data_fields(self):
         self.database_project_number_line_edit.setText("")
         self.database_project_directory_line_edit.setText("")
+        self.project_data_description_line_edit.setText("")
         self.database_project_email_subject_line_edit.setText("")
         self.database_email_to_list_widget.clear()
         self.database_email_cc_list_widget.clear()
@@ -576,6 +604,7 @@ class DataViewerView(QtWidgets.QWidget):
             has_non_empty_fields = any(widget.text() != "" for widget in [
                 self.database_project_number_line_edit,
                 self.database_project_directory_line_edit,
+                self.project_data_description_line_edit,
                 self.database_project_email_subject_line_edit,
             ])
             if not has_non_empty_fields:
@@ -659,11 +688,12 @@ class DataViewerView(QtWidgets.QWidget):
         self._project_data_loaded_data = {
             "project_number": self.database_viewer_table.item(current_row, 0).text(),
             "directory": self.database_viewer_table.item(current_row, 1).text(),
-            "email_to": self.database_viewer_table.item(current_row, 2).text(),
-            "email_cc": self.database_viewer_table.item(current_row, 3).text(),
-            "email_bcc": self.database_viewer_table.item(current_row, 4).text(),
-            "email_subject": self.database_viewer_table.item(current_row, 5).text(),
-            "email_profile_name": self.database_viewer_table.item(current_row, 6).text(),
+            "description": self.database_viewer_table.item(current_row, 2).text(),
+            "email_to": self.database_viewer_table.item(current_row, 3).text(),
+            "email_cc": self.database_viewer_table.item(current_row, 4).text(),
+            "email_bcc": self.database_viewer_table.item(current_row, 5).text(),
+            "email_subject": self.database_viewer_table.item(current_row, 6).text(),
+            "email_profile_name": self.database_viewer_table.item(current_row, 7).text(),
         }
         self.database_populate_project_edit_fields()
         self.database_viewer_table.currentItemChanged.connect(
@@ -679,6 +709,9 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.database_project_directory_line_edit.setText(
             self._project_data_loaded_data["directory"]
+        )
+        self.project_data_description_line_edit.setText(
+            self._project_data_loaded_data["description"]
         )
         self.database_project_email_subject_line_edit.setText(
             self._project_data_loaded_data["email_subject"]
@@ -795,7 +828,10 @@ class DataViewerView(QtWidgets.QWidget):
         ] = self.database_project_number_line_edit.text()
         new_project_data[
             "directory"
-        ] = self.database_project_directory_line_edit.text().replace("\\", "/")
+        ] = os.path.abspath(self.database_project_directory_line_edit.text())
+        new_project_data[
+            "description"
+        ] = self.project_data_description_line_edit.text()
         new_project_data[
             "email_subject"
         ] = self.database_project_email_subject_line_edit.text()
@@ -823,6 +859,7 @@ class DataViewerView(QtWidgets.QWidget):
         self._project_data_loaded_data = {
             "project_number": None,
             "directory": None,
+            "description": None,
             "email_to": None,
             "email_cc": None,
             "email_bcc": None,

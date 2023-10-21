@@ -148,6 +148,7 @@ class MainModel(QtCore.QObject):
                             id INTEGER PRIMARY KEY,
                             project_number TEXT UNIQUE NOT NULL,
                             directory TEXT,
+                            description TEXT,
                             email_to TEXT,
                             email_cc TEXT,
                             email_bcc TEXT,
@@ -552,7 +553,7 @@ class MainModel(QtCore.QObject):
         headers = None
         with self.db_connection(self.database_path) as connection:
             # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
+            query = f"""SELECT project_number, directory, description, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
             try:
                 cursor = connection.cursor()
                 results = cursor.execute(query).fetchone()
@@ -572,7 +573,7 @@ class MainModel(QtCore.QObject):
 
         with self.db_connection(self.database_path) as connection:
             # Probably not proper way to mitigate SQL injections but good enough since database_table string is not user supplied
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
+            query = f"""SELECT project_number, directory, description, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data;"""
             try:
                 database_fetch_results = connection.cursor().execute(query).fetchall()
                 if not database_fetch_results:
@@ -587,7 +588,7 @@ class MainModel(QtCore.QObject):
 
         with self.db_connection(self.database_path) as connection:
 
-            query = f"""SELECT project_number, directory, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data WHERE project_number=?;"""
+            query = f"""SELECT project_number, directory, description, email_to, email_cc, email_bcc, email_subject, email_profile_name FROM project_data WHERE project_number=?;"""
             try:
                 database_fetch_results = connection.cursor().execute(query, (project_number,)).fetchone()
                 if not database_fetch_results:
@@ -669,12 +670,13 @@ class MainModel(QtCore.QObject):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
-                update_statement = """UPDATE project_data SET project_number=?, directory=?, email_to=?, email_cc=?, email_bcc=?, email_subject=?, email_profile_name=? WHERE project_number=?;"""
+                update_statement = """UPDATE project_data SET project_number=?, directory=?, description=?, email_to=?, email_cc=?, email_bcc=?, email_subject=?, email_profile_name=? WHERE project_number=?;"""
                 data = [
                     new_data[key]
                     for key in [
                         "project_number",
                         "directory",
+                        "description",
                         "email_to",
                         "email_cc",
                         "email_bcc",
@@ -695,12 +697,13 @@ class MainModel(QtCore.QObject):
         msg = None
         with self.db_connection(self.database_path) as connection:
             try:
-                new_data_query = """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?);"""
+                new_data_query = """INSERT INTO project_data (project_number,directory,description,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?,?);"""
                 data = [
                     new_data[key]
                     for key in [
                         "project_number",
                         "directory",
+                        "description",
                         "email_to",
                         "email_cc",
                         "email_bcc",
@@ -868,7 +871,7 @@ class ImportProjectDataThread(QtCore.QRunnable):
             self.import_project_data = temp_project_data
             with self.db_connection(self.database_path) as connection:
                 msg = connection.cursor().executemany(
-                    """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?);""",
+                    """INSERT INTO project_data (project_number,directory,description,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?,?);""",
                     self.import_project_data,
                 )
                 connection.commit()
