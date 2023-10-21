@@ -9,6 +9,8 @@ from utils import image_utils, general_utils
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
+import time
+
 
 class TemplateViewModel(QtCore.QObject):
 
@@ -19,6 +21,9 @@ class TemplateViewModel(QtCore.QObject):
     template_pixmap_update = QtCore.Signal()
     profile_file_loaded_status = QtCore.Signal()
     rects_found = QtCore.Signal()
+    get_secondary_parameter_rect_signal = QtCore.Signal()
+    disable_template_buttons = QtCore.Signal()
+
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -35,6 +40,7 @@ class TemplateViewModel(QtCore.QObject):
         self._profile_rect = None
         self._file_profile_path = ""
         self._profile_file_loaded = False
+        self.active_dialog_box = None
 
     def reset_template_view_state(self):
         self._project_button_enabled = False
@@ -49,6 +55,7 @@ class TemplateViewModel(QtCore.QObject):
         self._profile_rect = None
         self._file_profile_path = ""
         self._profile_file_loaded = False
+        self.active_dialog_box = None
 
         self.unique_file_identifier_button_status.emit()
         self.loaded_profile_label_update.emit()
@@ -150,7 +157,7 @@ class TemplateViewModel(QtCore.QObject):
         self._profile_file_loaded = True
 
     def update_window_size_from_widgets(self, template_widget: file_template_creation.TemplateWidget, *widgets: QtWidgets.QWidget):
-        """Scales the window size according to the template widget and any other vertically aldigned widgets passed to function.
+        """Scales the window size according to the template widget and any other vertically aligned widgets passed to function.
         """
 
         updated_width = template_widget.scaled_width() + 25
@@ -164,7 +171,7 @@ class TemplateViewModel(QtCore.QObject):
     def paint_existing_data_rects(self, profile_id: int):
         """Draws bounding boxes on top of loaded template file for user to see which data is already being analyzed for each profile"""
 
-        self._parameter_rects = self.main_view_model.fetch_parameter_rects_and_desc(
+        self._parameter_rects = self.main_view_model.fetch_all_parameter_rects_and_desc_by_primary_profile_id(
             profile_id)
         self._profile_rect = self.main_view_model.fetch_profile_rect_and_desc(
             profile_id)
@@ -251,17 +258,33 @@ class TemplateViewModel(QtCore.QObject):
         # Display an error if left blank and bring the button box back up to retry.
         # If cancelled or requirements met, exit loop
 
-        self.apply_template_property_dialog = apply_data_type_dialog.ApplyFoundData(
+        self.active_dialog_box = apply_data_type_dialog.ApplyFoundData(
             template_display.true_coords(),
             template_display.found_text,
             dialog_type={property_type: True},
+            confirm_callback=lambda: self.handle_apply_template_property_confirm(
+                property_type=property_type,
+                template_display=template_display,
+            ),
+            cancel_callback=lambda: self.handle_apply_template_property_cancel(
+                template_display=template_display,
+            ),
         )
+        self.active_dialog_box.add_roi_signal.connect(self.get_secondary_parameter_rect)
+        self.active_dialog_box.remove_roi_signal.connect(lambda: template_display.reset_secondary_rects())
 
-        if not self.apply_template_property_dialog.exec():
-            return
+        self.active_dialog_box.show()
 
+    def handle_apply_template_property_cancel(self, template_display: file_template_creation.TemplateWidget):
+        self.active_dialog_box.remove_roi2_and_comparison()
+        self.active_dialog_box.deleteLater()
+        self.active_dialog_box = None
+        template_display.reset_rects()
+
+    def handle_apply_template_property_confirm(self, property_type: str, template_display: file_template_creation.TemplateWidget):
+        self.active_dialog_box.hide()
         name = (
-            self.apply_template_property_dialog.description.text()
+            self.active_dialog_box.description.text()
             .strip()
             .lower()
             .replace(" ", "_")
@@ -291,7 +314,7 @@ class TemplateViewModel(QtCore.QObject):
                 message_box.text = "Description/name already used for this profile. Please enter a unique value."
             else:
                 message_box.title = "Reserved Name"
-                message_box.text = "project_number is a reserved template keyword. To set the project_number paramater, use the 'Apply Project Number' button."
+                message_box.text = "project_number is a reserved template keyword. To set the project_number parameter, use the 'Apply Project Number' button."
             message_box.icon = QtWidgets.QMessageBox.Critical
             message_box.buttons = ["Close",]
             message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
@@ -304,7 +327,7 @@ class TemplateViewModel(QtCore.QObject):
         [x_1, x_2, y_1, y_2] = template_display.true_coords()
 
         identifier = (
-            self.apply_template_property_dialog.text_input.text().replace(
+            self.active_dialog_box.text_input.text().replace(
                 "\n", " "
             )
         )
@@ -318,18 +341,45 @@ class TemplateViewModel(QtCore.QObject):
                     y_1=y_1,
                     y_2=y_2,
                 )
+
+            self.active_dialog_box.remove_roi2_and_comparison()
+            self.active_dialog_box.deleteLater()
+            self.active_dialog_box = None
+            return
+        
         else:
 
+            secondary_advanced_option = None
             if property_type == "parameter":
-                regex = self.apply_template_property_dialog.regex.text()
+                # Get parameter regex
+                regex = self.active_dialog_box.regex.text()
                 if not regex:
                     regex = None
+
+                # Get advanced options if any
+                advanced_option = self.active_dialog_box.roi1.processing_method_dropdown.currentData()
+                if advanced_option:
+                    example_text = self.active_dialog_box.roi1.extra_value
+                    # Check for second roi
+                    if self.active_dialog_box.roi2:
+                        secondary_advanced_option = self.active_dialog_box.roi2.processing_method_dropdown.currentData()
+                        if secondary_advanced_option:
+                            example_text = self.active_dialog_box.comparison_result
+                            comparison_type = self.active_dialog_box.comparison_operator_dropdown.currentData()
+                            [secondary_x_1, secondary_x_2, secondary_y_1, secondary_y_2] = template_display.true_secondary_coords()
+                else:
+                    example_text = self.process_example_text(self.active_dialog_box.text_input.text())
+
             else:
                 regex = None
+                advanced_option = None
+                example_text = self.process_example_text(self.active_dialog_box.text_input.text())
 
-            example_text = self.apply_template_property_dialog.text_input.text(
-            ).strip().replace(" ", "-").replace("---", "-").replace("--", "-")
-            example_text = self.main_view_model.scrub(example_text)
+
+            self.active_dialog_box.remove_roi2_and_comparison()
+            self.active_dialog_box.deleteLater()
+            self.active_dialog_box = None
+
             self.add_new_parameter(
                 profile_id=self._current_file_profile,
                 parameter_name=name,
@@ -339,7 +389,62 @@ class TemplateViewModel(QtCore.QObject):
                 y_1=y_1,
                 y_2=y_2,
                 example=example_text,
+                advanced_option=advanced_option,
             )
+
+            if secondary_advanced_option:
+                parameter_id = self.main_view_model.fetch_parameter_id_by_name_and_profile_id(
+                    profile_id=self._current_file_profile, parameter_name=name)
+                self.main_view_model.add_new_secondary_parameter(
+                    parameter_id=parameter_id,
+                    parameter_name=name,
+                    x_1=secondary_x_1,
+                    x_2=secondary_x_2,
+                    y_1=secondary_y_1,
+                    y_2=secondary_y_2,
+                    advanced_option=secondary_advanced_option,
+                    comparison_type=comparison_type,
+                )
+
+                self.paint_existing_data_rects(profile_id=self._current_file_profile)
+            
+            return
+        
+
+    def get_secondary_parameter_rect(self):
+        
+        self.active_dialog_box.hide()
+        self.disable_template_buttons.emit()
+        callback = lambda: self.get_secondary_parameter_rect_signal.emit()
+
+        message_box = general_utils.MessageBox()
+        message_box.title = "Select Secondary Parameter"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = "Use the mouse to click and drag a bounding box around the desired secondary region of interest."
+        message_box.buttons = [QtWidgets.QPushButton("Close")]
+        message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+        message_box.callback = [callback,]
+
+        self.main_view_model.display_message_box(message_box=message_box)
+    
+    def handle_secondary_rect_complete(self, secondary_text: str):
+        self.active_dialog_box.set_secondary_values(secondary_text=secondary_text)
+        self.active_dialog_box.show_roi2_and_comparison()
+        self.active_dialog_box.show()
+
+    def process_example_text(self, text: str) -> str:
+        """Processes example text to be used for parameter example
+
+        Args:
+            text (str): text to be processed
+
+        Returns:
+            str: processed text
+        """
+
+        text = text.strip().replace(" ", "-").replace("---", "-").replace("--", "-")
+        text = self.main_view_model.scrub(text)
+        return text
 
     def profile_conflict(self, identifier: str, name: str, x_1: int, x_2: int, y_1: int, y_2: int) -> bool:
         # check if identifying text can be found in any of the existing profiles
@@ -406,7 +511,7 @@ class TemplateViewModel(QtCore.QObject):
 
         return False
 
-    def add_new_parameter(self, profile_id: int, parameter_name: str, regex: str, x_1: int, x_2: int, y_1: int, y_2: int, example: str):
+    def add_new_parameter(self, profile_id: int, parameter_name: str, regex: str, x_1: int, x_2: int, y_1: int, y_2: int, example: str, advanced_option: str):
         self.main_view_model.add_new_parameter(
             profile_id=profile_id,
             parameter_name=parameter_name,
@@ -416,6 +521,7 @@ class TemplateViewModel(QtCore.QObject):
             y_1=y_1,
             y_2=y_2,
             example=example,
+            advanced_option=advanced_option,
         )
         self.paint_existing_data_rects(profile_id=profile_id)
         # TODO: add function here to update parameter list  in settings if currently

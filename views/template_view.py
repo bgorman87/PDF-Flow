@@ -21,9 +21,7 @@ class TemplateView(QtWidgets.QWidget):
         self.file_template_tab_cta_button_layout.addWidget(
             self.select_template_file)
 
-        
-
-        # Button to apply selection as co-ords for unique file identifier
+        # Button to apply selection as coords for unique file identifier
         self.apply_unique_file_identifier_button = QtWidgets.QPushButton()
         self.apply_unique_file_identifier_button.setObjectName(
             "apply_unique_file_identifier_button"
@@ -40,7 +38,7 @@ class TemplateView(QtWidgets.QWidget):
             self.apply_unique_file_identifier_button
         )
 
-        # Button to apply selection as co-ords for project number
+        # Button to apply selection as coords for project number
         self.apply_unique_profile_project_number_button = QtWidgets.QPushButton()
         self.apply_unique_profile_project_number_button.setObjectName(
             "apply_unique_profile_project_number_button"
@@ -136,9 +134,9 @@ class TemplateView(QtWidgets.QWidget):
             self.file_template_tab_line_below_profile_name_layout
         )
 
-
         # Custom template display widget
         self.template_display = file_template_creation.TemplateWidget()
+        
         self.main_layout.addWidget(self.template_display)
         self.view_model.template_pixmap_update.connect(lambda: self.update_template_pixmap(
             img_byte_arr=self.view_model.img_byte_array,
@@ -148,6 +146,8 @@ class TemplateView(QtWidgets.QWidget):
             parameter_rects=self.view_model.parameter_rects,
             profile_rect=self.view_model.profile_rect
         ))
+        self.view_model.get_secondary_parameter_rect_signal.connect(self.get_secondary_parameter_rect)
+        self.view_model.disable_template_buttons.connect(self.disable_all_buttons)
         self.setLayout(self.main_layout)
 
         self.translate_ui()
@@ -168,11 +168,40 @@ class TemplateView(QtWidgets.QWidget):
             _translate("TemplateView", "Rename"))
         self.file_template_delete_profile_button.setText(
             _translate("TemplateView", "Delete"))
+        
+    def get_secondary_parameter_rect(self) -> None:
+        """Gets the secondary parameter rect coordinates from the view model."""
+        self.template_display.get_secondary_parameter_rect()
+
+    def disable_all_buttons(self) -> None:
+        """Disables all buttons in the view."""
+        self.select_template_file.setEnabled(False)
+        self.apply_unique_file_identifier_button.setEnabled(False)
+        self.apply_unique_profile_project_number_button.setEnabled(False)
+        self.apply_unique_profile_parameter_button.setEnabled(False)
+        self.file_template_profile_name_rename_button.setEnabled(False)
+        self.file_template_delete_profile_button.setEnabled(False)
+
+    def enable_all_buttons(self) -> None:
+        """Enables all buttons in the view."""
+        self.select_template_file.setEnabled(True)
+        self.apply_unique_file_identifier_button.setEnabled(True)
+        self.apply_unique_profile_project_number_button.setEnabled(True)
+        self.apply_unique_profile_parameter_button.setEnabled(True)
+        self.file_template_profile_name_rename_button.setEnabled(True)
+        self.file_template_delete_profile_button.setEnabled(True)
+        
+    def secondary_rect_complete(self, found_text: str) -> None:
+        """Updates the view model with the secondary rect coordinates."""
+        self.enable_all_buttons()
+        print("secondary_rect_complete")
+        self.view_model.handle_secondary_rect_complete(secondary_text=found_text)
 
     def update_template_pixmap(self, img_byte_arr, image):
         self.template_display.deleteLater()
         self.template_display = file_template_creation.TemplateWidget(
             img_byte_arr, image)
+        self.template_display.secondary_rect_complete_signal.connect(self.secondary_rect_complete)
         self.main_layout.addWidget(self.template_display)
         self.template_display.style().polish(self.template_display)
 
