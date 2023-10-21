@@ -61,11 +61,24 @@ class FileNameViewModel(QtCore.QObject):
             file_profile_text.split(" - ")[0])
         self._active_parameters = self.main_view_model.fetch_active_parameters_by_profile_id(
             self._profile_id)
-        self._active_parameters_examples = ["01"]
+        
         self._active_parameter_list_items = []
-        active_param_list_item = QtWidgets.QListWidgetItem("doc_num")
-        self._active_parameter_list_items.append(active_param_list_item)
-        for parameter in self._active_parameters[1:]:
+        
+        # Add default parameters to active parameters list
+        self._active_parameters_examples = ["01"]
+        doc_num_list_item = QtWidgets.QListWidgetItem("doc_num")
+        self._active_parameter_list_items.append(doc_num_list_item)
+
+        if "project_number" in self._active_parameters:
+            project_description_list_item = QtWidgets.QListWidgetItem("project_description")
+            project_description_example = self.main_view_model.fetch_project_description_example()
+            if not project_description_example:
+                project_description_example = "ProjectDescription"
+            self._active_parameters_examples.append(project_description_example)
+            self._active_parameter_list_items.append(project_description_list_item)
+
+        # Add active parameters to active parameters list
+        for parameter in self._active_parameters[2:]:
             self._active_parameters_examples.append(
                 self.main_view_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=self._profile_id, parameter=parameter))
             active_param_list_item = QtWidgets.QListWidgetItem(parameter)

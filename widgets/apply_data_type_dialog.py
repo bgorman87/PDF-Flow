@@ -46,6 +46,13 @@ class ApplyFoundData(QDialog):
         self.confirm_callback = confirm_callback
         self.cancel_callback = cancel_callback
 
+        self.button_box = QDialogButtonBox()
+        self.confirm_button = self.button_box.addButton("Confirm", QDialogButtonBox.AcceptRole)
+        self.button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+        self.button_box.setWindowTitle(self.windowTitle())
+        self.button_box.accepted.connect(self.confirm_callback)
+        self.button_box.rejected.connect(self.cancel_callback)
+
         # Determine which type of dialog to display and call corresponding method
         if dialog_type.get("parameter"):
             self._setup_parameter_dialog()
@@ -53,14 +60,6 @@ class ApplyFoundData(QDialog):
             self._setup_profile_dialog()
         elif dialog_type.get("project_number"):
             self._setup_project_number_dialog()
-
-        self.button_box = QDialogButtonBox()
-        self.confirm_button = self.button_box.addButton("Confirm", QDialogButtonBox.AcceptRole)
-        self.confirm_button.setEnabled(False)
-        self.button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
-        self.button_box.setWindowTitle(self.windowTitle())
-        self.button_box.accepted.connect(self.confirm_callback)
-        self.button_box.rejected.connect(self.cancel_callback)
 
         self.layout.addWidget(self.button_box)
         self.setLayout(self.layout)
@@ -196,6 +195,9 @@ class ApplyFoundData(QDialog):
 
     def remove_roi2_and_comparison(self):
 
+        if not hasattr(self, 'roi_layout'):
+            return
+
         if self.roi_layout.indexOf(self.comparison_group) != -1:
             self.roi_layout.removeWidget(self.comparison_group)
             self.comparison_group.setVisible(False)
@@ -273,6 +275,7 @@ class ApplyFoundData(QDialog):
 
 
     def _setup_parameter_dialog(self):
+        self.confirm_button.setEnabled(False)
         self.message_layout = QHBoxLayout()
         message = QLabel("Data Description:<span style='color: red;'>*</span>")
         self.description.setPlaceholderText("date, client_id, project_tag ...etc")
@@ -327,12 +330,14 @@ class ApplyFoundData(QDialog):
         self.adjustSize()
 
     def _setup_profile_dialog(self):
+        self.confirm_button.setEnabled(False)
         message = QLabel(
-            "Unique Profile Name: (Any spaces will be replaced with underscores '_' upon submission)"
+            "Unique Profile Name:<span style='color: red;'>*</span>"
         )
         self.description.setPlaceholderText(
             "formal_report, invoice, client_report_2, ...etc"
         )
+        self.description.textChanged.connect(self.handle_description_change)
         self.layout.addWidget(message)
         self.layout.addWidget(self.description)
 
@@ -351,7 +356,6 @@ class ApplyFoundData(QDialog):
             f"If project number produced acceptable results Continue on.\nOtherwise Cancel and try again by adjusting the selection area."
         )
         self.layout.addWidget(message2)
-
         self.text_input = QLineEdit(self.primary_text)
         self.layout.addWidget(self.text_input)
 

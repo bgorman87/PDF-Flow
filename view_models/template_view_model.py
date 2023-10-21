@@ -304,17 +304,38 @@ class TemplateViewModel(QtCore.QObject):
 
         # Check if user filled in profile_name and if its not already used
         # if so display message to user and use this function as a callback to bring it back up
-        if name == "" or db_id is not None or ("project_number" == name.lower() and property_type != "project_number"):
+        if ("project_number" == name.lower() and property_type != "project_number") or "project_description" == name.lower():
             message_box = general_utils.MessageBox()
-            if name == "":
-                message_box.title = "No Name"
-                message_box.text = "Please enter a description/name."
-            elif db_id is not None:
-                message_box.title = "Name Not Unique"
-                message_box.text = "Description/name already used for this profile. Please enter a unique value."
-            else:
-                message_box.title = "Reserved Name"
-                message_box.text = "project_number is a reserved template keyword. To set the project_number parameter, use the 'Apply Project Number' button."
+            message_box.title = "Reserved Name"
+            message_box.text = f"{name.lower()} is a reserved template keyword."
+            if "project_number" in name.lower():
+                message_box.text += " To set the project_number parameter, use the 'Apply Project Number' button."
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.buttons = ["Close",]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.callback = [lambda: self.apply_template_property(
+                property_type=property_type, template_display=template_display),]
+
+            self.main_view_model.display_message_box(message_box)
+            return
+
+        if name == "":
+            message_box = general_utils.MessageBox()
+            message_box.title = "No Name"
+            message_box.text = "Please enter a description/name."
+            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.buttons = ["Close",]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.callback = [lambda: self.apply_template_property(
+                property_type=property_type, template_display=template_display),]
+
+            self.main_view_model.display_message_box(message_box)
+            return
+            
+        if db_id is not None:
+            message_box = general_utils.MessageBox()
+            message_box.title = "Name Not Unique"
+            message_box.text = "Description/name already used for this profile. Please enter a unique value."
             message_box.icon = QtWidgets.QMessageBox.Critical
             message_box.buttons = ["Close",]
             message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
@@ -370,15 +391,14 @@ class TemplateViewModel(QtCore.QObject):
                 else:
                     example_text = self.process_example_text(self.active_dialog_box.text_input.text())
 
+                self.active_dialog_box.remove_roi2_and_comparison()
+                self.active_dialog_box.deleteLater()
+                self.active_dialog_box = None
+
             else:
                 regex = None
                 advanced_option = None
                 example_text = self.process_example_text(self.active_dialog_box.text_input.text())
-
-
-            self.active_dialog_box.remove_roi2_and_comparison()
-            self.active_dialog_box.deleteLater()
-            self.active_dialog_box = None
 
             self.add_new_parameter(
                 profile_id=self._current_file_profile,
