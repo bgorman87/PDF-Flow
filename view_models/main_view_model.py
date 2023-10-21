@@ -120,6 +120,14 @@ class MainViewModel(QtCore.QObject):
         return self.main_model.fetch_active_parameters_by_profile_id(
             profile_id=profile_id
         )
+    
+    def fetch_project_description_by_project_number(self, project_number: str) -> str:
+        return self.main_model.fetch_project_description_by_project_number(
+            project_number=project_number
+        )
+
+    def fetch_project_description_example(self) -> str:
+        return self.main_model.fetch_project_description_example()
 
     def fetch_advanced_option_by_parameter_name_and_profile_id(
         self, profile_id: int, parameter_name: str

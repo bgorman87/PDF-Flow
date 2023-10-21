@@ -267,6 +267,35 @@ class MainModel(QtCore.QObject):
             file_profile_description = file_profile_data[0]
         return file_profile_description
 
+    def fetch_project_description_by_project_number(self, project_number: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            project_description_query = (
+                """SELECT description FROM project_data WHERE project_number=?"""
+            )
+            project_description = (
+                connection.cursor()
+                .execute(project_description_query, (project_number,))
+                .fetchone()
+            )
+            if project_description:
+                return project_description[0]
+            return ""
+
+    def fetch_project_description_example(self) -> str:
+        query = """SELECT description
+                FROM project_data
+                WHERE description IS NOT NULL AND description != ''
+                LIMIT 1;"""
+        
+        with self.db_connection(self.database_path) as connection:
+            connection.row_factory = sqlite3.Row
+            data = connection.cursor().execute(query).fetchone()
+        
+        if data:
+            return data['description']
+        else:
+            return ''
+
     def fetch_active_parameters_by_profile_id(self, profile_id: int) -> list[str]:
         """Get active parameters for a file_profile
 
@@ -288,6 +317,7 @@ class MainModel(QtCore.QObject):
                 )
                 return [
                     "doc_num",
+                    "project_description",
                 ] + [parameter[0] for parameter in active_params if parameter]
             except (TypeError, sqlite3.DatabaseError) as e:
                 return []

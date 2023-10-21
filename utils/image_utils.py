@@ -131,8 +131,12 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                     ):
                         rename_path_project_dir = project_dir
                         break
+            project_description = self.main_view_model.fetch_project_description_by_project_number(
+                project_number=project_number
+            )
         else:
             rename_path_project_dir = ""
+            project_description = ""
 
         file_pattern = (
             self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
@@ -153,6 +157,19 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             if "{doc_num}" in new_file_name:
                 doc_number = detect_package_number(self.file_dir_path, rename_path_project_dir)
                 new_file_name = new_file_name.replace("{doc_num}", doc_number)
+
+            if "{project_description}" in new_file_name:
+                if project_number is None:
+                    project_description = ""
+                else:
+                    project_description = self.main_view_model.fetch_project_description_by_project_number(
+                        project_number=project_number
+                    )
+                    if project_description is None:
+                        project_description = ""
+                    new_file_name = new_file_name.replace(
+                        "{project_description}", project_description
+                    )
 
             for key in parameter_data.keys():
                 new_file_name = new_file_name.replace(
@@ -289,7 +306,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         )
         # Iterate through each location of each parameter
         data = {}
-        for file_profile_parameter in file_profile_parameters[1:]:
+        for file_profile_parameter in file_profile_parameters[2:]:
             [
                 x_1,
                 x_2,
