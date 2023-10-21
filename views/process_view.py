@@ -238,11 +238,12 @@ class ProcessView(QtWidgets.QWidget):
             file_data["source"] = renamed_source_path
 
         project_data_path = file_data["project_data"]
-        renamed_project_data_path = project_data_path.replace(current_name, new_name)
-        renamed = self.view_model.rename_file(project_data_path, renamed_project_data_path)
+        if project_data_path:
+            renamed_project_data_path = project_data_path.replace(current_name, new_name)
+            renamed = self.view_model.rename_file(project_data_path, renamed_project_data_path)
 
-        if renamed:
-            file_data["project_data"] = renamed_project_data_path
+            if renamed:
+                file_data["project_data"] = renamed_project_data_path
 
         self.processed_files_list_widget.currentItem().setText(
             self.file_rename_line_edit.text()

@@ -1,17 +1,19 @@
 import os
 import regex as re
-from PySide6 import QtCore
+from PySide6 import QtCore, QtWidgets
 from pdf2image import convert_from_path
 from utils.path_utils import resource_path
 import io
 import random
 import shutil
 import pytesseract
-
+from view_models import main_view_model
 import regex as re
+import debugpy
+from utils import text_utils
 
 
-def detect_package_number(file_path: str, project_file_path: str) -> str:
+def detect_package_number(file_path: str, project_file_path: str = None) -> str:
     """Checks project_file_path directory for all pdf files to determine the current document number. If unable it'll resort to checking file_path.
 
     Args:
@@ -64,7 +66,7 @@ class AnalysisSignals(QtCore.QObject):
 
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
-    def __init__(self, file_name: str, main_view_model, template: bool = False):
+    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
@@ -74,7 +76,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     @QtCore.Slot()
     def run(self):
-        # debugpy.debug_this_thread()
+        debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True
@@ -129,8 +131,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                     ):
                         rename_path_project_dir = project_dir
                         break
-
-        doc_number = detect_package_number(self.file_dir_path, rename_path_project_dir)
+        else:
+            rename_path_project_dir = ""
 
         file_pattern = (
             self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
@@ -141,12 +143,17 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         # If no file pattern just add each parameter value separated by hyphen
         # else format according to supplied pattern
         if file_pattern is None:
-            new_file_name = f"{doc_number}"
-            for key in parameter_data.keys():
-                new_file_name += f"-{parameter_data[key]}"
+
+            new_file_name = "-".join(map(str,[parameter_data[key] for key in parameter_data.keys()]))
+
         else:
+
             new_file_name = file_pattern
-            new_file_name = new_file_name.replace("{doc_num}", doc_number)
+
+            if "{doc_num}" in new_file_name:
+                doc_number = detect_package_number(self.file_dir_path, rename_path_project_dir)
+                new_file_name = new_file_name.replace("{doc_num}", doc_number)
+
             for key in parameter_data.keys():
                 new_file_name = new_file_name.replace(
                     "".join(["{", key, "}"]), parameter_data[key]
@@ -155,30 +162,34 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         rename_path = os.path.abspath(
             os.path.join(self.file_dir_path, new_file_name + ".pdf")
         )
+        rename_path = self.rename_file(self.file, rename_path)
+        new_file_name = os.path.basename(rename_path)
 
-        if len(str(rename_path)) > 260:
-            cut = len(str(rename_path)) - 256
-            new_file_name = new_file_name[:-cut] + "LONG"
-            rename_path = os.path.abspath(
-                os.path.join(self.file_dir_path, new_file_name + ".pdf")
-            )
+        # if os.path.isfile(rename_path):
+        #     # TODO: Implement proper event looping for the below
 
-        if os.path.isfile(rename_path):
-            new_file_name = new_file_name[:-3] + str(random.randint(1, 999))
-            rename_path = os.path.abspath(
-                os.path.join(self.file_dir_path, new_file_name + ".pdf")
-            )
-
-        try:
-            os.rename(self.file, rename_path)
-        except Exception as e:
-            print(f"Error renaming file in original location: {e}")
-
-        if rename_path_project_dir is not None:
+        #     # message_box = QtWidgets.QMessageBox()
+        #     # message_box.setWindowTitle("File Already Exists")
+        #     # message_box.setText(
+        #     #     f"File {new_file_name} already exists in this directory. Would you like to overwrite it?"
+        #     # )
+        #     # message_box.setStandardButtons(
+        #     #     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        #     # )
+        #     # message_box.setDefaultButton(QtWidgets.QMessageBox.No)
+        #     # message_box.setIcon(QtWidgets.QMessageBox.Warning)
+            
+        #     # if message_box.exec():
+        #     #     self.file = self.rename_file(self.file, rename_path)
+        rename_project_data_path = ""
+        if rename_path_project_dir:
             try:
                 shutil.copy(rename_path, rename_path_project_dir)
+                rename_project_data_path = os.path.join(
+                    rename_path_project_dir, new_file_name + ".pdf"
+                )
             except FileNotFoundError as e:
-                file_name = rename_path.replace("\\", "/").split("/")[-1]
+                file_name = os.path.basename(rename_path)
                 if rename_path_project_dir == "":
                     self.main_view_model.add_console_text(
                         f"No project directory found for {file_name}"
@@ -191,10 +202,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             except shutil.SameFileError as e:
                 pass
 
-        rename_project_data_path = os.path.join(
-            rename_path_project_dir, new_file_name + ".pdf"
-        )
-        prev_file_name = self.file.split("/")[-1]
+        
+        prev_file_name = os.path.basename(self.file)
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [
             print_string,
@@ -206,6 +215,42 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         ]
         self.signals.analysis_progress.emit(90)
         self.signals.analysis_result.emit(returns)
+
+    def generate_unique_filename(self, rename_path, extension=".pdf"):
+        # Extract the base filename and directory from the absolute path
+        dir_name = os.path.dirname(rename_path)
+        base_name = os.path.splitext(os.path.basename(rename_path))[0]
+        
+        # Counter for appending to the file name
+        counter = 1
+        
+        # Check if the path exists, and if so, increment counter and try again
+        while os.path.isfile(rename_path):
+            new_name = f"{base_name}({counter}){extension}"
+            rename_path = os.path.join(dir_name, new_name)
+            counter += 1
+
+        return rename_path
+
+    def rename_file(self, current_name: str, new_name: str, extension: str=".pdf") -> str:
+        MAX_PATH_LENGTH = 253
+        dir_name = os.path.dirname(new_name)
+        base_name = os.path.splitext(os.path.basename(new_name))[0]
+        
+        if len(new_name) > MAX_PATH_LENGTH:
+            cut_length = len(new_name) - (MAX_PATH_LENGTH - len("LONG") - len(extension) - 1)
+            base_name = base_name[:-cut_length] + "LONG"
+            new_name = os.path.abspath(
+                os.path.join(dir_name, base_name + extension)
+            )
+        if os.path.isfile(new_name):
+            new_name = self.generate_unique_filename(new_name, extension=extension)
+        try:
+            os.rename(current_name, new_name)
+            return new_name
+        except Exception as e:
+            print(f"Error renaming file in original location: {e}")
+            return current_name
 
     def find_file_profile(self, pdf_image: io.BytesIO) -> int:
         profiles = self.main_view_model.fetch_all_file_profiles(order_by="count")
@@ -242,7 +287,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 profile_id=profile_id
             )
         )
-        # Iterate through each location of each paramater
+        # Iterate through each location of each parameter
         data = {}
         for file_profile_parameter in file_profile_parameters[1:]:
             [
@@ -256,11 +301,13 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             parameter_regex = self.main_view_model.fetch_parameter_regex_by_parameter_name_and_profile_id(
                 profile_id=profile_id, parameter_name=file_profile_parameter
             )
+            advanced_option = self.main_view_model.fetch_advanced_option_by_parameter_name_and_profile_id(
+                profile_id=profile_id, parameter_name=file_profile_parameter
+            )
             for scale in [1.0, 1.01, 1.02, 1.03, 1.04, 1.05]:
-                scaled_x_1 = int(x_1 / scale)
-                scaled_x_2 = int(x_2 * scale)
-                scaled_y_1 = int(y_1 / scale)
-                scaled_y_2 = int(y_2 * scale)
+                (scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2) = self.scaled_coordinates(
+                    x_1, x_2, y_1, y_2, scale
+                )
 
                 # crop image to desired location
                 cropped_image = pdf_image.crop(
@@ -269,30 +316,74 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
                 result = self.analyze_image(cropped_image)
 
-                if not parameter_regex:
-                    data[file_profile_parameter] = self.main_view_model.scrub(
-                        result.replace("\n", "")
-                        .replace(" ", "-")
-                        .replace("---", "-")
-                        .replace("--", "-")
+                if advanced_option:
+                    
+                    parameter_id = self.main_view_model.fetch_parameter_id_by_name_and_profile_id(
+                        profile_id=profile_id, parameter_name=file_profile_parameter
                     )
-                    break
-                print(f"regex: {parameter_regex}")
-                data_point = re.search(rf"{parameter_regex}", result, re.M + re.I)
-                data[file_profile_parameter] = data_point
-                if data_point is not None:
-                    data_point = data_point.groups()
-                    # Get rid of any extra hyphens, random spaces, new line characters, and then feed it into scrub to get rid of non alpha-numeric
-                    data_point = self.main_view_model.scrub(
-                        data_point[-1]
-                        .replace("\n", "")
-                        .replace(" ", "-")
-                        .replace("---", "-")
-                        .replace("--", "-")
-                    )
-                    data[file_profile_parameter] = data_point
-                    break
+                    secondary_parameter_data = self.main_view_model.fetch_secondary_parameter_by_parameter_id(parameter_id=parameter_id)
+                    if secondary_parameter_data:
+                        (scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2) = self.scaled_coordinates(
+                            secondary_parameter_data[0],
+                            secondary_parameter_data[1],
+                            secondary_parameter_data[2],
+                            secondary_parameter_data[3],
+                            scale
+                        )
+                        
+                        secondary_cropped_image = pdf_image.crop(
+                            (scaled_x_1, scaled_y_1, scaled_x_2, scaled_y_2)
+                        )
+                        secondary_advanced_option = secondary_parameter_data[4]
+                        comparison_type = secondary_parameter_data[5]
+                        secondary_result = self.analyze_image(secondary_cropped_image)
+                    
+                    potential_list = result.split("\n")
+
+                    try:
+                        primary_list = [line.strip() for line in potential_list]
+                        if secondary_parameter_data:
+                            secondary_list = [line.strip() for line in secondary_result.split("\n")]
+                            processed_data = text_utils.process_list_comparison(primary_list, advanced_option, secondary_list, secondary_advanced_option, comparison_type)
+                        else:
+                            processed_data = text_utils.process_list_comparison(primary_list, advanced_option)
+                    except ValueError:
+                        # Some item in the potential list couldn't be converted to float
+                        # Try to scale up and see if that fixes issue
+                        continue
+                else:
+                    # the multiple replaces in scrubs are to replace spaces with hyphens and then remove any extra hyphens
+                    if parameter_regex:
+                        data_point = re.search(rf"{parameter_regex}", result, re.M + re.I)
+                        if data_point:
+                            data_point = data_point.groups()
+                            processed_data = self.main_view_model.scrub(
+                                data_point[-1]
+                                .replace("\n", "")
+                                .replace(" ", "-")
+                                .replace("---", "-")
+                                .replace("--", "-")
+                            )
+                        else:
+                            processed_data = None
+                    else:
+                        processed_data = self.main_view_model.scrub(
+                            str(result).replace("\n", "")
+                            .replace(" ", "-")
+                            .replace("---", "-")
+                            .replace("--", "-")
+                        )
+                break
+
+            data[file_profile_parameter] = str(processed_data)
         return data
+    
+    def scaled_coordinates(self, x_1, x_2, y_1, y_2, scale):
+        scaled_x_1 = int(x_1 / scale)
+        scaled_x_2 = int(x_2 * scale)
+        scaled_y_1 = int(y_1 / scale)
+        scaled_y_2 = int(y_2 * scale)
+        return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path):
         # pytesseract.pytesseract.tesseract_cmd = tesseract_path

@@ -67,7 +67,7 @@ class MainModel(QtCore.QObject):
             return string_item
 
     def initialize_database(self):
-        """Checks if the database and tables exists and if not will create the database and intialize the necessary tables."""
+        """Checks if the database and tables exists and if not will create the database and initialize the necessary tables."""
 
         if not os.path.exists(self.database_folder):
             os.makedirs(self.database_folder)
@@ -119,12 +119,30 @@ class MainModel(QtCore.QObject):
                         y_1 REAL,
                         y_2 REAL,
                         example_text TEXT,
+                        advanced TEXT DEFAULT '',
                         FOREIGN KEY(profile_id) REFERENCES profiles(profile_id) ON DELETE CASCADE
                         );"""
                     connection.cursor().execute(database_initialization)
 
                     _ = connection.cursor().execute(database_parameter_table_check)
                     print("profile_parameters table successfully created")
+
+                    database_initialization = """CREATE TABLE IF NOT EXISTS secondary_profile_parameters (
+                        secondary_parameter_id INTEGER PRIMARY KEY,
+                        parameter_id INTEGER,
+                        description TEXT,
+                        x_1 REAL,
+                        x_2 REAL,
+                        y_1 REAL,
+                        y_2 REAL,
+                        advanced TEXT DEFAULT '',
+                        comparison_type TEXT DEFAULT '',
+                        FOREIGN KEY(parameter_id) REFERENCES profile_parameters(parameter_id) ON DELETE CASCADE
+                        );"""
+                    connection.cursor().execute(database_initialization)
+
+                    _ = connection.cursor().execute(database_parameter_table_check)
+                    print("secondary_profile_parameters table successfully created")
 
                     database_initialization = """CREATE TABLE IF NOT EXISTS project_data (
                             id INTEGER PRIMARY KEY,
@@ -272,6 +290,23 @@ class MainModel(QtCore.QObject):
                 ] + [parameter[0] for parameter in active_params if parameter]
             except (TypeError, sqlite3.DatabaseError) as e:
                 return []
+        
+    def fetch_secondary_parameter_by_parameter_id(self, parameter_id: int) -> list[str]:
+        with self.db_connection(self.database_path) as connection:
+            try:
+                secondary_params_query = (
+                    """SELECT x_1, x_2, y_1, y_2, advanced, comparison_type FROM secondary_profile_parameters WHERE parameter_id=?"""
+                )
+                secondary_params = (
+                    connection.cursor()
+                    .execute(secondary_params_query, (parameter_id,))
+                    .fetchone()
+                )
+
+                return secondary_params
+
+            except (TypeError, sqlite3.DatabaseError) as e:
+                return []
 
     def update_profile_used_count_by_profile_id(self, profile_id: int) -> None:
         with self.db_connection(self.database_path) as connection:
@@ -312,16 +347,52 @@ class MainModel(QtCore.QObject):
             except (TypeError, sqlite3.DatabaseError) as e:
                 return ""
 
-    def fetch_paramater_rectangles_and_description_by_profile_id(
-        self, profile_id: int
-    ) -> list[str]:
-        rects_data = []
+    def fetch_all_parameter_rectangles_and_description_by_primary_profile_id(self, profile_id: int) -> list[dict]:
+        select_rects = """
+            SELECT 
+                profile_parameters.parameter_id, 
+                profile_parameters.description AS primary_description, 
+                profile_parameters.x_1 AS primary_x_1, 
+                profile_parameters.x_2 AS primary_x_2, 
+                profile_parameters.y_1 AS primary_y_1, 
+                profile_parameters.y_2 AS primary_y_2, 
+                profile_parameters.example_text, 
+                profile_parameters.advanced AS primary_advanced,
+                secondary_profile_parameters.description AS secondary_description, 
+                secondary_profile_parameters.x_1 AS secondary_x_1, 
+                secondary_profile_parameters.x_2 AS secondary_x_2, 
+                secondary_profile_parameters.y_1 AS secondary_y_1, 
+                secondary_profile_parameters.y_2 AS secondary_y_2, 
+                secondary_profile_parameters.advanced AS secondary_advanced, 
+                secondary_profile_parameters.comparison_type
+            FROM profile_parameters
+            LEFT JOIN secondary_profile_parameters ON profile_parameters.parameter_id = secondary_profile_parameters.parameter_id
+            WHERE profile_parameters.profile_id = ?
+        """
+        
         with self.db_connection(self.database_path) as connection:
-            select_rects = """SELECT x_1, x_2, y_1, y_2, description FROM profile_parameters WHERE profile_id=?;"""
-            rects_data = (
-                connection.cursor().execute(select_rects, (profile_id,)).fetchall()
-            )
-        return rects_data
+            connection.row_factory = sqlite3.Row
+            raw_data = connection.cursor().execute(select_rects, (profile_id,)).fetchall()
+            
+        # Process the data into the desired dictionary format
+        processed_data = []
+        for row in raw_data:
+            processed_data.append({
+                'primary': {
+                    'coords': (row['primary_x_1'], row['primary_x_2'], row['primary_y_1'], row['primary_y_2']),
+                    'description': row['primary_description'],
+                    'example_text': row['example_text'],
+                    'advanced': row['primary_advanced']
+                },
+                'secondary': {
+                    'coords': (row['secondary_x_1'], row['secondary_x_2'], row['secondary_y_1'], row['secondary_y_2']) if row['secondary_x_1'] else None,
+                    'description': row['secondary_description'] if row['secondary_description'] else None,
+                    'advanced': row['secondary_advanced'] if row['secondary_advanced'] else None,
+                    'comparison_type': row['comparison_type'] if row['comparison_type'] else None
+                }
+            })
+            
+        return processed_data
 
     def fetch_profile_rectangle_by_profile_id(self, profile_id: int) -> list[str]:
         rects_profile_data = []
@@ -333,13 +404,25 @@ class MainModel(QtCore.QObject):
                 .fetchone()
             )
         return rects_profile_data
+    
+    def fetch_advanced_option_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
+        with self.db_connection(self.database_path) as connection:
+            advanced_option_query = """SELECT advanced FROM profile_parameters WHERE profile_id=? AND description=?"""
+            advanced_option = (
+                connection.cursor()
+                .execute(advanced_option_query, (profile_id, parameter_name))
+                .fetchone()
+            )
+            if advanced_option and advanced_option[0] is not None:
+                return advanced_option[0]
+            return ""
 
     def fetch_parameter_id_by_name(self, profile_id: int, parameter_name: str) -> int:
         with self.db_connection(self.database_path) as connection:
             parameter_query = """SELECT parameter_id FROM profile_parameters WHERE profile_id=? AND description=?;"""
-            paramater_data = (profile_id, parameter_name)
+            parameter_data = (profile_id, parameter_name)
             parameter_id = (
-                connection.cursor().execute(parameter_query, paramater_data).fetchone()
+                connection.cursor().execute(parameter_query, parameter_data).fetchone()
             )
         if parameter_id is not None:
             parameter_id = parameter_id[0]
@@ -355,9 +438,10 @@ class MainModel(QtCore.QObject):
         y_1: int,
         y_2: int,
         example: str,
+        advanced_option: str,
     ):
         with self.db_connection(self.database_path) as connection:
-            add_parameter_query = """INSERT INTO profile_parameters(profile_id, description, regex, x_1, x_2, y_1, y_2, example_text) VALUES(?,?,?,?,?,?,?,?)"""
+            add_parameter_query = """INSERT INTO profile_parameters(profile_id, description, regex, x_1, x_2, y_1, y_2, example_text, advanced) VALUES(?,?,?,?,?,?,?,?,?)"""
             data = (
                 profile_id,
                 parameter_name,
@@ -367,12 +451,29 @@ class MainModel(QtCore.QObject):
                 y_1,
                 y_2,
                 example,
+                advanced_option
+            )
+            connection.cursor().execute(add_parameter_query, data)
+            connection.commit()
+
+    def add_new_secondary_parameter(self, parameter_id: int, parameter_name: str, x_1: int, x_2: int, y_1: int, y_2: int, advanced_option: str, comparison_type: str):
+        with self.db_connection(self.database_path) as connection:
+            add_parameter_query = """INSERT INTO secondary_profile_parameters(parameter_id, description, x_1, x_2, y_1, y_2, advanced, comparison_type) VALUES(?,?,?,?,?,?,?,?)"""
+            data = (
+                parameter_id,
+                parameter_name,
+                x_1,
+                x_2,
+                y_1,
+                y_2,
+                advanced_option,
+                comparison_type
             )
             connection.cursor().execute(add_parameter_query, data)
             connection.commit()
 
     def fetch_all_file_profiles(self, order_by: str) -> list[str]:
-        """Fetces the file_profile data to display to user in dropdowns
+        """Fetches the file_profile data to display to user in dropdowns
 
         Returns:
             list: Profile names
@@ -541,10 +642,10 @@ class MainModel(QtCore.QObject):
         self, profile_id: int, parameter_name: str
     ) -> list[int]:
         with self.db_connection(self.database_path) as connection:
-            parameter_ractangle_query = """SELECT x_1, x_2, y_1, y_2 FROM profile_parameters WHERE profile_id=? AND description=?;"""
+            parameter_rectangle_query = """SELECT x_1, x_2, y_1, y_2 FROM profile_parameters WHERE profile_id=? AND description=?;"""
             profile_rectangle = (
                 connection.cursor()
-                .execute(parameter_ractangle_query, (profile_id, parameter_name))
+                .execute(parameter_rectangle_query, (profile_id, parameter_name))
                 .fetchone()
             )
 
@@ -767,7 +868,7 @@ class ImportProjectDataThread(QtCore.QRunnable):
             self.import_project_data = temp_project_data
             with self.db_connection(self.database_path) as connection:
                 msg = connection.cursor().executemany(
-                    """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject) VALUES(?,?,?,?,?,?);""",
+                    """INSERT INTO project_data (project_number,directory,email_to,email_cc,email_bcc,email_subject,email_profile_name) VALUES(?,?,?,?,?,?,?);""",
                     self.import_project_data,
                 )
                 connection.commit()

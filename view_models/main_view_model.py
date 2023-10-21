@@ -9,7 +9,6 @@ from utils.general_utils import MessageBox
 
 
 class MainViewModel(QtCore.QObject):
-
     console_text_update = QtCore.Signal()
     stack_item_change_id = QtCore.Signal()
     message_box_alert = QtCore.Signal(MessageBox)
@@ -71,8 +70,12 @@ class MainViewModel(QtCore.QObject):
         self.process_files = 0
         self.processed_files_update.emit()
 
-    def fetch_parameter_id_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> int:
-        return self.main_model.fetch_parameter_id_by_name(profile_id=profile_id, parameter_name=parameter_name)
+    def fetch_parameter_id_by_name_and_profile_id(
+        self, profile_id: int, parameter_name: str
+    ) -> int:
+        return self.main_model.fetch_parameter_id_by_name(
+            profile_id=profile_id, parameter_name=parameter_name
+        )
 
     def update_emailed_files_update_count(self, emailed_files_count: int) -> None:
         self.emailed_files_count += emailed_files_count
@@ -104,25 +107,42 @@ class MainViewModel(QtCore.QObject):
         return dropdown_profiles
 
     def fetch_profile_id_by_profile_name(self, profile_name: str) -> int:
-        return self.main_model.fetch_profile_id_by_profile_name(profile_name=profile_name)
+        return self.main_model.fetch_profile_id_by_profile_name(
+            profile_name=profile_name
+        )
 
     def fetch_profile_description_by_profile_id(self, profile_id: int) -> str:
-        return self.main_model.fetch_profile_description_by_profile_id(profile_id=profile_id)
+        return self.main_model.fetch_profile_description_by_profile_id(
+            profile_id=profile_id
+        )
 
-    def fetch_active_parameters_by_profile_id(
-        self, profile_id: str
-    ) -> list[str]:
-        return self.main_model.fetch_active_parameters_by_profile_id(profile_id=profile_id)
+    def fetch_active_parameters_by_profile_id(self, profile_id: str) -> list[str]:
+        return self.main_model.fetch_active_parameters_by_profile_id(
+            profile_id=profile_id
+        )
+
+    def fetch_advanced_option_by_parameter_name_and_profile_id(
+        self, profile_id: int, parameter_name: str
+    ) -> str:
+        return self.main_model.fetch_advanced_option_by_parameter_name_and_profile_id(
+            profile_id=profile_id, parameter_name=parameter_name
+        )
+    
+    def fetch_secondary_parameter_by_parameter_id(self, parameter_id: int) -> list[str]:
+        return self.main_model.fetch_secondary_parameter_by_parameter_id(
+            parameter_id=parameter_id
+        )
 
     def display_message_box(self, message_box: dict):
         self.message_box_alert.emit(message_box)
 
     def update_profile_used_count_by_profile_id(self, profile_id: int) -> None:
-        self.main_model.update_profile_used_count_by_profile_id(
-            profile_id=profile_id)
+        self.main_model.update_profile_used_count_by_profile_id(profile_id=profile_id)
 
     def fetch_project_directory_by_project_number(self, project_number: str) -> str:
-        return self.main_model.fetch_project_directory_by_project_number(project_number=project_number)
+        return self.main_model.fetch_project_directory_by_project_number(
+            project_number=project_number
+        )
 
     def fetch_all_project_directories(self) -> list[str]:
         return self.main_model.fetch_all_project_directories()
@@ -131,23 +151,35 @@ class MainViewModel(QtCore.QObject):
         return self.main_model.fetch_all_project_numbers()
 
     def fetch_profile_file_name_pattern_by_profile_id(self, profile_id: int) -> str:
-        return self.main_model.fetch_profile_file_name_pattern_by_profile_id(profile_id=profile_id)
+        return self.main_model.fetch_profile_file_name_pattern_by_profile_id(
+            profile_id=profile_id
+        )
 
-    def fetch_parameter_example_text_by_name_and_profile_id(self, profile_id: int, parameter: str) -> str:
-        return self.main_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=profile_id, parameter=parameter)
+    def fetch_parameter_example_text_by_name_and_profile_id(
+        self, profile_id: int, parameter: str
+    ) -> str:
+        return self.main_model.fetch_parameter_example_text_by_name_and_profile_id(
+            profile_id=profile_id, parameter=parameter
+        )
 
     def fetch_all_profile_template_info(self) -> list[str]:
         return self.main_model.fetch_all_profile_template_info()
 
-    def fetch_profile_rectangle_bounds_by_profile_id(self, profile_id: int) -> list[str]:
-        return self.main_model.fetch_profile_rectangle_bounds_by_profile_id(profile_id=profile_id)
-    
+    def fetch_profile_rectangle_bounds_by_profile_id(
+        self, profile_id: int
+    ) -> list[str]:
+        return self.main_model.fetch_profile_rectangle_bounds_by_profile_id(
+            profile_id=profile_id
+        )
+
     def fetch_all_project_data(self) -> list[str]:
         return self.main_model.fetch_all_project_data()
-    
+
     def fetch_project_data_by_project_number(self, project_number: str) -> list[str]:
-        return self.main_model.fetch_project_data_by_project_number(project_number=project_number)
-    
+        return self.main_model.fetch_project_data_by_project_number(
+            project_number=project_number
+        )
+
     def fetch_project_data_table_headers(self) -> list[str]:
         return self.main_model.fetch_project_data_table_headers()
 
@@ -164,19 +196,40 @@ class MainViewModel(QtCore.QObject):
         self.main_model.delete_all_project_data_thread()
 
     def rename_template_profile(self, profile_id: int, new_name: str) -> str:
-        return self.main_model.rename_template_profile(profile_id=profile_id, new_name=new_name)
+        return self.main_model.rename_template_profile(
+            profile_id=profile_id, new_name=new_name
+        )
 
-    def add_new_profile(self, profile_identifier: str, profile_name: str, x_1: int, x_2: int, y_1: int, y_2: int):
+    def add_new_profile(
+        self,
+        profile_identifier: str,
+        profile_name: str,
+        x_1: int,
+        x_2: int,
+        y_1: int,
+        y_2: int,
+    ):
         self.main_model.add_new_profile(
             profile_identifier=profile_identifier,
             profile_name=profile_name,
             x_1=x_1,
             x_2=x_2,
             y_1=y_1,
-            y_2=y_2
+            y_2=y_2,
         )
 
-    def add_new_parameter(self, profile_id: int, parameter_name: str, regex: str, x_1: int, x_2: int, y_1: int, y_2: int, example: str):
+    def add_new_parameter(
+        self,
+        profile_id: int,
+        parameter_name: str,
+        regex: str,
+        x_1: int,
+        x_2: int,
+        y_1: int,
+        y_2: int,
+        example: str,
+        advanced_option: str,
+    ):
         self.main_model.add_new_parameter(
             profile_id=profile_id,
             parameter_name=parameter_name,
@@ -186,6 +239,29 @@ class MainViewModel(QtCore.QObject):
             y_1=y_1,
             y_2=y_2,
             example=example,
+            advanced_option=advanced_option,
+        )
+
+    def add_new_secondary_parameter(
+        self,
+        parameter_id: int,
+        parameter_name: str,
+        x_1: int,
+        x_2: int,
+        y_1: int,
+        y_2: int,
+        advanced_option: str,
+        comparison_type: str,
+    ):
+        self.main_model.add_new_secondary_parameter(
+            parameter_id=parameter_id,
+            parameter_name=parameter_name,
+            x_1=x_1,
+            x_2=x_2,
+            y_1=y_1,
+            y_2=y_2,
+            advanced_option=advanced_option,
+            comparison_type=comparison_type,
         )
 
     def scrub(self, string_item):
@@ -198,8 +274,13 @@ class MainViewModel(QtCore.QObject):
             str: Initial string with only alpha-numeric, "_", "-", ".", and " " characters remaining
         """
         try:
-            scrubbed = ''.join(
-                (chr for chr in string_item if chr.isalnum() or chr in ["_", "-", ".", " "]))
+            scrubbed = "".join(
+                (
+                    chr
+                    for chr in string_item
+                    if chr.isalnum() or chr in ["_", "-", ".", " "]
+                )
+            )
             return scrubbed
         except TypeError:
             print(f"Scrub Error: Text does not need scrubbing - {string_item}")
@@ -229,49 +310,75 @@ class MainViewModel(QtCore.QObject):
     def window_size(self):
         return self._width, self._height
 
-    def fetch_parameter_rects_and_desc(self, profile_id: int) -> list[str]:
-        return self.main_model.fetch_paramater_rectangles_and_description_by_profile_id(profile_id)
+    def fetch_all_parameter_rects_and_desc_by_primary_profile_id(self, profile_id: int) -> list[str]:
+        return self.main_model.fetch_all_parameter_rectangles_and_description_by_primary_profile_id(
+            profile_id
+        )
 
     def fetch_profile_rect_and_desc(self, profile_id: int) -> list[str]:
         return self.main_model.fetch_profile_rectangle_by_profile_id(profile_id)
 
-    def fetch_parameter_rectangle_by_name_and_profile_id(self, profile_id: int, parameter_name: str) -> list[int]:
-        return self.main_model.fetch_parameter_rectangle_by_name_and_profile_id(profile_id=profile_id, parameter_name=parameter_name)
-    
-    def fetch_parameter_regex_by_parameter_name_and_profile_id(self, profile_id: int, parameter_name: str) -> str:
-        return self.main_model.fetch_parameter_regex_by_parameter_name_and_profile_id(profile_id=profile_id, parameter_name=parameter_name)
-    
+    def fetch_parameter_rectangle_by_name_and_profile_id(
+        self, profile_id: int, parameter_name: str
+    ) -> list[int]:
+        return self.main_model.fetch_parameter_rectangle_by_name_and_profile_id(
+            profile_id=profile_id, parameter_name=parameter_name
+        )
+
+    def fetch_parameter_regex_by_parameter_name_and_profile_id(
+        self, profile_id: int, parameter_name: str
+    ) -> str:
+        return self.main_model.fetch_parameter_regex_by_parameter_name_and_profile_id(
+            profile_id=profile_id, parameter_name=parameter_name
+        )
+
     def delete_project_data_entry_by_project_number(self, project_number: str) -> None:
-        return self.main_model.delete_project_data_entry_by_project_number(project_number=project_number)
-    
+        return self.main_model.delete_project_data_entry_by_project_number(
+            project_number=project_number
+        )
+
     def update_project_data_entry(self, old_data: dict, new_data: dict) -> str:
         return self.main_model.update_project_data_entry(old_data, new_data)
 
     def add_new_project_data(self, project_data: dict) -> str:
         return self.main_model.add_new_project_data(new_data=project_data)
-    
+
     def update_email_profile_names(self, email_profile_names: list[str]) -> None:
         self.email_profiles_updated.emit(email_profile_names)
-        return 
+        return
 
     def get_email_directory(self) -> os.path:
         relative_directory = "signatures"
         if not os.path.exists(relative_directory):
             os.makedirs(relative_directory)
         return os.path.abspath(relative_directory)
-    
-    def set_email_profile_by_profile_name(self, profile_name: str, email_profile_name: str) -> None:
+
+    def set_email_profile_by_profile_name(
+        self, profile_name: str, email_profile_name: str
+    ) -> None:
         profile_id = self.fetch_profile_id_by_profile_name(profile_name=profile_name)
-        self.set_email_profile(profile_id=profile_id, email_profile_name=email_profile_name)
+        self.set_email_profile(
+            profile_id=profile_id, email_profile_name=email_profile_name
+        )
 
     def set_email_profile(self, profile_id: int, email_profile_name: str) -> None:
-        self.main_model.update_email_profile_by_profile_id(profile_id=profile_id, email_profile_name=email_profile_name)
+        self.main_model.update_email_profile_by_profile_id(
+            profile_id=profile_id, email_profile_name=email_profile_name
+        )
 
     def fetch_email_profile_name_by_profile_id(self, profile_id: int) -> str:
-        return self.main_model.fetch_email_profile_name_by_profile_id(profile_id=profile_id)
-    
+        return self.main_model.fetch_email_profile_name_by_profile_id(
+            profile_id=profile_id
+        )
+
     def fetch_email_profile_name_by_project_number(self, project_number: str) -> str:
-        return self.main_model.fetch_email_profile_name_by_project_number(project_number=project_number)
-    
-    def fetch_email_template_info_by_email_template_name(self, email_template_name: str) -> list[str]:
-        return self.main_model.fetch_email_template_info_by_email_template_name(email_template_name=email_template_name)
+        return self.main_model.fetch_email_profile_name_by_project_number(
+            project_number=project_number
+        )
+
+    def fetch_email_template_info_by_email_template_name(
+        self, email_template_name: str
+    ) -> list[str]:
+        return self.main_model.fetch_email_template_info_by_email_template_name(
+            email_template_name=email_template_name
+        )
