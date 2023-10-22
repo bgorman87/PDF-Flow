@@ -44,26 +44,35 @@ class MainModel(QtCore.QObject):
         finally:
             connection.close()
 
-    def scrub(self, string_item):
+    def scrub(self, string_item: str) -> str:
         """Used to clean up OCR results as well as help prevent SQL injection/errors.
 
         Args:
             string_item (str): string to be cleaned
 
         Returns:
-            str: Initial string with only alpha-numeric, "_", "-", ".", and " " characters remaining
+            str: Initial string with only alpha-numeric, "_", "-", and "." characters remaining
         """
         try:
+            string_item = string_item.strip().lower()
+            string_item = string_item.replace("\n", "").replace(" ", "_")
+
+            # Because spaces are replaced with hyphens or underscores, to make it more visually appealing
+            # we will remove any duplicate hyphens or underscores. Requires 3 loops total to do.
+            for i in range(3, 0, -1):
+                string_item = string_item.replace("_"*i, "_")
+                string_item = string_item.replace("-"*i, "-")
+
+
             scrubbed = "".join(
                 (
                     chr
                     for chr in string_item
-                    if chr.isalnum() or chr in ["_", "-", ".", " "]
+                    if chr.isalnum() or chr in ["_", "-", "."]
                 )
             )
             return scrubbed
         except TypeError:
-            print(f"Scrub Error: Text does not need scrubbing - {string_item}")
             return string_item
 
     def initialize_database(self):

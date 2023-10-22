@@ -289,14 +289,19 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
             # Using tesseract on cropped image, check if its equal to the unique_text
             text = self.analyze_image(cropped_pdf_image)
-            if (
-                file_identifier_text.strip().lower()
-                in self.main_view_model.scrub(text.replace("\n", " ")).strip().lower()
-            ):
+            if (self.compare_strings(file_identifier_text, text.replace("\n", " "))):
                 file_type = file_profile[0]
                 return file_type
 
         return 0
+
+    def compare_strings(self, string_1: str, string_2: str) -> bool:
+        if string_1 == string_2:
+            return True
+        if self.main_view_model.scrub(string_1) in self.main_view_model.scrub(string_2):
+            return True
+        else:
+            return False
 
     def find_parameter_data(self, profile_id: int, pdf_image: io.BytesIO) -> dict:
         file_profile_parameters = (
@@ -369,27 +374,16 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                         # Try to scale up and see if that fixes issue
                         continue
                 else:
-                    # the multiple replaces in scrubs are to replace spaces with hyphens and then remove any extra hyphens
+
                     if parameter_regex:
                         data_point = re.search(rf"{parameter_regex}", result, re.M + re.I)
                         if data_point:
                             data_point = data_point.groups()
-                            processed_data = self.main_view_model.scrub(
-                                data_point[-1]
-                                .replace("\n", "")
-                                .replace(" ", "-")
-                                .replace("---", "-")
-                                .replace("--", "-")
-                            )
+                            processed_data = self.main_view_model.scrub(data_point[-1].replace(" ", "-"))
                         else:
                             processed_data = None
                     else:
-                        processed_data = self.main_view_model.scrub(
-                            str(result).replace("\n", "")
-                            .replace(" ", "-")
-                            .replace("---", "-")
-                            .replace("--", "-")
-                        )
+                        processed_data = self.main_view_model.scrub(str(result).replace(" ", "-"))
                 break
 
             data[file_profile_parameter] = str(processed_data)
@@ -402,7 +396,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         scaled_y_2 = int(y_2 * scale)
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
-    def analyze_image(self, img_path):
+    def analyze_image(self, img_path) -> str:
         # pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()
