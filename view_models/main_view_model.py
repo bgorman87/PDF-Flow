@@ -272,7 +272,7 @@ class MainViewModel(QtCore.QObject):
             comparison_type=comparison_type,
         )
 
-    def scrub(self, string_item):
+    def scrub(self, string_item: str) -> str:
         """Used to clean up OCR results as well as help prevent SQL injection/errors.
 
         Args:
@@ -281,18 +281,7 @@ class MainViewModel(QtCore.QObject):
         Returns:
             str: Initial string with only alpha-numeric, "_", "-", ".", and " " characters remaining
         """
-        try:
-            scrubbed = "".join(
-                (
-                    chr
-                    for chr in string_item
-                    if chr.isalnum() or chr in ["_", "-", ".", " "]
-                )
-            )
-            return scrubbed
-        except TypeError:
-            print(f"Scrub Error: Text does not need scrubbing - {string_item}")
-            return string_item
+        return self.main_model.scrub(string_item=string_item)
 
     def update_template_profile_file_name_pattern(
         self, profile_name: str, profile_file_name_pattern: str

@@ -389,7 +389,7 @@ class TemplateViewModel(QtCore.QObject):
                             comparison_type = self.active_dialog_box.comparison_operator_dropdown.currentData()
                             [secondary_x_1, secondary_x_2, secondary_y_1, secondary_y_2] = template_display.true_secondary_coords()
                 else:
-                    example_text = self.process_example_text(self.active_dialog_box.text_input.text())
+                    example_text = self.main_view_model.scrub(self.active_dialog_box.text_input.text())
 
                 self.active_dialog_box.remove_roi2_and_comparison()
                 self.active_dialog_box.deleteLater()
@@ -398,7 +398,7 @@ class TemplateViewModel(QtCore.QObject):
             else:
                 regex = None
                 advanced_option = None
-                example_text = self.process_example_text(self.active_dialog_box.text_input.text())
+                example_text = self.main_view_model.scrub(self.active_dialog_box.text_input.text())
 
             self.add_new_parameter(
                 profile_id=self._current_file_profile,
@@ -437,34 +437,15 @@ class TemplateViewModel(QtCore.QObject):
         self.disable_template_buttons.emit()
         callback = lambda: self.get_secondary_parameter_rect_signal.emit()
 
-        message_box = general_utils.MessageBox()
-        message_box.title = "Select Secondary Parameter"
-        message_box.icon = QtWidgets.QMessageBox.Information
-        message_box.text = "Use the mouse to click and drag a bounding box around the desired secondary region of interest."
-        message_box.buttons = [QtWidgets.QPushButton("Close")]
-        message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
-        message_box.callback = [callback,]
-
-        self.main_view_model.display_message_box(message_box=message_box)
+        message_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, "Select Secondary Parameter", "Use the mouse to click and drag a bounding box around the desired secondary region of interest.")
+        message_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        message_box.buttonClicked.connect(lambda: callback())
+        message_box.exec()
     
     def handle_secondary_rect_complete(self, secondary_text: str):
         self.active_dialog_box.set_secondary_values(secondary_text=secondary_text)
         self.active_dialog_box.show_roi2_and_comparison()
         self.active_dialog_box.show()
-
-    def process_example_text(self, text: str) -> str:
-        """Processes example text to be used for parameter example
-
-        Args:
-            text (str): text to be processed
-
-        Returns:
-            str: processed text
-        """
-
-        text = text.strip().replace(" ", "-").replace("---", "-").replace("--", "-")
-        text = self.main_view_model.scrub(text)
-        return text
 
     def profile_conflict(self, identifier: str, name: str, x_1: int, x_2: int, y_1: int, y_2: int) -> bool:
         # check if identifying text can be found in any of the existing profiles
@@ -473,16 +454,10 @@ class TemplateViewModel(QtCore.QObject):
         unique_texts = self.main_view_model.fetch_all_profile_template_info()
 
         identifier_text_found = False
-        for profile_id, unique_text, profile_name in unique_texts:
-            if (
-                identifier.replace(
-                    "\n", " ").strip().lower()
-                in unique_text.replace("\n", " ").strip().lower()
-                or unique_text.replace("\n", " ").strip().lower()
-                in identifier.replace("\n", " ")
-                .strip()
-                .lower()
-            ):
+        identifier = identifier.replace("\n", " ").strip().lower()
+        for profile_id, unique_text, _ in unique_texts:
+            unique_text = unique_text.replace("\n", " ").strip().lower()
+            if identifier in unique_text or unique_text in identifier:
                 identifier_text_found = True
                 break
 
@@ -655,6 +630,7 @@ class TemplateViewModel(QtCore.QObject):
             self.rename_template_profile(self.rename_template_profile_dialog.textValue())
 
     def rename_template_profile(self, new_name: str):
+        new_name = self.main_view_model.scrub(new_name)
         result = self.main_view_model.rename_template_profile(profile_id=self._current_file_profile, new_name=new_name)
         if result is not None:
             self.rename_template_profile_dialog = general_utils.MessageBox()
