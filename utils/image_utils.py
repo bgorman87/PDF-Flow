@@ -180,7 +180,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             os.path.join(self.file_dir_path, new_file_name + ".pdf")
         )
         rename_path = self.rename_file(self.file, rename_path)
-        new_file_name = os.path.basename(rename_path)
 
         # if os.path.isfile(rename_path):
         #     # TODO: Implement proper event looping for the below
@@ -198,6 +197,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             
         #     # if message_box.exec():
         #     #     self.file = self.rename_file(self.file, rename_path)
+        
         rename_project_data_path = ""
         if rename_path_project_dir:
             try:
