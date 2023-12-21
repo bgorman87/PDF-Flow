@@ -28,7 +28,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='PDF Flow',
+    name='Englobe PDF Flow',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
