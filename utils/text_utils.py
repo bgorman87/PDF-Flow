@@ -1,4 +1,5 @@
 import datetime
+import re
 
 
 def valid_date(date_string):
@@ -138,3 +139,37 @@ def process_list(list_data, list_type, advanced_option):
         result = list_data[-1]
 
     return result
+
+
+def detect_englobe_project_number(text):
+    # Regex expressions for job numbers
+    # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
+    # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
+    # 1900: ^(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
+    # 0200: ^([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d{4})
+    # r = StringIO(text)
+    # text = text.replace(" ", "")
+    # test = re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M)
+    expressions = [
+        r"(B[\.-\s]\d+[\.-\s]+\d{1})",
+        r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})",
+        r"(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)",
+        r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d)",
+        r"(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+)",
+        r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d+)",
+        r"([0-2]\d+[\.-\s]+\d+[\.-\s]\d+)"
+    ]
+    project_number = "NA"
+
+    for i in range(6):
+        if re.search(expressions[i], text, re.M) is not None:
+            try:
+                project_number = re.search(expressions[i], text, re.M).groups()
+            except AttributeError as e:
+                print(e)
+                project_number = str(re.search(expressions[i], text, re.M))
+            project_number = project_number[-1]
+            project_number = project_number.replace(" ", "")
+            break
+
+    return project_number
