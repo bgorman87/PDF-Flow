@@ -337,7 +337,17 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 )
 
                 result = self.analyze_image(cropped_image)
-
+                
+                project_number_found = False
+                if "project_number" in file_profile_parameter:
+                    result = text_utils.detect_englobe_project_number(result)
+                    # check if project number is in database
+                    project_data = self.main_view_model.fetch_project_data_by_project_number(
+                        project_number=result
+                    )
+                    if project_data:
+                        project_number_found = True
+                        
                 if advanced_option:
                     
                     parameter_id = self.main_view_model.fetch_parameter_id_by_name_and_profile_id(
@@ -384,7 +394,14 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                             processed_data = None
                     else:
                         processed_data = self.main_view_model.scrub(str(result).replace(" ", "-"))
-                break
+                
+                if "project_number" in file_profile_parameter:
+                    if project_number_found:
+                        break
+                    else:
+                        continue
+                else:              
+                    break
 
             data[file_profile_parameter] = str(processed_data)
         return data
