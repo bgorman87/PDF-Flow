@@ -126,14 +126,23 @@ class EmailView(QtWidgets.QWidget):
         
     def email_profile_changed(self, index: int):
         self.view_model.email_profile_changed(index)
-        self.save_button.setEnabled(self.view_model.get_text_changed())
-        self.email_profile_delete_button.setEnabled(self.view_model.get_current_index() != 0)
+        if " - Outlook" in self.view_model._email_profile_names[index]:
+            self.save_button.setEnabled(False)
+            self.email_profile_delete_button.setEnabled(False)
+            self.email_text_edit.setEnabled(False)
+        else:
+            self.save_button.setEnabled(self.view_model.get_text_changed())
+            self.email_profile_delete_button.setEnabled(self.view_model.get_current_index() != 0)
+            self.email_text_edit.setEnabled(True)
     
     def email_text_changed(self):
         raw_html = self.email_text_edit.get_html()
         plain_text = self.email_text_edit.get_plain_text()
         self.view_model.email_text_changed(raw_html, plain_text)
-        self.save_button.setEnabled(self.view_model.get_text_changed())
+        if " - Outlook" in self.view_model._email_profile_names[self.view_model._loaded_email_index]:
+            self.save_button.setEnabled(False)
+        else:
+            self.save_button.setEnabled(self.view_model.get_text_changed())
 
     def update_email_text(self):
         self.email_text_edit.set_html(self.view_model.formatted_html)
