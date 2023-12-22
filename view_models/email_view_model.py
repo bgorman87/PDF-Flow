@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from lxml import html
 from PySide6 import QtCore, QtWidgets
 
-from utils import general_utils
+from utils import general_utils, text_utils
 from view_models import main_view_model
 
 
@@ -283,6 +283,11 @@ class EmailViewModel(QtCore.QObject):
 
         # If there is a loaded profile, and text has been changed, prompt user to save changes
         if self._text_changed and self._loaded_email_index != 0:
+            
+            if " - Outlook" in self._email_profile_names[self._loaded_email_index]:
+                self.discard_changes(index)
+                return
+            
             self.save_changes_button_dialog(index)
             return
 
@@ -316,28 +321,6 @@ class EmailViewModel(QtCore.QObject):
         self.set_current_index(index)
         self.load_email_profile(self._email_profile_names[index])
 
-    def format_external_html(self, signature_name: str, html: str) -> str:
-        soup = BeautifulSoup(html, 'lxml')
-        
-        def update_path(tag, attribute):
-            if tag.has_attr(attribute):
-                rel_path = tag[attribute]
-                # Check if the path is relative and not an external link
-                if rel_path and not rel_path.startswith(('http:', 'https:', 'mailto:', '#')):
-                    abs_path = os.path.join(self.main_view_model.get_outlook_email_directory(), *rel_path.split("/"))
-                    tag[attribute] = abs_path
-
-        # Update src and href attributes
-                    
-        def custom_selector(tag):
-            # Return tags with either a 'src' or 'href' attribute
-            return (tag.name is not None) and (tag.has_attr('src') or tag.has_attr('href'))
-
-        for tag in soup.find_all(custom_selector):
-            update_path(tag, 'src')
-            update_path(tag, 'href')
-
-        return(str(soup))
 
     def load_email_profile(self, profile_name: str):
         # For now, check if name has ' - Outlook' to determine if email is from outlook
@@ -398,7 +381,7 @@ class EmailViewModel(QtCore.QObject):
             with open(email_html_file, "r") as f:
                 self.email_raw_html = f.read()
 
-            self._loaded_raw_html = self.format_external_html(profile_base_name, self.email_raw_html)
+            self._loaded_raw_html = text_utils.format_external_html(self.main_view_model.get_outlook_email_directory(), self.email_raw_html)
 
         self.email_text_update.emit()
 

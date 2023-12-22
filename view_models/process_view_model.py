@@ -17,7 +17,7 @@ from googleapiclient.discovery import build
 from lxml import html
 from PySide6 import QtCore, QtWidgets
 
-from utils import general_utils, image_utils
+from utils import general_utils, image_utils, text_utils
 from utils.enums import EmailProvider
 from view_models import main_view_model
 
@@ -331,14 +331,34 @@ class ProcessViewModel(QtCore.QObject):
             self.main_view_model.update_emailed_files_update_count(1)
             body_content = ""
             if email_template:
-                email_template_path = os.path.join(
-                    self.main_view_model.get_local_email_directory(),
-                    email_template,
-                    "email.html",
-                )
+                if " - Outlook" in email_template:
+                    profile_base_name = email_template.replace(" - Outlook", "")
+                    outlook_directory = (
+                        self.main_view_model.get_outlook_email_directory()
+                    )
+
+                    signature_name = ""
+                    for filename in os.listdir(outlook_directory):
+                        if (
+                            filename.endswith(".htm") or filename.endswith(".html")
+                        ) and (profile_base_name in filename):
+                            signature_name = filename
+                            break
+
+                    email_template_path = os.path.join(
+                        outlook_directory, signature_name
+                    )
+
+                else:
+                    email_template_path = os.path.join(
+                        self.main_view_model.get_local_email_directory(),
+                        email_template,
+                        "email.html",
+                    )
 
                 with open(email_template_path) as email_file:
                     body_content = email_file.read()
+
             subject = ""
             recipients = []
             cc_recipients = []
