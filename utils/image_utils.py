@@ -1,7 +1,7 @@
 import os
 import regex as re
 from PySide6 import QtCore, QtWidgets
-# from pdf2image import convert_from_path
+from pdf2image import convert_from_path
 import fitz
 from utils.path_utils import resource_path
 import io
@@ -56,9 +56,10 @@ def detect_package_number(file_path: str, project_file_path: str = None) -> str:
 
 
 # hard coded tesseract and poppler path from current working directory
-tesseract_path = resource_path("Tesseract/tesseract.exe")
+tesseract_path = resource_path(os.path.join("Tesseract", "tesseract.exe"))
+poppler_path = resource_path(os.path.join("poppler", "bin"))
 # poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler/bin")))
-poppler_path = f"{os.path.abspath('/usr/bin')}"
+# poppler_path = f"{os.path.abspath('/usr/bin')}"
 
 
 class AnalysisSignals(QtCore.QObject):
@@ -79,13 +80,22 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
     def run(self):
         debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
-        doc = fitz.open(self.file)
-        page = doc.load_page(0)  # Load the first page (index 0)
-        image = page.get_pixmap()
-        doc.close()
-        img_byte_arr = io.BytesIO(image.pil_tobytes("png"))
-        # image.save(img_byte_arr, format="jpeg")
+
+        images_jpeg = convert_from_path(
+            self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True
+        )
+        image = images_jpeg[0]
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format="jpeg")
         img_byte_arr = img_byte_arr.getvalue()
+
+        # doc = fitz.open(self.file)
+        # page = doc.load_page(0)  # Load the first page (index 0)
+        # image = page.get_pixmap()
+        # doc.close()
+        # img_byte_arr = io.BytesIO(image.pil_tobytes("png"))
+        # # image.save(img_byte_arr, format="jpeg")
+        # img_byte_arr = img_byte_arr.getvalue()
 
         # For each image, connect to database and select all rows in profiles
         # Checking each unique id area for the unique identifier text
@@ -415,6 +425,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path) -> str:
-        # pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()
