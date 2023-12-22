@@ -1,10 +1,8 @@
 import typing
 import os
 
-from PySide6 import QtCore, QtWidgets
-from typing import Any
+from PySide6 import QtCore
 from models import main_model
-from widgets import loading_widget
 from utils.general_utils import MessageBox
 
 

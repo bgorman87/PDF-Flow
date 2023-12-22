@@ -1,7 +1,7 @@
-from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt, Signal
-from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QPainter, QPen,
+from PySide6.QtCore import QCoreApplication, QSize, Qt, Signal
+from PySide6.QtGui import (QColor, QFont, QIcon, QPainter,
                            QPixmap, QTextBlockFormat, QTextCharFormat,
-                           QTextFormat, QTextImageFormat, QPalette)
+                           QTextImageFormat, QPalette)
 from PySide6 import QtWidgets
 from utils import path_utils
 class EmailWidget(QtWidgets.QWidget):

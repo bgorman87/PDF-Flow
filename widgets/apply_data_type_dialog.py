@@ -8,13 +8,12 @@ from PySide6.QtWidgets import (
     QFrame,
     QComboBox,
     QToolButton,
-    QPushButton,
     QGroupBox,
     QMessageBox,
 )
 from PySide6.QtCore import Signal
 from widgets import utility_widgets
-from utils import text_utils, general_utils
+from utils import text_utils
 
 
 class ApplyFoundData(QDialog):

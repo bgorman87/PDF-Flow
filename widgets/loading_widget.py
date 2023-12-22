@@ -1,5 +1,5 @@
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QMessageBox, QProgressDialog
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QProgressDialog
 
 
 class LoadingWidget(QProgressDialog):

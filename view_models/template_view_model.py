@@ -9,8 +9,6 @@ from utils import image_utils, general_utils
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
-import time
-
 
 class TemplateViewModel(QtCore.QObject):
 

@@ -1,6 +1,5 @@
 from PySide6 import QtWidgets, QtGui, QtCore
 from widgets import email_list_widget, utility_widgets
-from utils import image_utils
 
 class DataViewerTableWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):

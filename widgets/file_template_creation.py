@@ -1,6 +1,4 @@
-import io
 import os
-import sys
 
 import pytesseract
 from PySide6 import QtCore, QtGui, QtWidgets

@@ -3,7 +3,6 @@ import csv
 from PySide6 import QtCore, QtWidgets
 from typing import List
 from view_models import main_view_model
-from widgets import loading_widget
 from utils import general_utils
 
 
