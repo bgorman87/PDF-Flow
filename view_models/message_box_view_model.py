@@ -1,4 +1,4 @@
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore
 from view_models import main_view_model
 from utils.general_utils import MessageBox
 

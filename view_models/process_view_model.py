@@ -12,9 +12,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from email.message import EmailMessage
-from email.mime.audio import MIMEAudio
-from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -25,7 +22,7 @@ from typing import List
 
 from view_models import main_view_model
 from utils.enums import EmailProvider
-from utils import image_utils, general_utils, path_utils
+from utils import image_utils, general_utils
 
 
 class ProcessViewModel(QtCore.QObject):

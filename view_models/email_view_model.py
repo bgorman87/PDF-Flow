@@ -3,7 +3,6 @@ import shutil
 import uuid
 import base64
 
-from io import BytesIO
 from lxml import html
 from PySide6 import QtCore, QtWidgets
 from view_models import main_view_model

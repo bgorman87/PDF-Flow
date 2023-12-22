@@ -1,11 +1,9 @@
 import os
 import regex as re
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
 from pdf2image import convert_from_path
-import fitz
 from utils.path_utils import resource_path
 import io
-import random
 import shutil
 import pytesseract
 from view_models import main_view_model
