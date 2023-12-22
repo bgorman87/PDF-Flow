@@ -8,6 +8,7 @@ __pycache__/
 
 # Virtual environment files
 venv/
+env/
 
 # PyInstaller Files
 build/

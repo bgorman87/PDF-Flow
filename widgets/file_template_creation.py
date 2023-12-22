@@ -4,10 +4,9 @@ import sys
 
 import pytesseract
 from PySide6 import QtCore, QtGui, QtWidgets
+from utils.path_utils import resource_path
 
-poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler\bin")))
-# tesseract_path = str(os.path.abspath(
-#     os.path.join(os.getcwd(), r"Tesseract\tesseract.exe")))
+tesseract_path = resource_path(os.path.join("Tesseract","tesseract.exe"))
 
 
 class TemplateWidget(QtWidgets.QWidget):
@@ -353,7 +352,7 @@ class TemplateWidget(QtWidgets.QWidget):
         if self.image_area_too_small:
             self.found_text = "Image Area Too Small"
             return
-        # pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"
