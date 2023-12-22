@@ -2,7 +2,7 @@ import collections
 import io
 from typing import NamedTuple
 
-import pdf2image
+import fitz
 from PySide6 import QtCore, QtWidgets
 
 from utils import image_utils, general_utils
@@ -143,14 +143,22 @@ class TemplateViewModel(QtCore.QObject):
     def update_template_pixmap(self):
         """Displays PDF file to be used for updating/creating a file_profile"""
 
-        self._image_jpeg = pdf2image.convert_from_path(
-            self._file_profile_path,
-            fmt="jpeg",
-            poppler_path=image_utils.poppler_path,
-            single_file=True,
-        )
-        self._img_byte_arr = io.BytesIO()
-        self._image_jpeg[0].save(self._img_byte_arr, format="jpeg")
+        # self._image_jpeg = pdf2image.convert_from_path(
+        #     self._file_profile_path,
+        #     fmt="jpeg",
+        #     poppler_path=image_utils.poppler_path,
+        #     single_file=True,
+        # )
+        # self._img_byte_arr = io.BytesIO()
+        # self._image_jpeg[0].save(self._img_byte_arr, format="jpeg")
+        # self._img_byte_arr = self._img_byte_arr.getvalue()
+
+        doc = fitz.open(self._file_profile_path)
+        page = doc.load_page(0)  # Load the first page (index 0)
+        self._image_jpeg = page.get_pixmap()
+        doc.close()
+        self._img_byte_arr = io.BytesIO(self._image_jpeg.pil_tobytes("png"))
+        # self._image_jpeg.save(self._img_byte_arr, format="jpeg")
         self._img_byte_arr = self._img_byte_arr.getvalue()
 
         self.template_pixmap_update.emit()
@@ -193,7 +201,7 @@ class TemplateViewModel(QtCore.QObject):
 
     @property
     def pil_image(self):
-        return self._image_jpeg[0] if self._image_jpeg else None
+        return self._image_jpeg if self._image_jpeg else None
 
     def template_button_guard(self, template_display: file_template_creation.TemplateWidget) -> bool:
         """Checks if profile identifier can begin to be processed

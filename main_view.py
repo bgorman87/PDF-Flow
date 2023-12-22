@@ -64,7 +64,7 @@ class MainView(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.navigation_view.setProperty("class", "nav-widget")
         screen = QtGui.QGuiApplication.primaryScreen().size()
-        self.resize(screen.width() // 2, screen.height())
+        self.resize(800, 950)
         self.main_view_model.window_size_update.connect(self.resize)
 
     def show_message_alert(self, message_box: general_utils.MessageBox):
