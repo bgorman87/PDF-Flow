@@ -55,9 +55,8 @@ def json_to_csv(parsed_data, csv_file_path):
 
 
 if __name__ == "__main__":
-    file_path = os.path.abspath(
-        r"C:\Users\gormbr\OneDrive - EnGlobe Corp\Documents\sorter_data.json"
-    )
+    file_path = os.path.abspath(os.path.join(os.getcwd(), "sorter_data.json"))
+
     output_file_path = os.path.abspath(os.path.join(os.getcwd(), "output.csv"))
     print(output_file_path)
     parsed_data = parse_json_file(file_path)
