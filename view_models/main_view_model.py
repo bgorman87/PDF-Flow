@@ -1,7 +1,8 @@
-import typing
 import os
+import typing
 
 from PySide6 import QtCore
+
 from models import main_model
 from utils.general_utils import MessageBox
 
@@ -342,11 +343,19 @@ class MainViewModel(QtCore.QObject):
         self.email_profiles_updated.emit(email_profile_names)
         return
 
-    def get_email_directory(self) -> os.path:
+    def get_local_email_directory(self) -> str | os.PathLike:
         relative_directory = "signatures"
         if not os.path.exists(relative_directory):
             os.makedirs(relative_directory)
         return os.path.abspath(relative_directory)
+    
+    def get_outlook_email_directory(self) -> str | os.PathLike:
+        appdata_path = os.getenv("APPDATA")
+        signatures_path = os.path.join(appdata_path, "Microsoft", "Signatures")
+        if os.path.exists(signatures_path):
+            return signatures_path
+        else:
+            return ""
 
     def set_email_profile_by_profile_name(
         self, profile_name: str, email_profile_name: str

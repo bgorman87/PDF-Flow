@@ -136,6 +136,6 @@ class EmailView(QtWidgets.QWidget):
         self.save_button.setEnabled(self.view_model.get_text_changed())
 
     def update_email_text(self):
-        self.email_text_edit.set_html(self.view_model.email_raw_html)
+        self.email_text_edit.set_html(self.view_model.formatted_html)
         self.view_model.set_loaded_raw_html(self.email_text_edit.get_html())
         self.save_button.setEnabled(False)

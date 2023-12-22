@@ -1,28 +1,25 @@
-import os
 import base64
-import requests
-import msal
-import uuid
 import mimetypes
-
+import os
 import subprocess
+import uuid
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import List
 
+import msal
+import requests
 from google.auth.exceptions import GoogleAuthError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-
-from email.mime.image import MIMEImage
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-from PySide6 import QtCore, QtWidgets
 from lxml import html
-from typing import List
+from PySide6 import QtCore, QtWidgets
 
-from view_models import main_view_model
+from utils import general_utils, image_utils
 from utils.enums import EmailProvider
-from utils import image_utils, general_utils
+from view_models import main_view_model
 
 
 class ProcessViewModel(QtCore.QObject):
@@ -207,7 +204,7 @@ class ProcessViewModel(QtCore.QObject):
             )
             self.main_view_model.add_console_alerts(1)
             return False
-        
+
     def get_outlook_token(self) -> bool:
         """Gets Outlook token for use in API calls
 
@@ -245,7 +242,7 @@ class ProcessViewModel(QtCore.QObject):
             message_box.callback = [
                 None,
             ]
-            
+
             self.main_view_model.display_message_box(message_box=message_box)
             return False
         else:
@@ -259,15 +256,14 @@ class ProcessViewModel(QtCore.QObject):
             bool: True if token is successfully retrieved, False otherwise
         """
 
-        SCOPES = ['https://www.googleapis.com/auth/gmail.compose']
+        SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
-                    'assets/credentials.json', SCOPES)
+                "assets/credentials.json", SCOPES
+            )
             credentials = flow.run_local_server(port=0)
         except (GoogleAuthError, FileNotFoundError) as e:
-            self.main_view_model.add_console_text(
-                f"Email Authentication Error: {e}"
-            )
+            self.main_view_model.add_console_text(f"Email Authentication Error: {e}")
             self.main_view_model.add_console_alerts(1)
             message_box = general_utils.MessageBox()
             message_box.title = "Email Authentication Error"
@@ -281,7 +277,7 @@ class ProcessViewModel(QtCore.QObject):
 
             self.main_view_model.display_message_box(message_box)
             return False
-                
+
         if credentials:
             self._token = credentials.token
             return True
@@ -299,11 +295,15 @@ class ProcessViewModel(QtCore.QObject):
             message_box.callback = [
                 None,
             ]
-            
+
             self.main_view_model.display_message_box(message_box)
             return False
 
-    def email_files(self, email_items: List[QtWidgets.QListWidgetItem], email_provider: EmailProvider):
+    def email_files(
+        self,
+        email_items: List[QtWidgets.QListWidgetItem],
+        email_provider: EmailProvider,
+    ):
         """Emails the selected files
 
         Args:
@@ -320,7 +320,7 @@ class ProcessViewModel(QtCore.QObject):
                     file_data["project_number"]
                 )
             )
-            
+
             if not email_template:
                 email_template = (
                     self.main_view_model.fetch_email_profile_name_by_profile_id(
@@ -332,7 +332,9 @@ class ProcessViewModel(QtCore.QObject):
             body_content = ""
             if email_template:
                 email_template_path = os.path.join(
-                    self.main_view_model.get_email_directory(), email_template, "email.html"
+                    self.main_view_model.get_local_email_directory(),
+                    email_template,
+                    "email.html",
                 )
 
                 with open(email_template_path) as email_file:
@@ -343,15 +345,17 @@ class ProcessViewModel(QtCore.QObject):
             bcc_recipients = []
             if file_data["project_number"] is not None:
                 project_number = file_data["project_number"]
-                email_template_info = self.main_view_model.fetch_project_data_by_project_number(
-                    project_number
+                email_template_info = (
+                    self.main_view_model.fetch_project_data_by_project_number(
+                        project_number
+                    )
                 )
                 if email_template_info:
-                    subject = email_template_info[5]
-                    recipients += email_template_info[2].split(";")
-                    cc_recipients += email_template_info[3].split(";")
-                    bcc_recipients += email_template_info[4].split(";")
-                
+                    subject = email_template_info[6]
+                    recipients += email_template_info[3].split(";")
+                    cc_recipients += email_template_info[4].split(";")
+                    bcc_recipients += email_template_info[5].split(";")
+
             attachments = [
                 source_path,
             ]
@@ -373,7 +377,7 @@ class ProcessViewModel(QtCore.QObject):
                     cc_recipients,
                     bcc_recipients,
                     attachments,
-                    email_template
+                    email_template,
                 )
             elif email_provider == EmailProvider.LOCAL:
                 email_info = self.create_local_draft_email(
@@ -386,11 +390,17 @@ class ProcessViewModel(QtCore.QObject):
                     email_template,
                 )
             if email_info.status_code == 201:
-                self.main_view_model.add_console_text(f"Draft email created for: {os.path.basename(source_path)}")
+                self.main_view_model.add_console_text(
+                    f"Draft email created for: {os.path.basename(source_path)}"
+                )
                 self.main_view_model.add_console_alerts(1)
             else:
-                self.main_view_model.add_console_text(f"Error creating draft email for: {os.path.basename(source_path)}")
-                self.main_view_model.add_console_text(f"{email_info.status_code} - {email_info.text()}")
+                self.main_view_model.add_console_text(
+                    f"Error creating draft email for: {os.path.basename(source_path)}"
+                )
+                self.main_view_model.add_console_text(
+                    f"{email_info.status_code} - {email_info.text}"
+                )
                 self.main_view_model.add_console_alerts(1)
 
     def embed_images_as_base64(self, html_content: str) -> str:
@@ -403,20 +413,22 @@ class ProcessViewModel(QtCore.QObject):
             str: html with images embedded as base64
         """
         root = html.fromstring(html_content)
-        
-        for img_tag in root.xpath('//img'):
-            src = img_tag.get('src')
+
+        for img_tag in root.xpath("//img"):
+            src = img_tag.get("src")
             if not src.startswith("data:image/"):
                 # Read the image and encode it in base64
                 with open(src, "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                
+                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+
                 # Get the image's format from its extension (e.g., .jpg -> jpeg)
-                image_format = os.path.splitext(src)[1].replace('.', '').replace('jpg', 'jpeg')
-                
+                image_format = (
+                    os.path.splitext(src)[1].replace(".", "").replace("jpg", "jpeg")
+                )
+
                 # Replace the src with the base64 encoded version
-                img_tag.set('src', f"data:image/{image_format};base64,{encoded_string}")
-        
+                img_tag.set("src", f"data:image/{image_format};base64,{encoded_string}")
+
         return html.tostring(root, encoding="unicode")
 
     def create_outlook_draft_email(
@@ -464,7 +476,10 @@ class ProcessViewModel(QtCore.QObject):
         email = {}
         email["isDraft"] = True
         email["subject"] = subject
-        email["body"] = {"contentType": "HTML", "content": self.embed_images_as_base64(body_content)}
+        email["body"] = {
+            "contentType": "HTML",
+            "content": self.embed_images_as_base64(body_content),
+        }
         if recipients:
             email["toRecipients"] = [
                 {"emailAddress": {"address": recipient}} for recipient in recipients
@@ -495,7 +510,7 @@ class ProcessViewModel(QtCore.QObject):
         response = requests.post(url, headers=headers, json=email)
 
         return response
-    
+
     def create_local_draft_email(
         self,
         subject: str,
@@ -524,11 +539,11 @@ class ProcessViewModel(QtCore.QObject):
         if self.main_view_model.os == "win32":
             # Create draft using local outlook
             try:
-                outlook = self.Dispatch('outlook.application')
+                outlook = self.Dispatch("outlook.application")
                 mail = outlook.CreateItem(0)
-                mail.To = recipients
-                mail.CC = cc_recipients
-                mail.BCC = bcc_recipients
+                mail.To = "; ".join(recipients) if recipients else ""
+                mail.CC = "; ".join(cc_recipients) if cc_recipients else ""
+                mail.BCC = "; ".join(bcc_recipients) if bcc_recipients else ""
                 mail.Subject = subject
                 mail.HtmlBody = body_content
                 for attachment in attachments:
@@ -544,7 +559,10 @@ class ProcessViewModel(QtCore.QObject):
                 # Check if thunderbird is installed
                 subprocess.run(cmd)
             except Exception:
-                return general_utils.FauxResponse(500, "Thunderbird installation not found. Please install Thunderbird to use this feature on this platform. Please notify the developer if you would like to see support for additional mail clients on this platform.")
+                return general_utils.FauxResponse(
+                    500,
+                    "Thunderbird installation not found. Please install Thunderbird to use this feature on this platform. Please notify the developer if you would like to see support for additional mail clients on this platform.",
+                )
             compose_str = f"to='{','.join(recipients)}',subject='{subject}'"
             # compose_str += f",message='{body_content}'"
             if cc_recipients:
@@ -552,14 +570,16 @@ class ProcessViewModel(QtCore.QObject):
             if bcc_recipients:
                 compose_str += f",bcc='{','.join(bcc_recipients)}'"
             # if attachments:
-                # compose_str += f",attachment='{','.join(attachments)}'"
+            # compose_str += f",attachment='{','.join(attachments)}'"
 
             cmd = ["thunderbird", "-compose", compose_str]
             subprocess.run(cmd)
             return general_utils.FauxResponse(201, "success")
         else:
-            return general_utils.FauxResponse(500, "Local email not supported on this platform. Supported platforms are Windows and Linux. Please notify the developer if you would like to see support for this platform.")
-        
+            return general_utils.FauxResponse(
+                500,
+                "Local email not supported on this platform. Supported platforms are Windows and Linux. Please notify the developer if you would like to see support for this platform.",
+            )
 
     def create_gmail_draft_email(
         self,
@@ -588,103 +608,106 @@ class ProcessViewModel(QtCore.QObject):
 
         # Create the Gmail API client
         credentials = Credentials(token=self._token)
-        service = build('gmail', 'v1', credentials=credentials)
+        service = build("gmail", "v1", credentials=credentials)
 
         # Construct the email headers
-        email_to = ', '.join(recipients)
-        email_cc = ', '.join(cc_recipients) if cc_recipients else None
-        email_bcc = ', '.join(bcc_recipients) if bcc_recipients else None
+        email_to = ", ".join(recipients)
+        email_cc = ", ".join(cc_recipients) if cc_recipients else None
+        email_bcc = ", ".join(bcc_recipients) if bcc_recipients else None
 
-        msg = MIMEMultipart(_subtype='related')  # Use 'related' for CID referencing
-        msg['to'] = email_to
-        msg['subject'] = subject
+        msg = MIMEMultipart(_subtype="related")  # Use 'related' for CID referencing
+        msg["to"] = email_to
+        msg["subject"] = subject
         if email_cc:
-            msg['cc'] = email_cc
+            msg["cc"] = email_cc
         if email_bcc:
-            msg['bcc'] = email_bcc
+            msg["bcc"] = email_bcc
 
         image_attachments = []
         root = html.fromstring(body_content)
-        for img_tag in root.xpath('//img'):
-            src = img_tag.get('src')
+        for img_tag in root.xpath("//img"):
+            src = img_tag.get("src")
             if src.startswith("data:image/"):
                 # Extracting the file type and base64 data
                 file_type = src.split(";")[0].split("/")[-1]
                 base64_data = src.split(",")[1]
-                
+
                 # Decoding the base64 data to get the image
                 image_data = base64.b64decode(base64_data)
-                
+
                 # Generating a random filename with the identified file type
                 random_filename = f"{uuid.uuid4()}.{file_type}"
-                new_img_path = os.path.join(self.main_view_model.get_email_directory(), email_template, random_filename)
-                
+                new_img_path = os.path.join(
+                    self.main_view_model.get_local_email_directory(),
+                    email_template,
+                    random_filename,
+                )
+
                 # Saving the image to the new directory
-                with open(new_img_path, 'wb') as f:
+                with open(new_img_path, "wb") as f:
                     f.write(image_data)
 
                 cid = os.path.basename(new_img_path)
-                img_tag.set('src', f"cid:{cid}")
-                 # Attach the extracted image with CID
-                with open(new_img_path, 'rb') as file:
+                img_tag.set("src", f"cid:{cid}")
+                # Attach the extracted image with CID
+                with open(new_img_path, "rb") as file:
                     image_data = file.read()
                 image_mime_type, _ = mimetypes.guess_type(new_img_path)
-                main_type, sub_type = image_mime_type.split('/')
+                main_type, sub_type = image_mime_type.split("/")
                 image = MIMEImage(image_data, sub_type, name=cid)
-                image.add_header('Content-ID', f'<{cid}>')
-                image.add_header('Content-Disposition', 'inline', filename=cid)
+                image.add_header("Content-ID", f"<{cid}>")
+                image.add_header("Content-Disposition", "inline", filename=cid)
                 image_attachments.append(image)
             else:
                 # For non-base64 images, just attach and set CID
                 cid = os.path.basename(src)
-                img_tag.set('src', f"cid:{cid}")
+                img_tag.set("src", f"cid:{cid}")
 
-                with open(src, 'rb') as file:
+                with open(src, "rb") as file:
                     image_data = file.read()
                 image_mime_type, _ = mimetypes.guess_type(src)
-                main_type, sub_type = image_mime_type.split('/')
+                main_type, sub_type = image_mime_type.split("/")
                 image = MIMEImage(image_data, sub_type, name=cid)
-                image.add_header('Content-ID', f'<{cid}>')
-                image.add_header('Content-Disposition', 'inline', filename=cid)
+                image.add_header("Content-ID", f"<{cid}>")
+                image.add_header("Content-Disposition", "inline", filename=cid)
                 image_attachments.append(image)
 
-        for img_tag in root.xpath('//img'):
-            src = img_tag.get('src')
+        for img_tag in root.xpath("//img"):
+            src = img_tag.get("src")
             print(src)
 
         # Convert the modified HTML back to string and attach
         body_content = html.tostring(root, method="html", encoding="unicode")
-        msg.attach(MIMEText(body_content, _subtype='html'))
+        msg.attach(MIMEText(body_content, _subtype="html"))
 
         for image in image_attachments:
             msg.attach(image)
 
         # Attach other files if any
         for attachment_path in attachments or []:
-            with open(attachment_path, 'rb') as file:
+            with open(attachment_path, "rb") as file:
                 attachment_data = file.read()
             mime_type, _ = mimetypes.guess_type(attachment_path)
-            main_type, sub_type = mime_type.split('/')
+            main_type, sub_type = mime_type.split("/")
             attachment = MIMEImage(attachment_data, sub_type)
-            attachment.add_header('Content-Disposition', 'attachment', filename=os.path.basename(attachment_path))
+            attachment.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=os.path.basename(attachment_path),
+            )
             msg.attach(attachment)
 
-        raw_email = base64.b64encode(msg.as_bytes()).decode('utf-8')
+        raw_email = base64.b64encode(msg.as_bytes()).decode("utf-8")
 
         # Create draft using the Gmail API
         try:
-            draft_body = {
-                'message': {
-                    'raw': raw_email
-                }
-            }
-            service.users().drafts().create(userId='me', body=draft_body).execute()
+            draft_body = {"message": {"raw": raw_email}}
+            service.users().drafts().create(userId="me", body=draft_body).execute()
 
             return general_utils.FauxResponse(201, "success")
         except Exception as e:
             return general_utils.FauxResponse(500, e)
 
-    
     def get_local_email_icon_path(self) -> str:
         """Gets the path to the local email icon depending on the detected OS
 
