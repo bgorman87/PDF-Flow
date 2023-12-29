@@ -178,24 +178,24 @@ def detect_englobe_project_number(text):
     return project_number
 
 def format_external_html(folder_path: str, html: str) -> str:
-        soup = BeautifulSoup(html, 'lxml')
-        
-        def update_path(tag, attribute):
-            if tag.has_attr(attribute):
-                rel_path = tag[attribute]
-                # Check if the path is relative and not an external link
-                if rel_path and not rel_path.startswith(('http:', 'https:', 'mailto:', '#')):
-                    abs_path = os.path.join(folder_path, *rel_path.split("/"))
-                    tag[attribute] = abs_path
+    soup = BeautifulSoup(html, 'lxml')
+    
+    def update_path(tag, attribute):
+        if tag.has_attr(attribute):
+            rel_path = tag[attribute]
+            # Check if the path is relative and not an external link
+            if rel_path and not rel_path.startswith(('http:', 'https:', 'mailto:', '#')):
+                abs_path = os.path.join(folder_path, *rel_path.split("/"))
+                tag[attribute] = abs_path
 
-        # Update src and href attributes
-                    
-        def custom_selector(tag):
-            # Return tags with either a 'src' or 'href' attribute
-            return (tag.name is not None) and (tag.has_attr('src') or tag.has_attr('href'))
+    # Update src and href attributes
+                
+    def custom_selector(tag):
+        # Return tags with either a 'src' or 'href' attribute
+        return (tag.name is not None) and (tag.has_attr('src') or tag.has_attr('href'))
 
-        for tag in soup.find_all(custom_selector):
-            update_path(tag, 'src')
-            update_path(tag, 'href')
+    for tag in soup.find_all(custom_selector):
+        update_path(tag, 'src')
+        update_path(tag, 'href')
 
-        return(str(soup))
+    return(str(soup))
