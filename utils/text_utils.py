@@ -195,12 +195,12 @@ def format_external_html(folder_path: str, html: str) -> str:
     def custom_selector(tag):
         # Return tags with either a 'src' or 'href' attribute
         return (tag.name is not None) and (tag.has_attr('src') or tag.has_attr('href'))
-
-    for tag in soup.find_all(custom_selector):
+    tags = soup.find_all(custom_selector)
+    for tag in tags:
         update_path(tag, 'src')
         update_path(tag, 'href')
 
-        return(str(soup))
+    return(str(soup))
 
 def embed_images_as_base64(html_content: str) -> str:
     """Embeds images in html as base64

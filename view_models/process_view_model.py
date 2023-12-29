@@ -7,6 +7,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
+from urllib.parse import unquote
 
 import msal
 import requests
@@ -548,11 +549,11 @@ class ProcessViewModel(QtCore.QObject):
 
                 root = html.fromstring(full_path_body_content)
                 for img_tag in root.xpath("//img"):
-                    src = os.path.abspath(img_tag.get("src"))
+                    src = os.path.abspath(unquote(img_tag.get("src")))
                     if not src.startswith("http"):
                         attachment = mail.Attachments.Add(src)
 
-                        cid = str(os.path.basename(src)).split(".")[0]
+                        cid = os.path.basename(src)
                         attachment.PropertyAccessor.SetProperty("http://schemas.microsoft.com/mapi/proptag/0x3712001F", cid)
 
                         img_tag.set("src", f"cid:{cid}")
