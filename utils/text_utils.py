@@ -2,6 +2,8 @@ import datetime
 import re
 import os
 from bs4 import BeautifulSoup
+from lxml import html
+import base64
 
 
 def valid_date(date_string):
@@ -199,3 +201,31 @@ def format_external_html(folder_path: str, html: str) -> str:
             update_path(tag, 'href')
 
         return(str(soup))
+
+def embed_images_as_base64(html_content: str) -> str:
+    """Embeds images in html as base64
+
+    Args:
+        html_content (str): Body content for an HTML email
+
+    Returns:
+        str: html with images embedded as base64
+    """
+    root = html.fromstring(html_content)
+
+    for img_tag in root.xpath("//img"):
+        src = img_tag.get("src")
+        if not src.startswith("data:image/"):
+            # Read the image and encode it in base64
+            with open(src, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+
+            # Get the image's format from its extension (e.g., .jpg -> jpeg)
+            image_format = (
+                os.path.splitext(src)[1].replace(".", "").replace("jpg", "jpeg")
+            )
+
+            # Replace the src with the base64 encoded version
+            img_tag.set("src", f"data:image/{image_format};base64,{encoded_string}")
+
+    return html.tostring(root, encoding="unicode")
