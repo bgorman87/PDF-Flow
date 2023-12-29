@@ -423,34 +423,7 @@ class ProcessViewModel(QtCore.QObject):
                 )
                 self.main_view_model.add_console_alerts(1)
 
-    def embed_images_as_base64(self, html_content: str) -> str:
-        """Embeds images in html as base64
-
-        Args:
-            html_content (str): Body content for an HTML email
-
-        Returns:
-            str: html with images embedded as base64
-        """
-        root = html.fromstring(html_content)
-
-        for img_tag in root.xpath("//img"):
-            src = img_tag.get("src")
-            if not src.startswith("data:image/"):
-                # Read the image and encode it in base64
-                with open(src, "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-
-                # Get the image's format from its extension (e.g., .jpg -> jpeg)
-                image_format = (
-                    os.path.splitext(src)[1].replace(".", "").replace("jpg", "jpeg")
-                )
-
-                # Replace the src with the base64 encoded version
-                img_tag.set("src", f"data:image/{image_format};base64,{encoded_string}")
-
-        return html.tostring(root, encoding="unicode")
-
+    
     def create_outlook_draft_email(
         self,
         subject: str,
@@ -476,6 +449,10 @@ class ProcessViewModel(QtCore.QObject):
             requests.Response: Response from Outlook API
         """
 
+
+        full_path_body_content = text_utils.format_external_html(
+            self.main_view_model.get_outlook_email_directory(), body_content
+        )
         # Endpoint for creating draft messages
         url = "https://graph.microsoft.com/v1.0/me/messages"
         base64_attachments = []
@@ -498,7 +475,7 @@ class ProcessViewModel(QtCore.QObject):
         email["subject"] = subject
         email["body"] = {
             "contentType": "HTML",
-            "content": self.embed_images_as_base64(body_content),
+            "content": text_utils.embed_images_as_base64(full_path_body_content),
         }
         if recipients:
             email["toRecipients"] = [
@@ -556,8 +533,11 @@ class ProcessViewModel(QtCore.QObject):
             general_utils.FauxResponse: Fake response mimicking requests.Response
         """
 
+        full_path_body_content = text_utils.format_external_html(
+            self.main_view_model.get_outlook_email_directory(), body_content
+        )
+
         if self.main_view_model.os == "win32":
-            # Create draft using local outlook
             try:
                 outlook = self.Dispatch("outlook.application")
                 mail = outlook.CreateItem(0)
@@ -565,9 +545,24 @@ class ProcessViewModel(QtCore.QObject):
                 mail.CC = "; ".join(cc_recipients) if cc_recipients else ""
                 mail.BCC = "; ".join(bcc_recipients) if bcc_recipients else ""
                 mail.Subject = subject
-                mail.HtmlBody = body_content
-                for attachment in attachments:
-                    mail.Attachments.Add(attachment)
+
+                root = html.fromstring(full_path_body_content)
+                for img_tag in root.xpath("//img"):
+                    src = os.path.abspath(img_tag.get("src"))
+                    if not src.startswith("http"):
+                        attachment = mail.Attachments.Add(src)
+
+                        cid = str(os.path.basename(src)).split(".")[0]
+                        attachment.PropertyAccessor.SetProperty("http://schemas.microsoft.com/mapi/proptag/0x3712001F", cid)
+
+                        img_tag.set("src", f"cid:{cid}")
+
+                modified_body_content = html.tostring(root, method="html", encoding="unicode")
+                mail.HTMLBody = modified_body_content
+
+                for attachment_path in attachments:
+                    mail.Attachments.Add(attachment_path)
+
                 mail.Save()
 
                 return general_utils.FauxResponse(201, "success")

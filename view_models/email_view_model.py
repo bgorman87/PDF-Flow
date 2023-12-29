@@ -2,6 +2,7 @@ import base64
 import os
 import shutil
 import uuid
+
 from bs4 import BeautifulSoup
 from lxml import html
 from PySide6 import QtCore, QtWidgets
@@ -285,11 +286,10 @@ class EmailViewModel(QtCore.QObject):
 
         # If there is a loaded profile, and text has been changed, prompt user to save changes
         if self._text_changed and self._loaded_email_index != 0:
-            
             if " - Outlook" in self._email_profile_names[self._loaded_email_index]:
                 self.discard_changes(index)
                 return
-            
+
             self.save_changes_button_dialog(index)
             return
 
@@ -323,12 +323,10 @@ class EmailViewModel(QtCore.QObject):
         self.set_current_index(index)
         self.load_email_profile(self._email_profile_names[index])
 
-
     def load_email_profile(self, profile_name: str):
         # For now, check if name has ' - Outlook' to determine if email is from outlook
         # TODO In future, update database to also store the location of the email Signature
         if " - Outlook" not in profile_name:
-
             local_email_folder = os.path.join(
                 self.main_view_model.get_local_email_directory(), profile_name
             )
@@ -348,7 +346,7 @@ class EmailViewModel(QtCore.QObject):
                 )
                 self.main_view_model.add_console_alerts(1)
                 return
-            
+
             with open(email_html_file, "r") as f:
                 self.email_raw_html = f.read()
 
@@ -357,13 +355,15 @@ class EmailViewModel(QtCore.QObject):
         else:
             profile_base_name = profile_name.replace(" - Outlook", "")
             outlook_directory = self.main_view_model.get_outlook_email_directory()
-            
+
             signature_name = ""
             for filename in os.listdir(outlook_directory):
-                if (filename.endswith(".htm") or filename.endswith(".html")) and (profile_base_name in filename):
+                if (filename.endswith(".htm") or filename.endswith(".html")) and (
+                    profile_base_name in filename
+                ):
                     signature_name = filename
                     break
-            
+
             if not os.path.exists(outlook_directory):
                 self.main_view_model.add_console_text(
                     f"Email folder {local_email_folder} does not exist"
@@ -383,7 +383,7 @@ class EmailViewModel(QtCore.QObject):
             with open(email_html_file, "r") as f:
                 self.email_raw_html = f.read()
 
-            self._loaded_raw_html = text_utils.format_external_html(outlook_directory, self.email_raw_html)
+            self._loaded_raw_html = text_utils.format_external_html(self.main_view_model.get_outlook_email_directory(), self.email_raw_html)
 
         self.email_text_update.emit()
 
