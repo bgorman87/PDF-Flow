@@ -1,5 +1,6 @@
 import base64
 import mimetypes
+import re
 import os
 import subprocess
 import uuid
@@ -424,7 +425,6 @@ class ProcessViewModel(QtCore.QObject):
                 )
                 self.main_view_model.add_console_alerts(1)
 
-    
     def create_outlook_draft_email(
         self,
         subject: str,
@@ -449,7 +449,6 @@ class ProcessViewModel(QtCore.QObject):
         Returns:
             requests.Response: Response from Outlook API
         """
-
 
         full_path_body_content = text_utils.format_external_html(
             self.main_view_model.get_outlook_email_directory(), body_content
@@ -539,6 +538,12 @@ class ProcessViewModel(QtCore.QObject):
         )
 
         if self.main_view_model.os == "win32":
+            # Register the namespace for VML
+            namespaces = {"v": "urn:schemas-microsoft-com:vml"}
+
+            # Regular expression to match conditional comments
+            pattern = r'<!--\[if gte vml.*?-->'
+
             try:
                 outlook = self.Dispatch("outlook.application")
                 mail = outlook.CreateItem(0)
@@ -547,22 +552,37 @@ class ProcessViewModel(QtCore.QObject):
                 mail.BCC = "; ".join(bcc_recipients) if bcc_recipients else ""
                 mail.Subject = subject
 
+                image_attachments = []
                 root = html.fromstring(full_path_body_content)
                 for img_tag in root.xpath("//img"):
+                    if 'v:shapes' in img_tag.attrib:
+                        del img_tag.attrib['v:shapes']
                     src = os.path.abspath(unquote(img_tag.get("src")))
                     if not src.startswith("http"):
-                        attachment = mail.Attachments.Add(src)
-
                         cid = os.path.basename(src)
-                        attachment.PropertyAccessor.SetProperty("http://schemas.microsoft.com/mapi/proptag/0x3712001F", cid)
+                        image_attachments.append([src, cid])
 
                         img_tag.set("src", f"cid:{cid}")
 
-                modified_body_content = html.tostring(root, method="html", encoding="unicode")
+                # Find all VML elements and remove them
+                for vml_element in root.xpath("//v:*", namespaces=namespaces):
+                    vml_element.getparent().remove(vml_element)
+
+                modified_body_content = html.tostring(
+                    root, method="html", encoding="unicode"
+                )
+                modified_body_content = re.sub(pattern, "", modified_body_content, flags=re.DOTALL)
                 mail.HTMLBody = modified_body_content
 
                 for attachment_path in attachments:
                     mail.Attachments.Add(attachment_path)
+
+                for image_source, content_id in image_attachments:
+                    attachment = mail.Attachments.Add(image_source)
+                    attachment.PropertyAccessor.SetProperty(
+                        "http://schemas.microsoft.com/mapi/proptag/0x3712001F",
+                        content_id,
+                    )
 
                 mail.Save()
 
