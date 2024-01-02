@@ -25,3 +25,5 @@ test_files/
 
 signatures/
 credentials.json
+
+manual_db_entry.py
