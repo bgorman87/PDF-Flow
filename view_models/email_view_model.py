@@ -259,12 +259,14 @@ class EmailViewModel(QtCore.QObject):
             emails = [""] + emails
 
         # After getting local email signatures, try to add in Outlook signatures
-        for filename in os.listdir(self.main_view_model.get_outlook_email_directory()):
-            if filename.endswith(".htm") or filename.endswith(
-                ".html"
-            ):  # For HTML signatures
-                signature_name = filename.replace(".htm", "").replace(".html", "")
-                emails.append(signature_name + " - Outlook")
+        outlook_email_folder = self.main_view_model.get_outlook_email_directory()
+        if outlook_email_folder:
+            for filename in os.listdir(outlook_email_folder):
+                if filename.endswith(".htm") or filename.endswith(
+                    ".html"
+                ):  # For HTML signatures
+                    signature_name = filename.replace(".htm", "").replace(".html", "")
+                    emails.append(signature_name + " - Outlook")
         # New entries can be added here as program runs, so indexing can become off
         # If the current name is in the updated list, then set the loaded index to that index
         if current_name:
@@ -381,9 +383,7 @@ class EmailViewModel(QtCore.QObject):
             with open(email_html_file, "r") as f:
                 self.email_raw_html = f.read()
 
-            self._loaded_raw_html = text_utils.format_external_html(
-                self.main_view_model.get_outlook_email_directory(), self.email_raw_html
-            )
+            self._loaded_raw_html = text_utils.format_external_html(self.main_view_model.get_outlook_email_directory(), self.email_raw_html)
 
         self.email_text_update.emit()
 
