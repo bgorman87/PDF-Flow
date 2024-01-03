@@ -397,7 +397,6 @@ class MainViewModel(QtCore.QObject):
         """
         def telemetry_thread():
             response = post_telemetry_data(usage_count=quantity, identifier=self._telemetry_id)
-            print(response.text)
 
         telemetry_thread = threading.Thread(target=telemetry_thread)
         telemetry_thread.start()
