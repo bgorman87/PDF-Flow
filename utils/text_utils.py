@@ -253,7 +253,6 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
         "info": info if info else None
     }
 
-    # Convert the data to JSON
     json_data = json.dumps(data)
 
     # Headers, set 'Content-Type' to 'application/json'
@@ -261,6 +260,11 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
         "Content-Type": "application/json"
     }
 
-    response = requests.post(url, data=json_data, headers=headers)
+    try:
+        response = requests.post(url, data=json_data, headers=headers)
+        print("Verified")
+    except requests.exceptions.SSLError:
+        response = requests.post(url, data=json_data, headers=headers, verify=False)
+        print("Unverified")
 
     return response
