@@ -180,8 +180,6 @@ class EmailWidget(QtWidgets.QWidget):
         self.text_edit_area.textChanged.connect(lambda: self.text_changed.emit())
         self.widget_layout.addWidget(self.text_edit_area)
 
-        self.show()
-
 
     # Whenever the cursor changes position, update all of the formatting options to where the cursor is placed
     # Only do this if the user has already typed, and if the user is not currently just selecting text
