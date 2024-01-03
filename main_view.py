@@ -6,6 +6,8 @@ else:
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from datetime import date
+import json
+import uuid
 
 from models import main_model
 from view_models import main_view_model, message_box_view_model
@@ -81,7 +83,10 @@ class MainView(QtWidgets.QMainWindow):
         self.main_view_model.message_box_handler(message_box.callback[result_index])
 
 
-def main():
+def main(version: str):
+
+    config = get_config_data(version)
+
     app = QtWidgets.QApplication([])
     
     # Open the qss styles file and read in the css-alike styling code
@@ -97,11 +102,44 @@ def main():
     palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))
     app.setPalette(palette)
     QtGui.QFontDatabase.addApplicationFont(path_utils.resource_path("assests/Roboto-Regular.ttf"))
-    window = MainView(main_view_model.MainViewModel(main_model.MainModel()))
-    window.setWindowTitle("PDF Flow")
+    window = MainView(main_view_model.MainViewModel(main_model.MainModel(), config=config))
+    window.setWindowTitle("Englobe PDF Flow")
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
     app.exec()
 
+def get_config_data(version: str) -> dict:
+    """Gets the configuration data from the config.json file.
+
+    Returns:
+        dict: The configuration data.
+    """
+    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    if os.path.exists(config_file_path):
+
+        with open(config_file_path, "r") as f:
+            config = json.load(f)
+        
+        if config['version'] != version:
+            config['version'] = version
+            with open(config_file_path, "w") as f:
+                json.dump(config, f, indent=4)
+
+    else:
+        os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
+        
+        config = {
+            "version": "0.1.0",
+            "telemetry": {
+                "annonymous": False,
+                "identifier": str(uuid.uuid4()),
+            }
+        }
+
+        with open(config_file_path, "w") as f:
+            json.dump(config, f, indent=4)
+    return config
+
 if __name__ == "__main__":
-    main()
+    version = "0.1.0"
+    main(version)

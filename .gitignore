@@ -21,9 +21,10 @@ database/
 test_files/
 
 # Database exported file
-# *.csv
+*.csv
 
 signatures/
 credentials.json
 
 manual_db_entry.py
+.gitignore

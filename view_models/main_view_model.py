@@ -2,9 +2,10 @@ import os
 import typing
 
 from PySide6 import QtCore
-
+import threading
 from models import main_model
 from utils.general_utils import MessageBox
+from utils.text_utils import post_telemetry_data
 
 
 class MainViewModel(QtCore.QObject):
@@ -24,7 +25,7 @@ class MainViewModel(QtCore.QObject):
     parameter_update_list = QtCore.Signal()
     email_profiles_updated = QtCore.Signal(list)
 
-    def __init__(self, main_model: main_model.MainModel):
+    def __init__(self, main_model: main_model.MainModel, config: dict = None):
         super().__init__()
         self.console_text = ""
         self.main_model = main_model
@@ -39,7 +40,8 @@ class MainViewModel(QtCore.QObject):
         self.process_button_state = True
         self.process_button_count = 0
         self.os = os.sys.platform
-        self.version = "1.0.0"
+        self.version = config["version"]
+        self._telemetry_id = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
@@ -386,3 +388,16 @@ class MainViewModel(QtCore.QObject):
         return self.main_model.fetch_email_template_info_by_email_template_name(
             email_template_name=email_template_name
         )
+
+    def send_telemetry_data(self, quantity: int):
+        """Sends telemetry data to the API Gateway endpoint in a separate thread.
+
+        Args:
+            quantity (int): The quantity of telemetry data to send.
+        """
+        def telemetry_thread():
+            response = post_telemetry_data(usage_count=quantity, identifier=self._telemetry_id)
+            print(response.text)
+
+        telemetry_thread = threading.Thread(target=telemetry_thread)
+        telemetry_thread.start()
