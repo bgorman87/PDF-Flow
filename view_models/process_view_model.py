@@ -88,7 +88,7 @@ class ProcessViewModel(QtCore.QObject):
     # For each file in self._file_names create a thread to process
     def process_files(self):
         """Processes the selected files"""
-
+        self.main_view_model.set_process_button_state(False)
         self.main_view_model.set_process_progress_bar_text("Processing... %p%")
 
         # For each file create a new thread to increase performance
