@@ -4,6 +4,9 @@ import os
 from bs4 import BeautifulSoup
 from lxml import html
 import base64
+import json
+import requests
+import uuid
 
 
 def valid_date(date_string):
@@ -229,3 +232,35 @@ def embed_images_as_base64(html_content: str) -> str:
             img_tag.set("src", f"data:image/{image_format};base64,{encoded_string}")
 
     return html.tostring(root, encoding="unicode")
+
+def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "") -> requests.Response:
+    """Sends telemetry data to the API Gateway endpoint
+
+    Args:
+        data (dict): Telemetry data
+        identifier (uuid.UUID): Device identifier
+        info (str, optional): Additional information. Defaults to "".
+
+    Returns:
+        requests.Response: Response from the API Gateway endpoint
+    """
+
+    url = "https://telemetry.englobe-pdf-flow.brandongorman.me/telemetry"
+
+    data = {
+        "device": identifier,
+        "data": usage_count,
+        "info": info if info else None
+    }
+
+    # Convert the data to JSON
+    json_data = json.dumps(data)
+
+    # Headers, set 'Content-Type' to 'application/json'
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(url, data=json_data, headers=headers)
+
+    return response
