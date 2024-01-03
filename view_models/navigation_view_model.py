@@ -25,9 +25,11 @@ class NavigationViewModel(QtCore.QObject):
     def open_feedback_link(self):
         """Opens the default email client with a pre-filled email to the developer."""
 
+        mailto_link = f"mailto:brandon.gorman@englobecorp.com?subject=PDF%20Flow%20v{self.main_view_model.version}%20Feedback"
+
         if self.main_view_model.os == "win32":
-            os.startfile(f"mailto:brandon@godevservices.com?subject='PDF Flow v{self.main_view_model.version} Feedback'")
+            os.startfile(mailto_link)
         elif self.main_view_model.os == "darwin":
-            os.system(f"open mailto:brandon@godevservices.com?subject='PDF Flow v{self.main_view_model.version} Feedback'")
+            os.system(f'open "{mailto_link}"')
         elif self.main_view_model.os == "linux":
-            os.system(f"xdg-open mailto:brandon@godevservices.com?subject='PDF Flow v{self.main_view_model.version} Feedback'")
+            os.system(f'xdg-open "{mailto_link}"')
