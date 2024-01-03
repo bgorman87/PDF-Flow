@@ -134,7 +134,7 @@ class ProcessView(QtWidgets.QWidget):
             self.main_layout.indexOf(self.file_preview), 8
         )
 
-        self.file_preview.show()
+        # self.file_preview.show()
 
         # Progress bar to show analyze progress
         self.progress_bar = QtWidgets.QProgressBar()
@@ -173,7 +173,6 @@ class ProcessView(QtWidgets.QWidget):
 
         pdf_dir = self.view_model.selected_file_dir
         self.file_preview.load(QtCore.QUrl(f"file:{pdf_dir}"))
-        self.file_preview.show()
 
     def display_file_name(self):
         """Displays file name in line edit"""
