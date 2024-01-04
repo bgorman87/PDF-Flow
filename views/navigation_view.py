@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWidgets, QtSvgWidgets
 
 from view_models import main_view_model, navigation_view_model
-
+from utils import path_utils
 
 class NavigationView(QtWidgets.QVBoxLayout):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
@@ -15,7 +15,7 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.company_logo_layout.setContentsMargins(0, 0, 0, 0)
         self.company_logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
 
-        self.company_logo = QtSvgWidgets.QSvgWidget("assets/icons/englobe_logo.svg")
+        self.company_logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/englobe_logo.svg"))
         self.company_logo.setProperty("class", "company-logo")
         self.company_logo.setFixedSize(100, 100)
         # self.company_logo.setPixmap(
