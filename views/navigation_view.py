@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets, QtGui, QtCore
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from view_models import main_view_model, navigation_view_model
 
@@ -10,6 +10,13 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.view_model = navigation_view_model.NavigationViewModel(
             self.main_view_model
         )
+
+        self.company_logo = QtWidgets.QLabel()
+        self.company_logo.setProperty("class", "company-logo")
+        self.company_logo.setPixmap(
+            QtGui.QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
+        )
+        self.company_logo.setAlignment(QtCore.Qt.AlignCenter)
 
         self.navigation_title = QtWidgets.QLabel()
         self.navigation_title.setText("Navigation")
@@ -60,7 +67,13 @@ class NavigationView(QtWidgets.QVBoxLayout):
         )
 
         self.setSpacing(5)
-        self.setContentsMargins(0, 100, 0, 0)
+        self.setContentsMargins(0, 0, 0, 0)
+
+        self.addSpacing(25)
+        self.addWidget(self.company_logo)
+        self.addSpacing(25)
+
+        self.layout_index_count = self.count()
 
         # self.addWidget(self.navigation_title)
         self.addWidget(self.process_nav_button)
@@ -83,18 +96,24 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.addWidget(self.version_button)
         self.addWidget(self.feedback_button)
 
-        self.process_nav_button.setProperty("id", self.indexOf(self.process_nav_button))
-        self.console_nav_button.setProperty("id", self.indexOf(self.console_nav_button))
+        self.process_nav_button.setProperty(
+            "id", self.indexOf(self.process_nav_button) - self.layout_index_count
+        )
+        self.console_nav_button.setProperty(
+            "id", self.indexOf(self.console_nav_button) - self.layout_index_count
+        )
         self.data_viewer_nav_button.setProperty(
-            "id", self.indexOf(self.data_viewer_nav_button)
+            "id", self.indexOf(self.data_viewer_nav_button) - self.layout_index_count
         )
         self.template_nav_button.setProperty(
-            "id", self.indexOf(self.template_nav_button)
+            "id", self.indexOf(self.template_nav_button) - self.layout_index_count
         )
         self.file_name_nav_button.setProperty(
-            "id", self.indexOf(self.file_name_nav_button)
+            "id", self.indexOf(self.file_name_nav_button) - self.layout_index_count
         )
-        self.email_nav_button.setProperty("id", self.indexOf(self.email_nav_button))
+        self.email_nav_button.setProperty(
+            "id", self.indexOf(self.email_nav_button) - self.layout_index_count
+        )
 
         self.process_nav_button.setProperty("class", "nav-button-active")
         self.console_nav_button.setProperty("class", "nav-button")
