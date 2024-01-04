@@ -1,5 +1,6 @@
 import base64
 import mimetypes
+import time
 import re
 import os
 import subprocess
@@ -204,11 +205,37 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             source_path (str): Current file name
             renamed_source_path (str): New file name
+
+        Returns:
+            bool: True if file is successfully renamed, False otherwise
         """
         try:
             os.rename(source_path, renamed_source_path)
             return True
         except OSError as e:
+            # If not renamed, then try again a few times, but notify user as progress occurs
+            progress_dialog = QtWidgets.QProgressDialog()
+            progress_dialog.setWindowTitle("File Rename Error")
+            progress_dialog.setLabelText("File renaming failed, trying again...")
+            progress_dialog.setRange(0, 10)
+            progress_dialog.show()
+
+            # Try again a few times
+            for i in range(10):
+                try:
+                    os.rename(source_path, renamed_source_path)
+                    progress_dialog.close()
+                    self.main_view_model.add_console_text(
+                        f"File renaming info - Took {i} attempts to rename file:\nSource: {source_path}\nNew: {renamed_source_path}"
+                    )
+                    return True
+                except OSError:
+                    time.sleep(0.5)
+                    pass
+                progress_dialog.setValue(i+1)
+
+            progress_dialog.close()
+
             self.main_view_model.add_console_text(
                 f"Error renaming file - Please check if new directory exists:\nSource: {source_path}\nNew: {renamed_source_path}"
             )
