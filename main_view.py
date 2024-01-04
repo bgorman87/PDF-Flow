@@ -40,7 +40,7 @@ class MainView(QtWidgets.QMainWindow):
         self.main_layout.setStretch(1, 1)
 
         self.copyright_label = QtWidgets.QLabel(
-            f"© {date.today().year} Brandon Gorman. All rights reserved."
+            f"© 2023 Brandon Gorman."
         )
         self.copyright_label.setProperty("class", "copyright-label")
         self.copyright_layout = QtWidgets.QHBoxLayout()
@@ -103,7 +103,7 @@ def main(version: str):
     app.setPalette(palette)
     QtGui.QFontDatabase.addApplicationFont(path_utils.resource_path("assets/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel(), config=config))
-    window.setWindowTitle("Englobe PDF Flow")
+    window.setWindowTitle("PDF Flow")
     window.setWindowIcon(QtGui.QIcon(path_utils.resource_path("assets/icons/icon.png")))
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()

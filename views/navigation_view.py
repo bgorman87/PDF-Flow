@@ -1,4 +1,4 @@
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets, QtSvgWidgets
 
 from view_models import main_view_model, navigation_view_model
 
@@ -11,12 +11,18 @@ class NavigationView(QtWidgets.QVBoxLayout):
             self.main_view_model
         )
 
-        self.company_logo = QtWidgets.QLabel()
+        self.company_logo_layout = QtWidgets.QHBoxLayout()
+        self.company_logo_layout.setContentsMargins(0, 0, 0, 0)
+        self.company_logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
+
+        self.company_logo = QtSvgWidgets.QSvgWidget("assets/icons/englobe_logo.svg")
         self.company_logo.setProperty("class", "company-logo")
-        self.company_logo.setPixmap(
-            QtGui.QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
-        )
-        self.company_logo.setAlignment(QtCore.Qt.AlignCenter)
+        self.company_logo.setFixedSize(100, 100)
+        # self.company_logo.setPixmap(
+        #     QtGui.QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
+        # )
+
+        self.company_logo_layout.addWidget(self.company_logo)
 
         self.navigation_title = QtWidgets.QLabel()
         self.navigation_title.setText("Navigation")
@@ -70,7 +76,7 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.setContentsMargins(0, 0, 0, 0)
 
         self.addSpacing(25)
-        self.addWidget(self.company_logo)
+        self.addLayout(self.company_logo_layout)
         self.addSpacing(25)
 
         self.layout_index_count = self.count()
