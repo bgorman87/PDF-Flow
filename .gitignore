@@ -21,7 +21,7 @@ database/
 test_files/
 
 # Database exported file
-*.csv
+**.csv
 
 signatures/
 credentials.json
