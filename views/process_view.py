@@ -233,7 +233,7 @@ class ProcessView(QtWidgets.QWidget):
         
         file_data = current_item.data(QtCore.Qt.UserRole)
 
-        source_path = file_data["source"]
+        source_path = str(file_data["source"])
         renamed_source_path = source_path.replace(current_name, new_name)
         renamed = self.view_model.rename_file(source_path, renamed_source_path)
 

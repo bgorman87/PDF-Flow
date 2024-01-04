@@ -96,7 +96,10 @@ class ProcessViewModel(QtCore.QObject):
     # For each file in self._file_names create a thread to process
     def process_files(self):
         """Processes the selected files"""
+
         self.main_view_model.set_process_button_state(False)
+        self._progress = 0
+        self.main_view_model.set_process_progress_bar_value(self._progress)
         self.main_view_model.set_process_progress_bar_text("Processing... %p%")
 
         # For each file create a new thread to increase performance
@@ -112,7 +115,7 @@ class ProcessViewModel(QtCore.QObject):
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
-        for file_name in self._file_names:
+        for i, file_name in enumerate(self._file_names):
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=file_name, main_view_model=self.main_view_model
             )
@@ -226,7 +229,7 @@ class ProcessViewModel(QtCore.QObject):
                     os.rename(source_path, renamed_source_path)
                     progress_dialog.close()
                     self.main_view_model.add_console_text(
-                        f"File renaming info - Took {i} attempts to rename file:\nSource: {source_path}\nNew: {renamed_source_path}"
+                        f"File renaming info - Took {i+1} attempts to rename file:\nSource: {source_path}\nNew: {renamed_source_path}"
                     )
                     return True
                 except OSError:
