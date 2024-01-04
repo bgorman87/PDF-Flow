@@ -66,11 +66,12 @@ class AnalysisSignals(QtCore.QObject):
 
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
-    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False):
+    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False, email: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
         self.template = template
+        self.email = email
         self.main_view_model = main_view_model
         self.signals = AnalysisSignals()
 
@@ -103,6 +104,10 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         if self.template:
             self.signals.analysis_progress.emit(100)
             self.signals.analysis_result.emit([file_type])
+            return
+        
+        if self.email:
+            self.signals.analysis_result.emit([file_type, self.file])
             return
 
         if file_type == 0:
