@@ -1,12 +1,10 @@
-"""Handles the logic of switching current stack index"""
-
-from PySide6 import QtCore
+from PySide6.QtCore import QObject, Signal
 
 from view_models import main_view_model
 
 
-class StackedViewModel(QtCore.QObject):
-    stacked_item_id_update = QtCore.Signal()
+class StackedViewModel(QObject):
+    stacked_item_id_update = Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()

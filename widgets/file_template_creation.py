@@ -1,19 +1,20 @@
-import os
+from PySide6.QtCore import Qt, QPoint, QRect, QRectF, QLineF, Signal, QTextOption
+from PySide6.QtGui import QPen, QColor, QPainter, QPixmap, QImage, QFontMetrics
+from PySide6.QtWidgets import QWidget, QSizePolicy, QWidget
+from os.path import join
+from pytesseract import image_to_string
+from pytesseract.pytesseract import tesseract_cmd
 
-import pytesseract
-from PySide6 import QtCore, QtGui, QtWidgets
 from utils.path_utils import resource_path
 
-tesseract_path = resource_path(os.path.join("Tesseract","tesseract.exe"))
 
-
-class TemplateWidget(QtWidgets.QWidget):
+class TemplateWidget(QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
-    secondary_rect_complete_signal = QtCore.Signal(str)
+    secondary_rect_complete_signal = Signal(str)
 
     def __init__(self, image_data=None, pil_image=None):
         super(TemplateWidget, self).__init__()
-        self.pix = QtGui.QPixmap()
+        self.pix = QPixmap()
         self.pil_image = pil_image
         self.initial_width = 0
         self.initial_height = 0
@@ -25,17 +26,17 @@ class TemplateWidget(QtWidgets.QWidget):
             self.initialize_pdf()
         
 
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                           QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Expanding,
+                           QSizePolicy.Expanding)
         self.found_text = ''
         self.secondary_text = ''
         self.data_info = None
         self.profile_rect_info = None
         self.image_area_too_small = False
 
-        self.begin, self.end = QtCore.QPoint(), QtCore.QPoint()
-        self.secondary_begin, self.secondary_end = QtCore.QPoint(), QtCore.QPoint()
-        self.last_point = QtCore.QPoint()
+        self.begin, self.end = QPoint(), QPoint()
+        self.secondary_begin, self.secondary_end = QPoint(), QPoint()
+        self.last_point = QPoint()
         self.drawing = False
 
     def initialize_pdf(self):
@@ -59,11 +60,11 @@ class TemplateWidget(QtWidgets.QWidget):
             self.set_width_ratio(event.size().width())
             self.set_height_ratio(event.size().height())
 
-            image = QtGui.QImage()
+            image = QImage()
             image.loadFromData(self._image_data)
-            image = image.scaled(event.size(), aspectMode=QtCore.Qt.IgnoreAspectRatio, mode=QtCore.Qt.SmoothTransformation)
+            image = image.scaled(event.size(), aspectMode=Qt.IgnoreAspectRatio, mode=Qt.SmoothTransformation)
             
-            self.pix = QtGui.QPixmap.fromImage(image)
+            self.pix = QPixmap.fromImage(image)
             self.reset_rects()
             self.update()
 
@@ -75,28 +76,28 @@ class TemplateWidget(QtWidgets.QWidget):
 
     def reset_rects(self):
         """After creating new parameter or identifier, called to reset the currently drawn rect"""
-        self.begin, self.end = QtCore.QPoint(), QtCore.QPoint()
-        self.secondary_begin, self.secondary_end = QtCore.QPoint(), QtCore.QPoint()
+        self.begin, self.end = QPoint(), QPoint()
+        self.secondary_begin, self.secondary_end = QPoint(), QPoint()
         self.update()
 
     def reset_secondary_rects(self):
         """Resets secondary rect after removing a secondary parameter"""
-        self.secondary_begin, self.secondary_end = QtCore.QPoint(), QtCore.QPoint()
+        self.secondary_begin, self.secondary_end = QPoint(), QPoint()
         self.update()
 
     def paintEvent(self, event):
         """Handles all of the painting for the existing parameter locations and names, as well as the drawing of a new bounding box"""
-        painter = QtGui.QPainter(self)
-        painter.drawPixmap(QtCore.QPoint(), self.pix)
+        painter = QPainter(self)
+        painter.drawPixmap(QPoint(), self.pix)
 
         # List of colors for dual parameters
         dual_colors = [
-            QtGui.QColor(255, 69, 0), QtGui.QColor(50, 205, 50),
-            QtGui.QColor(70, 130, 180), QtGui.QColor(255, 215, 0),
-            QtGui.QColor(139, 0, 139), QtGui.QColor(255, 105, 180),
-            QtGui.QColor(165, 42, 42), QtGui.QColor(255, 160, 122),
-            QtGui.QColor(100, 149, 237), QtGui.QColor(144, 238, 144),
-            QtGui.QColor(255, 182, 193), QtGui.QColor(255, 228, 196)
+            QColor(255, 69, 0), QColor(50, 205, 50),
+            QColor(70, 130, 180), QColor(255, 215, 0),
+            QColor(139, 0, 139), QColor(255, 105, 180),
+            QColor(165, 42, 42), QColor(255, 160, 122),
+            QColor(100, 149, 237), QColor(144, 238, 144),
+            QColor(255, 182, 193), QColor(255, 228, 196)
         ]
         dual_color_index = 0
 
@@ -106,15 +107,15 @@ class TemplateWidget(QtWidgets.QWidget):
                 secondary_coords = data_entry.get('secondary', {}).get('coords', None)
 
                 # Get primary rectangle and text_rect for title
-                primary_rect = QtCore.QRect(QtCore.QPoint(int(primary_coords[0]*self.width_ratio), int(primary_coords[2]*self.height_ratio)), 
-                                            QtCore.QPoint(int(primary_coords[1]*self.width_ratio), int(primary_coords[3]*self.height_ratio)))
+                primary_rect = QRect(QPoint(int(primary_coords[0]*self.width_ratio), int(primary_coords[2]*self.height_ratio)), 
+                                            QPoint(int(primary_coords[1]*self.width_ratio), int(primary_coords[3]*self.height_ratio)))
 
                 text_height = 20
-                text_rect = QtCore.QRectF(
-                    QtCore.QPoint(int(primary_coords[0]*self.width_ratio), int(primary_coords[2]*self.height_ratio) - text_height),
-                    QtCore.QPoint(int(primary_coords[1]*self.width_ratio), int(primary_coords[2]*self.height_ratio)))
+                text_rect = QRectF(
+                    QPoint(int(primary_coords[0]*self.width_ratio), int(primary_coords[2]*self.height_ratio) - text_height),
+                    QPoint(int(primary_coords[1]*self.width_ratio), int(primary_coords[2]*self.height_ratio)))
 
-                primary_color = QtGui.QColor(255, 165, 0)  # Default orange color for single parameter
+                primary_color = QColor(255, 165, 0)  # Default orange color for single parameter
 
                 if secondary_coords:
                     # If dual parameter, get a color from the dual_colors list and increment the index
@@ -126,99 +127,99 @@ class TemplateWidget(QtWidgets.QWidget):
 
                 # If secondary rectangle exists, draw it with the same color but no title
                 if secondary_coords:
-                    secondary_rect = QtCore.QRect(QtCore.QPoint(int(secondary_coords[0]*self.width_ratio), int(secondary_coords[2]*self.height_ratio)), 
-                                                QtCore.QPoint(int(secondary_coords[1]*self.width_ratio), int(secondary_coords[3]*self.height_ratio)))
+                    secondary_rect = QRect(QPoint(int(secondary_coords[0]*self.width_ratio), int(secondary_coords[2]*self.height_ratio)), 
+                                                QPoint(int(secondary_coords[1]*self.width_ratio), int(secondary_coords[3]*self.height_ratio)))
                     self.paint_box_and_text(painter, secondary_rect, None, None, primary_color)
                     self.draw_dashed_line_between_rects(painter, primary_rect, secondary_rect, primary_color)
 
 
         if self.profile_rect_info != None:
-            data_rect = QtCore.QRect(
-                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
+            data_rect = QRect(
+                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
                     self.profile_rect_info[2]*self.height_ratio)),
-                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
+                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
                     self.profile_rect_info[3]*self.height_ratio))
             )
-            text_rect = QtCore.QRectF(
-                QtCore.QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
+            text_rect = QRectF(
+                QPoint(int(self.profile_rect_info[0]*self.width_ratio), int(
                     self.profile_rect_info[2]*self.height_ratio)-20),
-                QtCore.QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
+                QPoint(int(self.profile_rect_info[1]*self.width_ratio), int(
                     self.profile_rect_info[2]*self.height_ratio))
             )
             profile_text = f"Profile: {self.profile_rect_info[-1]}"
-            self.paint_box_and_text(painter, data_rect, text_rect, profile_text, QtGui.QColor(255, 125, 125))
+            self.paint_box_and_text(painter, data_rect, text_rect, profile_text, QColor(255, 125, 125))
         if not self.begin.isNull() and not self.end.isNull():
-            rect = QtCore.QRect(self.begin, self.end)
-            pen = QtGui.QPen(QtCore.Qt.red, 3, QtCore.Qt.SolidLine)
+            rect = QRect(self.begin, self.end)
+            pen = QPen(Qt.red, 3, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(rect)
 
         if not self.secondary_begin.isNull() and not self.secondary_end.isNull():
-            rect = QtCore.QRect(self.secondary_begin, self.secondary_end)
-            pen = QtGui.QPen(QtCore.Qt.blue, 3, QtCore.Qt.SolidLine)
+            rect = QRect(self.secondary_begin, self.secondary_end)
+            pen = QPen(Qt.blue, 3, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(rect)
 
-    def paint_box_and_text(self, painter: QtGui.QPainter, data_bounds: QtCore.QRect, text_bounds: QtCore.QRect, text: str, pen_color: QtGui.QColor):
+    def paint_box_and_text(self, painter: QPainter, data_bounds: QRect, text_bounds: QRect, text: str, pen_color: QColor):
         
-        painter.setPen(QtCore.Qt.NoPen) 
-        painter.setBrush(QtCore.Qt.NoBrush)
+        painter.setPen(Qt.NoPen) 
+        painter.setBrush(Qt.NoBrush)
 
         # Draw the bounding box of the data
-        data_pen = QtGui.QPen(pen_color, 3, QtCore.Qt.DashLine)
+        data_pen = QPen(pen_color, 3, Qt.DashLine)
         painter.setPen(data_pen)
         painter.drawRect(data_bounds)
 
         if text_bounds == None or text == None:
-            painter.setPen(QtCore.Qt.NoPen) 
-            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.setPen(Qt.NoPen) 
+            painter.setBrush(Qt.NoBrush)
             return
         
         # Get font size and generate transparent backdrop
-        font_metrics = QtGui.QFontMetrics(painter.font())
+        font_metrics = QFontMetrics(painter.font())
         text_width = font_metrics.boundingRect(text).width()
         text_bounds.setRight(text_bounds.left() + text_width + 10)               
-        background_color = QtGui.QColor(0, 0, 0, 128)  # semi-transparent black
-        text_pen = QtGui.QPen(QtGui.QColor(255, 255, 255))
+        background_color = QColor(0, 0, 0, 128)  # semi-transparent black
+        text_pen = QPen(QColor(255, 255, 255))
         painter.setBrush(background_color)
-        painter.setPen(QtCore.Qt.NoPen)  # no border for the background rectangle
+        painter.setPen(Qt.NoPen)  # no border for the background rectangle
         painter.drawRect(text_bounds)
 
         # Add margin to text bounds and draw text
         text_bounds.setLeft(text_bounds.left() + 5)  # add a left margin to the text
         painter.setPen(text_pen)  # reset to the desired text color
-        text_option = QtGui.QTextOption(
-            QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        text_option.setWrapMode(QtGui.QTextOption.NoWrap)
+        text_option = QTextOption(
+            Qt.AlignLeft | Qt.AlignVCenter)
+        text_option.setWrapMode(QTextOption.NoWrap)
         painter.drawText(text_bounds, text, text_option)
 
-        painter.setPen(QtCore.Qt.NoPen) 
-        painter.setBrush(QtCore.Qt.NoBrush)
+        painter.setPen(Qt.NoPen) 
+        painter.setBrush(Qt.NoBrush)
 
-    def draw_dashed_line_between_rects(self, painter: QtGui.QPainter, rect1: QtCore.QRect, rect2: QtCore.QRect, pen_color: QtGui.QColor):
+    def draw_dashed_line_between_rects(self, painter: QPainter, rect1: QRect, rect2: QRect, pen_color: QColor):
         center1 = rect1.center()
         center2 = rect2.center()
 
         intersection1 = self.line_rect_intersection(center1, center2, rect1)
         intersection2 = self.line_rect_intersection(center1, center2, rect2)
 
-        data_pen = QtGui.QPen(pen_color, 3, QtCore.Qt.DashLine)
+        data_pen = QPen(pen_color, 3, Qt.DashLine)
         painter.setPen(data_pen)
         painter.drawLine(intersection1, intersection2)
         
 
-    def line_rect_intersection(self, line_p1: QtCore.QPoint, line_p2: QtCore.QPoint, rect: QtCore.QRect) -> QtCore.QPoint:
+    def line_rect_intersection(self, line_p1: QPoint, line_p2: QPoint, rect: QRect) -> QPoint:
         lines = [
-            QtCore.QLineF(rect.topLeft(), rect.topRight()),
-            QtCore.QLineF(rect.topRight(), rect.bottomRight()),
-            QtCore.QLineF(rect.bottomRight(), rect.bottomLeft()),
-            QtCore.QLineF(rect.bottomLeft(), rect.topLeft())
+            QLineF(rect.topLeft(), rect.topRight()),
+            QLineF(rect.topRight(), rect.bottomRight()),
+            QLineF(rect.bottomRight(), rect.bottomLeft()),
+            QLineF(rect.bottomLeft(), rect.topLeft())
         ]
 
-        target_line = QtCore.QLineF(line_p1, line_p2)
+        target_line = QLineF(line_p1, line_p2)
         for line in lines:
             intersection = line.intersects(target_line)
-            if intersection and intersection[0] == QtCore.QLineF.BoundedIntersection:
+            if intersection and intersection[0] == QLineF.BoundedIntersection:
                 try:
                     return intersection[1]
                 except IndexError:
@@ -231,7 +232,7 @@ class TemplateWidget(QtWidgets.QWidget):
         """Handles starting the creation of a new bounding box."""
 
         # Bounding box must be started within the bounds of the PDF template
-        if event.button() == QtCore.Qt.LeftButton and ((event.x() < self.pix.width() and event.x() > 0) and (event.y() < self.pix.height() and event.y() > 0)):
+        if event.button() == Qt.LeftButton and ((event.x() < self.pix.width() and event.x() > 0) and (event.y() < self.pix.height() and event.y() > 0)):
             self.drawing = True
             if self.drawing_secondary:
                 self.secondary_begin = event.pos()
@@ -243,7 +244,7 @@ class TemplateWidget(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         """Handles updating bounding box currently being drawn."""
-        if event.buttons() and QtCore.Qt.LeftButton and self.drawing:
+        if event.buttons() and Qt.LeftButton and self.drawing:
 
             # If mouse is outside of PDF template, then only draw bounding box to edge of PDF
             if event.x() < self.pix.width() and event.x() > 0 and event.y() < self.pix.height() and event.y() > 0:
@@ -265,15 +266,15 @@ class TemplateWidget(QtWidgets.QWidget):
                 else:
                     end_y = event.y()
                 if self.drawing_secondary:
-                    self.secondary_end = QtCore.QPoint(end_x, end_y)
+                    self.secondary_end = QPoint(end_x, end_y)
                 else:
-                    self.end = QtCore.QPoint(end_x, end_y)
+                    self.end = QPoint(end_x, end_y)
             self.update()
 
     def mouseReleaseEvent(self, event):
         """Handles setting final bounding box points as well as processing current bounding box text."""
 
-        if event.button() == QtCore.Qt.LeftButton and self.drawing:
+        if event.button() == Qt.LeftButton and self.drawing:
 
             # If mouse is outside of PDF template, then only draw bounding box to edge of PDF
             if event.x() < self.pix.width() and event.x() > 0 and event.y() < self.pix.height() and event.y() > 0:
@@ -295,9 +296,9 @@ class TemplateWidget(QtWidgets.QWidget):
                 else:
                     end_y = event.y()
                 if self.drawing_secondary:
-                    self.secondary_end = QtCore.QPoint(end_x, end_y)
+                    self.secondary_end = QPoint(end_x, end_y)
                 else:
-                    self.end = QtCore.QPoint(end_x, end_y)
+                    self.end = QPoint(end_x, end_y)
                     
             self.drawing = False
             self.update()
@@ -334,8 +335,8 @@ class TemplateWidget(QtWidgets.QWidget):
 
     def determine_begin_end(self, begin, end):
 
-        begin_fixed = QtCore.QPoint(min(begin.x(), end.x()), min(begin.y(), end.y()))
-        end_fixed = QtCore.QPoint(max(begin.x(), end.x()), max(begin.y(), end.y()))
+        begin_fixed = QPoint(min(begin.x(), end.x()), min(begin.y(), end.y()))
+        end_fixed = QPoint(max(begin.x(), end.x()), max(begin.y(), end.y()))
 
         return begin_fixed, end_fixed
 
@@ -350,7 +351,8 @@ class TemplateWidget(QtWidgets.QWidget):
         if self.image_area_too_small:
             self.found_text = "Image Area Too Small"
             return
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        
+        tesseract_cmd = resource_path(join("Tesseract","tesseract.exe"))
 
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"
@@ -372,10 +374,10 @@ class TemplateWidget(QtWidgets.QWidget):
         ##########################################################
 
         if self.drawing_secondary:
-            self.secondary_text = pytesseract.image_to_string(
+            self.secondary_text = image_to_string(
                 cropped_pil_image, config=config_str).strip()
         else:
-            self.found_text = pytesseract.image_to_string(
+            self.found_text = image_to_string(
                 cropped_pil_image, config=config_str).strip()
 
         print(f"Found: {self.found_text}", type(self.found_text))

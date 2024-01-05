@@ -1,19 +1,21 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QListWidget, QLineEdit, QAbstractItemView, QListWidgetItem
+
 from view_models import file_name_view_model
 from widgets import utility_widgets
 
 
-class FileNameView(QtWidgets.QWidget):
+class FileNameView(QWidget):
     def __init__(self, view_model: file_name_view_model.FileNameViewModel):
         super().__init__()
         self.view_model = view_model
-        self.main_layout = QtWidgets.QVBoxLayout()
+        self.main_layout = QVBoxLayout()
         self.setObjectName("file_name_stack_item")
 
-        self.settings_profile_choices_label_layout = QtWidgets.QHBoxLayout()
+        self.settings_profile_choices_label_layout = QHBoxLayout()
 
         # Label to display active parameters
-        self.settings_profile_template_label = QtWidgets.QLabel()
+        self.settings_profile_template_label = QLabel()
         self.settings_profile_template_label.setObjectName(
             "settings_profile_template_label"
         )
@@ -22,7 +24,7 @@ class FileNameView(QtWidgets.QWidget):
         )
 
         # Label to display active parameters
-        self.settings_profile_parameters_label = QtWidgets.QLabel()
+        self.settings_profile_parameters_label = QLabel()
         self.settings_profile_parameters_label.setObjectName(
             "settings_profile_parameters_label"
         )
@@ -32,12 +34,12 @@ class FileNameView(QtWidgets.QWidget):
 
         self.main_layout.addLayout(self.settings_profile_choices_label_layout)
 
-        self.settings_profile_choices_layout = QtWidgets.QHBoxLayout()
+        self.settings_profile_choices_layout = QHBoxLayout()
 
         # List widget to display profiles
-        self.settings_profile_templates_list_widget = QtWidgets.QListWidget()
+        self.settings_profile_templates_list_widget = QListWidget()
         self.settings_profile_templates_list_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection
+            QAbstractItemView.SingleSelection
         )
         self.settings_profile_templates_list_widget.setObjectName(
             "settings_profile_templates_list_widget"
@@ -56,9 +58,9 @@ class FileNameView(QtWidgets.QWidget):
         )
 
         # List widget to display active parameters
-        self.settings_profile_parameters_list_widget = QtWidgets.QListWidget()
+        self.settings_profile_parameters_list_widget = QListWidget()
         self.settings_profile_parameters_list_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection
+            QAbstractItemView.SingleSelection
         )
 
         self.view_model.main_view_model.parameter_update_list.connect(
@@ -87,15 +89,15 @@ class FileNameView(QtWidgets.QWidget):
         self.main_layout.addLayout(self.settings_profile_choices_layout)
 
         # Label for file rename parameter input
-        self.settings_profile_naming_scheme_label = QtWidgets.QLabel()
+        self.settings_profile_naming_scheme_label = QLabel()
         self.settings_profile_naming_scheme_label.setObjectName(
             "settings_profile_naming_scheme_label"
         )
         self.main_layout.addWidget(self.settings_profile_naming_scheme_label)
 
-        self.settings_file_name_pattern_layout = QtWidgets.QHBoxLayout()
+        self.settings_file_name_pattern_layout = QHBoxLayout()
         # Line edit for user to type in format with parameters
-        self.settings_profile_naming_scheme_line_edit = QtWidgets.QLineEdit()
+        self.settings_profile_naming_scheme_line_edit = QLineEdit()
         self.settings_profile_naming_scheme_line_edit.setObjectName(
             "settings_profile_naming_scheme_line_edit"
         )
@@ -111,7 +113,7 @@ class FileNameView(QtWidgets.QWidget):
         self.main_layout.addLayout(self.settings_file_name_pattern_layout)
 
         # Label for file rename example output
-        self.settings_profile_naming_scheme_example_label = QtWidgets.QLabel()
+        self.settings_profile_naming_scheme_example_label = QLabel()
         self.settings_profile_naming_scheme_example_label.setObjectName(
             "settings_profile_naming_scheme_example_label"
         )
@@ -119,7 +121,7 @@ class FileNameView(QtWidgets.QWidget):
             self.settings_profile_naming_scheme_example_label)
 
         # Line edit to display an example of data shown
-        self.settings_profile_naming_scheme_example_line_edit = QtWidgets.QLineEdit()
+        self.settings_profile_naming_scheme_example_line_edit = QLineEdit()
         self.settings_profile_naming_scheme_example_line_edit.setEnabled(False)
         self.settings_profile_naming_scheme_example_line_edit.setObjectName(
             "settings_profile_naming_scheme_example_line_edit"
@@ -128,16 +130,16 @@ class FileNameView(QtWidgets.QWidget):
             self.settings_profile_naming_scheme_example_line_edit
         )
 
-        self.profile_email_layout = QtWidgets.QHBoxLayout()
+        self.profile_email_layout = QHBoxLayout()
         # Label for dropdown menu
-        self.profile_email_label = QtWidgets.QLabel()
+        self.profile_email_label = QLabel()
         self.profile_email_label.setObjectName(
             "profile_email_label"
         )
         self.main_layout.addWidget(self.profile_email_label)
 
         # Dropdown menu containing e-mail profiles
-        self.profile_email_combo_box = QtWidgets.QComboBox()
+        self.profile_email_combo_box = QComboBox()
         self.profile_email_combo_box.setObjectName(
             "profile_email_combo_box"
         )
@@ -156,7 +158,7 @@ class FileNameView(QtWidgets.QWidget):
         self.main_layout.addWidget(self.line)
 
         # Button to save profile file/email data to database
-        self.settings_profile_naming_scheme_button = QtWidgets.QPushButton()
+        self.settings_profile_naming_scheme_button = QPushButton()
         self.settings_profile_naming_scheme_button.setObjectName(
             "settings_profile_naming_scheme_button"
         )
@@ -178,7 +180,7 @@ class FileNameView(QtWidgets.QWidget):
         self.translate_ui()
 
     def translate_ui(self):
-        _translate = QtCore.QCoreApplication.translate
+        _translate = QCoreApplication.translate
         self.settings_profile_naming_scheme_label.setText(
             _translate("FileNameView", "File Name Template:")
         )
@@ -204,7 +206,7 @@ class FileNameView(QtWidgets.QWidget):
             self.profile_email_combo_box.currentText()
         )
 
-    def profile_clicked(self, item: QtWidgets.QListWidgetItem):
+    def profile_clicked(self, item: QListWidgetItem):
         self.view_model.display_active_parameters_from_item(item)
         self.update_email_combo_box_state()
 
@@ -215,7 +217,7 @@ class FileNameView(QtWidgets.QWidget):
         )
 
     def update_parameter_list(
-        self, parameter_items: list[QtWidgets.QListWidgetItem], file_naming_scheme: str
+        self, parameter_items: list[QListWidgetItem], file_naming_scheme: str
     ) -> None:
         self.settings_profile_parameters_list_widget.clear()
         self.settings_profile_naming_scheme_line_edit.clear()

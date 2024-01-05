@@ -1,5 +1,5 @@
-from typing import List, Optional, Callable
 from PySide6.QtWidgets import QMessageBox, QPushButton
+from typing import List, Optional, Callable
 
 
 class MessageBox:
