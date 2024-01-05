@@ -1,23 +1,25 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QGroupBox, QFrame
+
 from utils import text_utils
 
 
-class HorizontalLine(QtWidgets.QWidget):
+class HorizontalLine(QWidget):
     def __init__(self, parent=None):
         super().__init__()
-        self.horizontal_layout = QtWidgets.QHBoxLayout()
-        self.line = QtWidgets.QFrame()
-        self.line.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.horizontal_layout = QHBoxLayout()
+        self.line = QFrame()
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
         self.horizontal_layout.addWidget(self.line)
         self.horizontal_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.horizontal_layout)
         
 
-class ROIGroupBox(QtWidgets.QGroupBox):
-    add_roi_signal = QtCore.Signal()
-    remove_roi_signal = QtCore.Signal()
-    process_method_changed = QtCore.Signal()
+class ROIGroupBox(QGroupBox):
+    add_roi_signal = Signal()
+    remove_roi_signal = Signal()
+    process_method_changed = Signal()
 
 
     def __init__(self, title: str, roi_type:str='default'):
@@ -31,10 +33,10 @@ class ROIGroupBox(QtWidgets.QGroupBox):
         self.method = None
         self.previous_method = None
 
-        self.values_layout = QtWidgets.QVBoxLayout(self)
+        self.values_layout = QVBoxLayout(self)
 
         # Processing Method Dropdown
-        self.processing_method_dropdown = QtWidgets.QComboBox()
+        self.processing_method_dropdown = QComboBox()
         self.options = [
             {"text": "Choose an option", "data": None},
             {"text": "Maximum Value", "data": "max"},
@@ -54,10 +56,10 @@ class ROIGroupBox(QtWidgets.QGroupBox):
         if roi_type == 'roi2':
             self.processing_method_dropdown.addItem("Value at position", "index")
 
-        self.values_layout.addWidget(QtWidgets.QLabel("Processing Method"))
+        self.values_layout.addWidget(QLabel("Processing Method"))
         self.values_layout.addWidget(self.processing_method_dropdown)
 
-        self.extra_value_label = QtWidgets.QLabel()
+        self.extra_value_label = QLabel()
         self.extra_value_label.setText("Returned Value: ")
         self.values_layout.addWidget(self.extra_value_label)
 
@@ -67,7 +69,7 @@ class ROIGroupBox(QtWidgets.QGroupBox):
         self.values_layout.addWidget(HorizontalLine())
 
          # Add the ROI button
-        self.add_roi_btn = QtWidgets.QPushButton("Add ROI")
+        self.add_roi_btn = QPushButton("Add ROI")
         if self.roi_type == 'roi1':
             self.add_roi_btn.clicked.connect(self._add_roi)
             self.values_layout.addWidget(self.add_roi_btn)
@@ -75,7 +77,7 @@ class ROIGroupBox(QtWidgets.QGroupBox):
             self.add_roi_btn.setEnabled(False)
 
         # Remove the ROI button
-        self.remove_roi_btn = QtWidgets.QPushButton("Remove ROI")
+        self.remove_roi_btn = QPushButton("Remove ROI")
         if self.roi_type == 'roi2':
             self.remove_roi_btn.clicked.connect(self._remove_roi)
             self.values_layout.addWidget(self.remove_roi_btn)
@@ -100,7 +102,7 @@ class ROIGroupBox(QtWidgets.QGroupBox):
         self.sample_values = sample_values
         insert_position = 0
         for value in self.sample_values:
-            label = QtWidgets.QLabel(str(value))
+            label = QLabel(str(value))
             self.value_labels.append(label)
             self.values_layout.insertWidget(insert_position, label)
             insert_position += 1

@@ -1,9 +1,10 @@
-from PySide6 import QtCore
+from PySide6.QtCore import QObject
+
 from view_models import main_view_model
 from utils.general_utils import MessageBox
 
 
-class MessageBoxViewModel(QtCore.QObject):
+class MessageBoxViewModel(QObject):
     def __init__(
         self, main_view_model: main_view_model.MainViewModel, message_box: MessageBox
     ):

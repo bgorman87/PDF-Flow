@@ -1,7 +1,9 @@
-from PySide6 import QtWidgets
+from PySide6.QtWidgets import QPlainTextEdit
+
 from view_models import console_view_model
 
-class ConsoleWidget(QtWidgets.QPlainTextEdit):
+
+class ConsoleWidget(QPlainTextEdit):
     def __init__(self, view_model: console_view_model.ConsoleViewModel):
         super().__init__()
         self.setObjectName("console")
