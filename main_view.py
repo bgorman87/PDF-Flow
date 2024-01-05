@@ -8,6 +8,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from datetime import date
 import json
 import uuid
+import sys
 
 from models import main_model
 from view_models import main_view_model, message_box_view_model
@@ -15,6 +16,8 @@ from views import message_box_view, navigation_view, stacked_view
 
 from utils import path_utils, general_utils
 
+if getattr(sys, 'frozen', False):
+    import pyi_splash
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
@@ -68,6 +71,7 @@ class MainView(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(800, 950)
         self.main_view_model.window_size_update.connect(self.resize)
+        
 
     def show_message_alert(self, message_box: general_utils.MessageBox):
         """Shows a message box alert to the user from given message box dict.
@@ -106,6 +110,10 @@ def main(version: str):
     window.setWindowTitle("Englobe PDF Flow")
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
+
+    if getattr(sys, 'frozen', False):
+        pyi_splash.close()
+
     app.exec()
 
 def get_config_data(version: str) -> dict:
