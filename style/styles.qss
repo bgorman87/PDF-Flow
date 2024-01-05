@@ -30,13 +30,13 @@ QTabBar::tab {
 }
 
 QTabBar::tab:selected {
-    background-color: #66bb6a;
+    background-color: #0b8072;
     color: white;
     border-bottom: none;
 }
 
 QTabBar::tab:hover {
-    background-color: #66bb6a;
+    background-color: #8bc9ba;
     color: white;
 }
 
@@ -77,12 +77,12 @@ QPushButton.stats-button, QPushButton.program-info-button {
 }
 
 QListWidget::item:selected:!editable, .email-list::item:selected:!editable {
-    background-color: #66bb6a;
+    background-color: #0b8072;
     color: #fff;
 }
 
 QListWidget::item:selected:editable, .email-list::item:selected:editable {
-    background-color: #66bb6a;
+    background-color: #0b8072;
     color: #fff;
 }
 
@@ -91,7 +91,7 @@ QListWidget::item {
 }
 
 QPushButton:hover {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QPushButton.stats-button:hover {
@@ -103,7 +103,7 @@ QPushButton:pressed {
 }
 
 QPushButton:checked {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QPushButton:disabled {
@@ -128,9 +128,15 @@ QPushButton.nav-button {
     background-color: #5a5a5a;
 }
 
+.company-logo {
+    background-color: #5a5a5a;
+    border: 0px;
+
+}
+
 QPushButton.nav-button:hover {
     background-color: #6a6a6a;
-    border-left: 10px solid #66bb6a;
+    border-left: 10px solid #8bc9ba;
 }
 
 QPushButton.nav-button-active {
@@ -144,7 +150,7 @@ QPushButton.nav-button-active {
     border-radius: 0;
     text-align: left;
     width: 100%;
-    border-left: 10px solid #66bb6a;
+    border-left: 10px solid #8bc9ba;
 }
 
 
@@ -168,11 +174,11 @@ QComboBox::down-arrow {
 }
 
 QComboBox:hover {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QComboBox::item:hover {
-    background-color: #66bb6a; 
+    background-color: #0b8072; 
 }
 
 QComboBox:disabled {
@@ -207,7 +213,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QTableView, QTableWidget {
@@ -223,7 +229,7 @@ QTableView::item {
 }
 
 QTableView::item:selected {
-    background-color: #66bb6a;
+    background-color: #0b8072;
     color: white;
     border: 1px solid #2a2a2a;
 }
@@ -240,11 +246,11 @@ QHeaderView::section {
 }
 
 QHeaderView::section:hover {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QTableView::item::hover {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 QTableWidget {
@@ -253,7 +259,7 @@ QTableWidget {
 }
 
 QTableWidget:selected {
-    background-color: #66bb6a;
+    background-color: #0b8072;
     color: white;
 }
 
@@ -262,7 +268,7 @@ QTableWidget:selected {
 }
 
 .delete-button:hover {
-    background-color: #66bb6a;
+    background-color: #0b8072;
 }
 
 .delete-button:disabled {

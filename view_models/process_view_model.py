@@ -1,5 +1,6 @@
 import base64
 import mimetypes
+import time
 import re
 import os
 import subprocess
@@ -38,6 +39,7 @@ class ProcessViewModel(QtCore.QObject):
         self._progress = 0
         self._thread_pool = QtCore.QThreadPool()
         self._token = ""
+        self.email_provider = None
         self.Dispatch = Dispatch
 
     def get_files(self):
@@ -84,6 +86,12 @@ class ProcessViewModel(QtCore.QObject):
         self.main_view_model.set_loaded_files_count(number_files)
         self.main_view_model.set_process_button_state(True)
         self.main_view_model.set_process_button_count(number_files)
+
+    @property
+    def selected_file_count(self):
+        """Returns the number of selected files"""
+
+        return len(self._file_names)
 
     # For each file in self._file_names create a thread to process
     def process_files(self):
@@ -197,11 +205,37 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             source_path (str): Current file name
             renamed_source_path (str): New file name
+
+        Returns:
+            bool: True if file is successfully renamed, False otherwise
         """
         try:
             os.rename(source_path, renamed_source_path)
             return True
         except OSError as e:
+            # If not renamed, then try again a few times, but notify user as progress occurs
+            progress_dialog = QtWidgets.QProgressDialog()
+            progress_dialog.setWindowTitle("File Rename Error")
+            progress_dialog.setLabelText("File renaming failed, trying again...")
+            progress_dialog.setRange(0, 10)
+            progress_dialog.show()
+
+            # Try again a few times
+            for i in range(10):
+                try:
+                    os.rename(source_path, renamed_source_path)
+                    progress_dialog.close()
+                    self.main_view_model.add_console_text(
+                        f"File renaming info - Took {i} attempts to rename file:\nSource: {source_path}\nNew: {renamed_source_path}"
+                    )
+                    return True
+                except OSError:
+                    time.sleep(0.5)
+                    pass
+                progress_dialog.setValue(i+1)
+
+            progress_dialog.close()
+
             self.main_view_model.add_console_text(
                 f"Error renaming file - Please check if new directory exists:\nSource: {source_path}\nNew: {renamed_source_path}"
             )
@@ -301,11 +335,22 @@ class ProcessViewModel(QtCore.QObject):
 
             self.main_view_model.display_message_box(message_box)
             return False
+        
+    def get_email_token(self) -> bool:
+        """Gets email token for use in API calls"""
+
+        if self.email_provider == EmailProvider.OUTLOOK:
+            return self.get_outlook_token()
+        elif self.email_provider == EmailProvider.GMAIL:
+            return self.get_gmail_token()
+        elif self.email_provider == EmailProvider.LOCAL:
+            return True
+        else:
+            return False
 
     def email_files(
         self,
-        email_items: List[QtWidgets.QListWidgetItem],
-        email_provider: EmailProvider,
+        email_items: List[QtWidgets.QListWidgetItem]
     ):
         """Emails the selected files
 
@@ -330,7 +375,6 @@ class ProcessViewModel(QtCore.QObject):
                         file_data["profile_id"]
                     )
                 )
-            print("Template: ", email_template)
             self.main_view_model.update_emailed_files_update_count(1)
             body_content = ""
             if email_template:
@@ -382,7 +426,7 @@ class ProcessViewModel(QtCore.QObject):
             attachments = [
                 source_path,
             ]
-            if email_provider == EmailProvider.OUTLOOK:
+            if self.email_provider == EmailProvider.OUTLOOK:
                 email_info = self.create_outlook_draft_email(
                     subject,
                     body_content,
@@ -392,7 +436,7 @@ class ProcessViewModel(QtCore.QObject):
                     attachments,
                     email_template,
                 )
-            elif email_provider == EmailProvider.GMAIL:
+            elif self.email_provider == EmailProvider.GMAIL:
                 email_info = self.create_gmail_draft_email(
                     subject,
                     body_content,
@@ -402,7 +446,7 @@ class ProcessViewModel(QtCore.QObject):
                     attachments,
                     email_template,
                 )
-            elif email_provider == EmailProvider.LOCAL:
+            elif self.email_provider == EmailProvider.LOCAL:
                 email_info = self.create_local_draft_email(
                     subject,
                     body_content,
@@ -755,3 +799,83 @@ class ProcessViewModel(QtCore.QObject):
             return "assets/icons/outlook-local.png"
         else:
             return "assets/icons/thunderbird-local.png"
+        
+    def unprocessed_email_check(self, callback: callable):
+        """Shows a pop-up to ask user if they want to email unprocessed files"""
+            
+        message_box = general_utils.MessageBox()
+        message_box.title = "Email Unprocessed Files"
+        message_box.icon = QtWidgets.QMessageBox.Question
+        message_box.text = "Would you like to email the unprocessed files?"
+        message_box.buttons = [
+            QtWidgets.QPushButton("Yes"),
+            QtWidgets.QPushButton("No"),
+        ]
+        message_box.button_roles = [
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
+        ]
+        message_box.callback = [
+            callback,
+            None,
+        ]
+
+        self.main_view_model.display_message_box(message_box)
+
+    def email_unprocessed_files(self):
+        """Emails the unprocessed files"""
+
+        max_threads = int(os.cpu_count() * 0.5)
+        self._thread_pool.setMaxThreadCount(max_threads)
+
+        for file_name in self._file_names:
+            self.analyze_worker = image_utils.WorkerAnalyzeThread(
+                file_name=file_name, email=True, main_view_model=self.main_view_model
+            )
+            self.analyze_worker.signals.analysis_result.connect(
+                self.email_file_type_complete
+            )
+            self._thread_pool.start(self.analyze_worker)
+
+    def email_file_type_complete(self, analysis_data: list):
+
+        if not analysis_data or analysis_data[0] == 0:  # No file type detected therefore new template
+            self.main_view_model.add_console_text(
+                f"Unprocessed Email Error: Could not determine file type for file: {os.path.basename(file_type[1])}"
+            )
+            return
+        
+        file_type, file_name = analysis_data
+
+        profile_name = self.main_view_model.fetch_profile_description_by_profile_id(
+            file_type)
+        
+        file_name_pattern = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
+            file_type)
+        
+        project_number = None
+        if r"{project_number}" in file_name_pattern:
+            # Escape any round brackets
+            escaped_template = re.sub(r"(\(|\))", r"\\\1", file_name_pattern)
+
+            # Replace the {project_number} placeholder with a search string
+            unique_project_number_pattern = re.sub(r"\{project_number\}", "(.+?)", escaped_template)
+
+            # Now replace all other placeholders with a generic regex pattern
+            final_regex_pattern = re.sub(r"\{.*?\}", ".*?", unique_project_number_pattern)
+
+            # Extracting the project number using the adjusted dynamic pattern
+            match = re.search(final_regex_pattern, os.path.basename(file_name))
+            project_number = match.group(1) if match else None
+        
+        file_data = {
+            "source": file_name,
+            "project_data": "",
+            "project_number": project_number,
+            "profile_id": file_type,
+        }
+
+        email_item = QtWidgets.QListWidgetItem(file_name)
+        email_item.setData(QtCore.Qt.UserRole, file_data)
+
+        self.email_files([email_item])
