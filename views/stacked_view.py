@@ -1,10 +1,10 @@
-"""Holds all of the stacked items"""
+from PySide6.QtWidgets import QStackedWidget
 
-from PySide6 import QtWidgets
 from views import console_view, file_name_view, template_view, data_viewer_view, process_view, email_view
 from view_models import file_name_view_model, main_view_model, stacked_view_model, console_view_model, template_view_model, data_viewer_view_model, process_view_model, email_view_model
 
-class StackedWidget(QtWidgets.QStackedWidget):
+
+class StackedWidget(QStackedWidget):
     def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
         self.main_view_model = main_view_model

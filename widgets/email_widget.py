@@ -3,7 +3,10 @@ from PySide6.QtGui import (QColor, QFont, QIcon, QPainter,
                            QPixmap, QTextBlockFormat, QTextCharFormat,
                            QTextImageFormat, QPalette)
 from PySide6 import QtWidgets
+
 from utils import path_utils
+
+
 class EmailWidget(QtWidgets.QWidget):
     text_changed = Signal()
 

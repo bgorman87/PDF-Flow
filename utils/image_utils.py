@@ -1,15 +1,15 @@
-import os
-import regex as re
-from PySide6 import QtCore
+from PySide6.QtCore import Signal, Slot, QRunnable, QObject
+from os import listdir, path, rename
+from regex import search
 from pdf2image import convert_from_path
-from utils.path_utils import resource_path
-import io
-import shutil
-import pytesseract
+from io import BytesIO
+from shutil import copy, SameFileError
+from pytesseract import image_to_string
+from pytesseract.pytesseract import tesseract_cmd
+
 from view_models import main_view_model
-import regex as re
-import debugpy
 from utils import text_utils
+from utils.path_utils import resource_path
 
 
 def detect_package_number(file_path: str, project_file_path: str = None) -> str:
@@ -25,13 +25,13 @@ def detect_package_number(file_path: str, project_file_path: str = None) -> str:
     try:
         only_files = [
             f_local[0:6]
-            for f_local in os.listdir(project_file_path)
+            for f_local in listdir(project_file_path)
             if "pdf" in f_local[-4:].lower()
         ]
     except:
         only_files = [
             f_local[0:6]
-            for f_local in os.listdir(file_path)
+            for f_local in listdir(file_path)
             if "pdf" in f_local[-4:].lower()
         ]
         pass
@@ -54,18 +54,18 @@ def detect_package_number(file_path: str, project_file_path: str = None) -> str:
 
 
 # hard coded tesseract and poppler path from current working directory
-tesseract_path = resource_path(os.path.join("Tesseract", "tesseract.exe"))
-poppler_path = resource_path(os.path.join("poppler", "bin"))
+tesseract_path = resource_path(path.join("Tesseract", "tesseract.exe"))
+poppler_path = resource_path(path.join("poppler", "bin"))
 # poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler/bin")))
 # poppler_path = f"{os.path.abspath('/usr/bin')}"
 
 
-class AnalysisSignals(QtCore.QObject):
-    analysis_result = QtCore.Signal(list)
-    analysis_progress = QtCore.Signal(int)
+class AnalysisSignals(QObject):
+    analysis_result = Signal(list)
+    analysis_progress = Signal(int)
 
 
-class WorkerAnalyzeThread(QtCore.QRunnable):
+class WorkerAnalyzeThread(QRunnable):
     def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False, email: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
@@ -75,16 +75,15 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         self.main_view_model = main_view_model
         self.signals = AnalysisSignals()
 
-    @QtCore.Slot()
+    @Slot()
     def run(self):
-        debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
 
         images_jpeg = convert_from_path(
             self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True
         )
         image = images_jpeg[0]
-        img_byte_arr = io.BytesIO()
+        img_byte_arr = BytesIO()
         image.save(img_byte_arr, format="jpeg")
         img_byte_arr = img_byte_arr.getvalue()
 
@@ -190,8 +189,8 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                     "".join(["{", key, "}"]), parameter_data[key]
                 )
 
-        rename_path = os.path.abspath(
-            os.path.join(self.file_dir_path, new_file_name + ".pdf")
+        rename_path = path.abspath(
+            path.join(self.file_dir_path, new_file_name + ".pdf")
         )
         rename_path = self.rename_file(self.file, rename_path)
 
@@ -215,12 +214,12 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         rename_project_data_path = ""
         if rename_path_project_dir:
             try:
-                shutil.copy(rename_path, rename_path_project_dir)
-                rename_project_data_path = os.path.join(
+                copy(rename_path, rename_path_project_dir)
+                rename_project_data_path = path.join(
                     rename_path_project_dir, new_file_name + ".pdf"
                 )
             except FileNotFoundError as e:
-                file_name = os.path.basename(rename_path)
+                file_name = path.basename(rename_path)
                 if rename_path_project_dir == "":
                     self.main_view_model.add_console_text(
                         f"No project directory found for {file_name}"
@@ -230,11 +229,11 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                         f"Error copying {file_name} to project directory: {rename_path_project_dir}"
                     )
                 self.main_view_model.add_console_alerts(1)
-            except shutil.SameFileError as e:
+            except SameFileError as e:
                 pass
 
         
-        prev_file_name = os.path.basename(self.file)
+        prev_file_name = path.basename(self.file)
         print_string = f"{prev_file_name} renamed to {new_file_name}"
         returns = [
             print_string,
@@ -249,41 +248,41 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     def generate_unique_filename(self, rename_path, extension=".pdf"):
         # Extract the base filename and directory from the absolute path
-        dir_name = os.path.dirname(rename_path)
-        base_name = os.path.splitext(os.path.basename(rename_path))[0]
+        dir_name = path.dirname(rename_path)
+        base_name = path.splitext(path.basename(rename_path))[0]
         
         # Counter for appending to the file name
         counter = 1
         
         # Check if the path exists, and if so, increment counter and try again
-        while os.path.isfile(rename_path):
+        while path.isfile(rename_path):
             new_name = f"{base_name}({counter}){extension}"
-            rename_path = os.path.join(dir_name, new_name)
+            rename_path = path.join(dir_name, new_name)
             counter += 1
 
         return rename_path
 
     def rename_file(self, current_name: str, new_name: str, extension: str=".pdf") -> str:
         MAX_PATH_LENGTH = 253
-        dir_name = os.path.dirname(new_name)
-        base_name = os.path.splitext(os.path.basename(new_name))[0]
+        dir_name = path.dirname(new_name)
+        base_name = path.splitext(path.basename(new_name))[0]
         
         if len(new_name) > MAX_PATH_LENGTH:
             cut_length = len(new_name) - (MAX_PATH_LENGTH - len("LONG") - len(extension) - 1)
             base_name = base_name[:-cut_length] + "LONG"
-            new_name = os.path.abspath(
-                os.path.join(dir_name, base_name + extension)
+            new_name = path.abspath(
+                path.join(dir_name, base_name + extension)
             )
-        if os.path.isfile(new_name):
+        if path.isfile(new_name):
             new_name = self.generate_unique_filename(new_name, extension=extension)
         try:
-            os.rename(current_name, new_name)
+            rename(current_name, new_name)
             return new_name
         except Exception as e:
             print(f"Error renaming file in original location: {e}")
             return current_name
 
-    def find_file_profile(self, pdf_image: io.BytesIO) -> int:
+    def find_file_profile(self, pdf_image: BytesIO) -> int:
         profiles = self.main_view_model.fetch_all_file_profiles(order_by="count")
 
         for file_profile in profiles:
@@ -317,7 +316,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         else:
             return False
 
-    def find_parameter_data(self, profile_id: int, pdf_image: io.BytesIO) -> dict:
+    def find_parameter_data(self, profile_id: int, pdf_image: BytesIO) -> dict:
         file_profile_parameters = (
             self.main_view_model.fetch_active_parameters_by_profile_id(
                 profile_id=profile_id
@@ -400,7 +399,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 else:
 
                     if parameter_regex:
-                        data_point = re.search(rf"{parameter_regex}", result, re.M + re.I)
+                        data_point = search(rf"{parameter_regex}", result, re.M + re.I)
                         if data_point:
                             data_point = data_point.groups()
                             processed_data = self.main_view_model.scrub(data_point[-1].replace(" ", "-"))
@@ -428,6 +427,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path) -> str:
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
-        return pytesseract.image_to_string(img_path, config=config_str).strip()
+        return image_to_string(img_path, config=config_str).strip()

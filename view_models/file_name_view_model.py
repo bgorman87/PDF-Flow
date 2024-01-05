@@ -1,16 +1,17 @@
-from PySide6 import QtCore, QtWidgets
+from Pyside6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QMessageBox, QListWidgetItem, QLineEdit
 
 from view_models import main_view_model
 from utils import general_utils
 
 
-class FileNameViewModel(QtCore.QObject):
-    file_name_update = QtCore.Signal()
-    file_name_example_update = QtCore.Signal()
-    parameter_update_list = QtCore.Signal()
-    email_profile_name_update = QtCore.Signal(str)
-    email_profile_list_update = QtCore.Signal()
-    profile_list_update = QtCore.Signal()
+class FileNameViewModel(QObject):
+    file_name_update = Signal()
+    file_name_example_update = Signal()
+    parameter_update_list = Signal()
+    email_profile_name_update = Signal(str)
+    email_profile_list_update = Signal()
+    profile_list_update = Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -48,7 +49,7 @@ class FileNameViewModel(QtCore.QObject):
                               for result in results]
         return dropdown_items
 
-    def display_active_parameters_from_item(self, file_profile_item: QtWidgets.QListWidgetItem) -> None:
+    def display_active_parameters_from_item(self, file_profile_item: QListWidgetItem) -> None:
         """Fills in active parameters list based off the currently chosen file_profile dropdown item.
 
         Args:
@@ -66,11 +67,11 @@ class FileNameViewModel(QtCore.QObject):
         
         # Add default parameters to active parameters list
         self._active_parameters_examples = ["01"]
-        doc_num_list_item = QtWidgets.QListWidgetItem("doc_num")
+        doc_num_list_item = QListWidgetItem("doc_num")
         self._active_parameter_list_items.append(doc_num_list_item)
 
         if "project_number" in self._active_parameters:
-            project_description_list_item = QtWidgets.QListWidgetItem("project_description")
+            project_description_list_item = QListWidgetItem("project_description")
             project_description_example = self.main_view_model.fetch_project_description_example()
             if not project_description_example:
                 project_description_example = "ProjectDescription"
@@ -81,7 +82,7 @@ class FileNameViewModel(QtCore.QObject):
         for parameter in self._active_parameters[2:]:
             self._active_parameters_examples.append(
                 self.main_view_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=self._profile_id, parameter=parameter))
-            active_param_list_item = QtWidgets.QListWidgetItem(parameter)
+            active_param_list_item = QListWidgetItem(parameter)
             self._active_parameter_list_items.append(active_param_list_item)
         self._active_file_naming_scheme = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             self._profile_id)
@@ -97,7 +98,7 @@ class FileNameViewModel(QtCore.QObject):
     def active_file_naming_scheme(self):
         return self._active_file_naming_scheme
 
-    def add_active_param_line_edit(self, line_edit: QtWidgets.QLineEdit, parameter_name: str):
+    def add_active_param_line_edit(self, line_edit: QLineEdit, parameter_name: str):
         """Upon clicking a parameter in the parameter list, {parameter}' gets inserted to the line edit"""
         current_cursor_position = line_edit.cursorPosition()
 
@@ -154,15 +155,15 @@ class FileNameViewModel(QtCore.QObject):
         if current_profile_file_name and current_profile_file_name != profile_name:
             message_box = general_utils.MessageBox()
             message_box.title = "File Name Pattern Already Found"
-            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.icon = QMessageBox.Warning
             message_box.text = f"Overwrite current pattern?\
                     \n \
                     \n{current_profile_file_name} \
                     \n "
             message_box.buttons = [
                 "Overwrite", "Cancel"]
-            message_box.button_roles = [QtWidgets.QMessageBox.YesRole,
-                            QtWidgets.QMessageBox.RejectRole,]
+            message_box.button_roles = [QMessageBox.YesRole,
+                            QMessageBox.RejectRole,]
             message_box.callback = [lambda: self.apply_file_name_pattern(
                 profile_name=profile_name, email_profile_name=email_profile_name), None]
 
@@ -182,7 +183,7 @@ class FileNameViewModel(QtCore.QObject):
         self.main_view_model.add_console_alerts(alerts=1)
         message_box = general_utils.MessageBox()
         message_box.title = "File Name Pattern Updated"
-        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.icon = QMessageBox.Information
         message_box.text = f"Data for profile '{profile_name}' updated:\
                 \n"
         
@@ -193,7 +194,7 @@ class FileNameViewModel(QtCore.QObject):
 
         message_box.buttons = [
             "Ok",]
-        message_box.button_roles = [QtWidgets.QMessageBox.YesRole,]
+        message_box.button_roles = [QMessageBox.YesRole,]
         message_box.callback = [None,]
 
         self.main_view_model.display_message_box(message_box=message_box)
