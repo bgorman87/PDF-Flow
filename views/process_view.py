@@ -15,7 +15,7 @@ class ProcessView(QtWidgets.QWidget):
         self.input_tab_action_buttons = QtWidgets.QHBoxLayout()
         # Action buttons on Input tab
         self.select_files = QtWidgets.QPushButton()
-        self.select_files.clicked.connect(self.view_model.get_files)
+        self.select_files.clicked.connect(self.get_files)
         self.select_files.setObjectName("Select_files")
         self.dialog = QtWidgets.QFileDialog()
         self.input_tab_action_buttons.addWidget(self.select_files)
@@ -33,7 +33,7 @@ class ProcessView(QtWidgets.QWidget):
 
         # Action button to start email process
         self.email_button = QtWidgets.QPushButton()
-        self.email_button.clicked.connect(self.get_email_provider)
+        self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
         self.email_button.setObjectName("email_button")
         self.email_button.setEnabled(False)
         self.input_tab_action_buttons.addWidget(self.email_button)
@@ -193,6 +193,10 @@ class ProcessView(QtWidgets.QWidget):
             self.processed_files_list_widget.currentItem()
         )
 
+    def get_files(self):
+        self.view_model.get_files()
+        self.email_button_handler()
+
     def process_button_text_update(self, value: int) -> None:
         """Updates process button text
 
@@ -252,16 +256,16 @@ class ProcessView(QtWidgets.QWidget):
         )
 
     def email_button_handler(self):
-        """Enables email button if there are files to email, disables if not"""
+        """Enables email button if there are files selected, disables if not"""
 
-        if self.processed_files_list_widget.count() == 0:
-            self.email_button.setEnabled(False)
-            return
-        else:
+        if self.view_model.selected_file_count > 0:
             self.email_button.setEnabled(True)
-            return
+        else:
+            self.email_button.setEnabled(False)
         
-    def email_processed_files(self, email_provider: EmailProvider):
+        return
+        
+    def email_processed_files(self):
         """Emails processed files
 
         Args:
@@ -270,9 +274,9 @@ class ProcessView(QtWidgets.QWidget):
         email_items = []
         for index in range(self.processed_files_list_widget.count()):
             email_items.append(self.processed_files_list_widget.item(index))
-        self.view_model.email_files(email_items, email_provider)
+        self.view_model.email_files(email_items)
 
-    def get_email_provider(self):
+    def get_email_provider(self, processed: bool):
         """Displays a popup for user to choose email client to send emails with"""
         
         # Display a popup to choose between outlook or gmail with the logos
@@ -289,7 +293,7 @@ class ProcessView(QtWidgets.QWidget):
             QtGui.QIcon(resource_path("assets/icons/outlook.png"))
         )
         outlook_button.setIconSize(QtCore.QSize(215, 41))
-        outlook_button.clicked.connect(lambda: self.email_handler(EmailProvider.OUTLOOK))
+        outlook_button.clicked.connect(lambda: self.email_handler(EmailProvider.OUTLOOK, processed))
         outlook_button.clicked.connect(popup.accept)
         popup_layout.addWidget(outlook_button)
 
@@ -298,7 +302,7 @@ class ProcessView(QtWidgets.QWidget):
             QtGui.QIcon(resource_path("assets/icons/gmail.png"))
         )
         gmail_button.setIconSize(QtCore.QSize(215, 46))
-        gmail_button.clicked.connect(lambda: self.email_handler(EmailProvider.GMAIL))
+        gmail_button.clicked.connect(lambda: self.email_handler(EmailProvider.GMAIL, processed))
         gmail_button.clicked.connect(popup.accept)
         popup_layout.addWidget(gmail_button)
 
@@ -307,21 +311,34 @@ class ProcessView(QtWidgets.QWidget):
             QtGui.QIcon(resource_path(self.view_model.get_local_email_icon_path()))
         )
         local_button.setIconSize(QtCore.QSize(215, 41))
-        local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL))
+        local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL, processed))
         local_button.clicked.connect(popup.accept)
         popup_layout.addWidget(local_button)
 
         popup.exec()
 
-    def email_handler(self, email_provider: EmailProvider):
+    def email_handler(self, email_provider: EmailProvider, processed: bool):
         """Handles which email provider to use to send emails
 
         Args:
             email_provider (EmailProvider): Email provider chosen by user
         """
-        if email_provider == EmailProvider.OUTLOOK and self.view_model.get_outlook_token():
-            self.email_processed_files(EmailProvider.OUTLOOK)
-        elif email_provider == EmailProvider.GMAIL and self.view_model.get_gmail_token():
-            self.email_processed_files(EmailProvider.GMAIL)
-        elif email_provider == EmailProvider.LOCAL:
-            self.email_processed_files(EmailProvider.LOCAL)
+        self.view_model.email_provider = email_provider
+        token_success = self.view_model.get_email_token()
+        if token_success:
+            if processed:
+                self.email_processed_files()
+            else:
+                self.view_model.email_unprocessed_files()
+        
+
+    def email_unprocessed_processed_handler(self):
+        """Checks if all files have been processed, if not, emails unprocessed files, if so, gets email provider
+        """
+
+        # If files havent been processed then we need the metadata to determine who to email and with what template
+        if self.view_model.selected_file_count > self.processed_files_list_widget.count():
+            self.view_model.unprocessed_email_check(lambda: self.get_email_provider(processed=False))
+            return
+        
+        self.get_email_provider(processed=True)
