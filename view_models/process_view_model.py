@@ -1,34 +1,35 @@
-import base64
-import mimetypes
-import time
-import re
-import os
-import subprocess
-import uuid
+from PySide6.QtCore import QObject, Signal, QThreadPool, Qt
+from PySide6.QtWidgets import QListWidgetItem, QFileDialog, QProgressDialog, QMessageBox, QPushButton
+from base64 import b64encode, b64decode
+from mimetypes import guess_type
+from time import sleep
+from re import sub, search, DOTALL
+from os import cpu_count, rename, listdir
+from os.path import join, basename, abspath
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
 from urllib.parse import unquote
-
-import msal
-import requests
+from subprocess import run
+from uuid import uuid4
+from requests import post, Response
+from msal import PublicClientApplication
 from google.auth.exceptions import GoogleAuthError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from lxml import html
-from PySide6 import QtCore, QtWidgets
 
 from utils import general_utils, image_utils, text_utils
 from utils.enums import EmailProvider
 from view_models import main_view_model
 
 
-class ProcessViewModel(QtCore.QObject):
-    processed_files_list_widget_update = QtCore.Signal(QtWidgets.QListWidgetItem)
-    display_pdf_preview = QtCore.Signal()
-    display_file_name = QtCore.Signal()
+class ProcessViewModel(QObject):
+    processed_files_list_widget_update = Signal(QListWidgetItem)
+    display_pdf_preview = Signal()
+    display_file_name = Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
@@ -37,7 +38,7 @@ class ProcessViewModel(QtCore.QObject):
         self._selected_file_dir = None
         self._selected_file_name = None
         self._progress = 0
-        self._thread_pool = QtCore.QThreadPool()
+        self._thread_pool = QThreadPool()
         self._token = ""
         self.email_provider = None
         self.Dispatch = Dispatch
@@ -49,7 +50,7 @@ class ProcessViewModel(QtCore.QObject):
         self._file_names = None
         self.main_view_model.set_loaded_files_count(0)
 
-        self._file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
+        self._file_names, _ = QFileDialog.getOpenFileNames(
             caption="Select Files to Process", filter="PDF (*.pdf)"
         )
 
@@ -112,7 +113,7 @@ class ProcessViewModel(QtCore.QObject):
         # 60% Threads - 18 Files: 3.0s
         # 50% Threads - 18 Files: 2.8s
         # 25% Threads - 18 Files: 4.9s
-        max_threads = int(os.cpu_count() * 0.5)
+        max_threads = int(cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
         for i, file_name in enumerate(self._file_names):
@@ -130,10 +131,10 @@ class ProcessViewModel(QtCore.QObject):
             self.evt_analyze_progress(10)
         self.main_view_model.set_process_button_count(0)
 
-    def list_widget_handler(self, list_widget_item: QtWidgets.QListWidgetItem):
+    def list_widget_handler(self, list_widget_item: QListWidgetItem):
         """Displays the currently selected list widget item"""
 
-        file_dirs = list_widget_item.data(QtCore.Qt.UserRole)
+        file_dirs = list_widget_item.data(Qt.UserRole)
         source_dir = file_dirs["source"].replace("\\", "/")
         # TODO: If doesn't exist remove from list widget and add
         # notice to the console
@@ -195,8 +196,8 @@ class ProcessViewModel(QtCore.QObject):
             "profile_id": profile_id,
         }
         self.main_view_model.add_console_text(print_string)
-        processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
-        processed_files_list_item.setData(QtCore.Qt.UserRole, file_data)
+        processed_files_list_item = QListWidgetItem(file_name)
+        processed_files_list_item.setData(Qt.UserRole, file_data)
         self.processed_files_list_widget_update.emit(processed_files_list_item)
         self.main_view_model.update_processed_files_count(1)
         self.main_view_model.set_process_button_state(False)
@@ -213,11 +214,11 @@ class ProcessViewModel(QtCore.QObject):
             bool: True if file is successfully renamed, False otherwise
         """
         try:
-            os.rename(source_path, renamed_source_path)
+            rename(source_path, renamed_source_path)
             return True
         except OSError as e:
             # If not renamed, then try again a few times, but notify user as progress occurs
-            progress_dialog = QtWidgets.QProgressDialog()
+            progress_dialog = QProgressDialog()
             progress_dialog.setWindowTitle("File Rename Error")
             progress_dialog.setLabelText("File renaming failed, trying again...")
             progress_dialog.setRange(0, 10)
@@ -226,14 +227,14 @@ class ProcessViewModel(QtCore.QObject):
             # Try again a few times
             for i in range(10):
                 try:
-                    os.rename(source_path, renamed_source_path)
+                    rename(source_path, renamed_source_path)
                     progress_dialog.close()
                     self.main_view_model.add_console_text(
                         f"File renaming info - Took {i+1} attempts to rename file:\nSource: {source_path}\nNew: {renamed_source_path}"
                     )
                     return True
                 except OSError:
-                    time.sleep(0.5)
+                    sleep(0.5)
                     pass
                 progress_dialog.setValue(i+1)
 
@@ -255,7 +256,7 @@ class ProcessViewModel(QtCore.QObject):
         authority = "https://login.microsoftonline.com/common"
         client_id = "c7cba64c-6df8-4e34-a136-f5a0a01428e7"
 
-        app = msal.PublicClientApplication(client_id, authority=authority)
+        app = PublicClientApplication(client_id, authority=authority)
         result = None
         scope = ["User.Read", "Mail.ReadWrite"]  # Adjust scopes as needed.
 
@@ -275,10 +276,10 @@ class ProcessViewModel(QtCore.QObject):
             self.main_view_model.add_console_alerts(1)
             message_box = general_utils.MessageBox()
             message_box.title = "Email Authentication Error"
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.text = f"Authentication Error: {result['error']}\nDescription: {result['error_description']}"
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [
                 None,
             ]
@@ -307,10 +308,10 @@ class ProcessViewModel(QtCore.QObject):
             self.main_view_model.add_console_alerts(1)
             message_box = general_utils.MessageBox()
             message_box.title = "Email Authentication Error"
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.text = f"Authentication Error: {e}"
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [
                 None,
             ]
@@ -328,10 +329,10 @@ class ProcessViewModel(QtCore.QObject):
             self.main_view_model.add_console_alerts(1)
             message_box = general_utils.MessageBox()
             message_box.title = "Email Authentication Error"
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.text = f"Authentication Error: Unexpected error occurred while confirming gmail credentials."
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [
                 None,
             ]
@@ -353,16 +354,16 @@ class ProcessViewModel(QtCore.QObject):
 
     def email_files(
         self,
-        email_items: List[QtWidgets.QListWidgetItem]
+        email_items: List[QListWidgetItem]
     ):
         """Emails the selected files
 
         Args:
-            email_items (List[QtWidgets.QListWidgetItem]): List of Email items from processed files list widget
+            email_items (List[QListWidgetItem]): List of Email items from processed files list widget
         """
 
         for email_item in email_items:
-            file_data = email_item.data(QtCore.Qt.UserRole)
+            file_data = email_item.data(Qt.UserRole)
             source_path = file_data["source"]
 
             # Project specific email templates override report specific email templates
@@ -388,19 +389,19 @@ class ProcessViewModel(QtCore.QObject):
                     )
 
                     signature_name = ""
-                    for filename in os.listdir(outlook_directory):
+                    for filename in listdir(outlook_directory):
                         if (
                             filename.endswith(".htm") or filename.endswith(".html")
                         ) and (profile_base_name in filename):
                             signature_name = filename
                             break
 
-                    email_template_path = os.path.join(
+                    email_template_path = join(
                         outlook_directory, signature_name
                     )
 
                 else:
-                    email_template_path = os.path.join(
+                    email_template_path = join(
                         self.main_view_model.get_local_email_directory(),
                         email_template,
                         "email.html",
@@ -461,12 +462,12 @@ class ProcessViewModel(QtCore.QObject):
                 )
             if email_info.status_code == 201:
                 self.main_view_model.add_console_text(
-                    f"Draft email created for: {os.path.basename(source_path)}"
+                    f"Draft email created for: {basename(source_path)}"
                 )
                 self.main_view_model.add_console_alerts(1)
             else:
                 self.main_view_model.add_console_text(
-                    f"Error creating draft email for: {os.path.basename(source_path)}"
+                    f"Error creating draft email for: {basename(source_path)}"
                 )
                 self.main_view_model.add_console_text(
                     f"{email_info.status_code} - {email_info.text}"
@@ -482,7 +483,7 @@ class ProcessViewModel(QtCore.QObject):
         bcc_recipients: List[str] = None,
         attachments: List[str] = None,
         email_template: str = None,
-    ) -> requests.Response:
+    ) -> Response:
         """Creates a draft email in Outlook
 
         Args:
@@ -510,8 +511,8 @@ class ProcessViewModel(QtCore.QObject):
                 with open(attachment, "rb") as attachment_file:
                     base64_attachments.append(
                         {
-                            "name": os.path.basename(attachment),
-                            "data": base64.b64encode(attachment_file.read()).decode(
+                            "name": basename(attachment),
+                            "data": b64encode(attachment_file.read()).decode(
                                 "utf-8"
                             ),
                         }
@@ -552,7 +553,7 @@ class ProcessViewModel(QtCore.QObject):
             "Content-Type": "application/json",
         }
 
-        response = requests.post(url, headers=headers, json=email)
+        response = post(url, headers=headers, json=email)
 
         return response
 
@@ -605,9 +606,9 @@ class ProcessViewModel(QtCore.QObject):
                 for img_tag in root.xpath("//img"):
                     if 'v:shapes' in img_tag.attrib:
                         del img_tag.attrib['v:shapes']
-                    src = os.path.abspath(unquote(img_tag.get("src")))
+                    src = abspath(unquote(img_tag.get("src")))
                     if not src.startswith("http"):
-                        cid = os.path.basename(src)
+                        cid = basename(src)
                         image_attachments.append([src, cid])
 
                         img_tag.set("src", f"cid:{cid}")
@@ -619,7 +620,7 @@ class ProcessViewModel(QtCore.QObject):
                 modified_body_content = html.tostring(
                     root, method="html", encoding="unicode"
                 )
-                modified_body_content = re.sub(pattern, "", modified_body_content, flags=re.DOTALL)
+                modified_body_content = sub(pattern, "", modified_body_content, flags=DOTALL)
                 mail.HTMLBody = modified_body_content
 
                 for attachment_path in attachments:
@@ -641,7 +642,7 @@ class ProcessViewModel(QtCore.QObject):
             cmd = ["which", "thunderbird"]
             try:
                 # Check if thunderbird is installed
-                subprocess.run(cmd)
+                run(cmd)
             except Exception:
                 return general_utils.FauxResponse(
                     500,
@@ -657,7 +658,7 @@ class ProcessViewModel(QtCore.QObject):
             # compose_str += f",attachment='{','.join(attachments)}'"
 
             cmd = ["thunderbird", "-compose", compose_str]
-            subprocess.run(cmd)
+            run(cmd)
             return general_utils.FauxResponse(201, "success")
         else:
             return general_utils.FauxResponse(
@@ -717,11 +718,11 @@ class ProcessViewModel(QtCore.QObject):
                 base64_data = src.split(",")[1]
 
                 # Decoding the base64 data to get the image
-                image_data = base64.b64decode(base64_data)
+                image_data = b64decode(base64_data)
 
                 # Generating a random filename with the identified file type
-                random_filename = f"{uuid.uuid4()}.{file_type}"
-                new_img_path = os.path.join(
+                random_filename = f"{uuid4()}.{file_type}"
+                new_img_path = join(
                     self.main_view_model.get_local_email_directory(),
                     email_template,
                     random_filename,
@@ -731,12 +732,12 @@ class ProcessViewModel(QtCore.QObject):
                 with open(new_img_path, "wb") as f:
                     f.write(image_data)
 
-                cid = os.path.basename(new_img_path)
+                cid = basename(new_img_path)
                 img_tag.set("src", f"cid:{cid}")
                 # Attach the extracted image with CID
                 with open(new_img_path, "rb") as file:
                     image_data = file.read()
-                image_mime_type, _ = mimetypes.guess_type(new_img_path)
+                image_mime_type, _ = guess_type(new_img_path)
                 main_type, sub_type = image_mime_type.split("/")
                 image = MIMEImage(image_data, sub_type, name=cid)
                 image.add_header("Content-ID", f"<{cid}>")
@@ -744,12 +745,12 @@ class ProcessViewModel(QtCore.QObject):
                 image_attachments.append(image)
             else:
                 # For non-base64 images, just attach and set CID
-                cid = os.path.basename(src)
+                cid = basename(src)
                 img_tag.set("src", f"cid:{cid}")
 
                 with open(src, "rb") as file:
                     image_data = file.read()
-                image_mime_type, _ = mimetypes.guess_type(src)
+                image_mime_type, _ = guess_type(src)
                 main_type, sub_type = image_mime_type.split("/")
                 image = MIMEImage(image_data, sub_type, name=cid)
                 image.add_header("Content-ID", f"<{cid}>")
@@ -771,17 +772,17 @@ class ProcessViewModel(QtCore.QObject):
         for attachment_path in attachments or []:
             with open(attachment_path, "rb") as file:
                 attachment_data = file.read()
-            mime_type, _ = mimetypes.guess_type(attachment_path)
+            mime_type, _ = guess_type(attachment_path)
             main_type, sub_type = mime_type.split("/")
             attachment = MIMEImage(attachment_data, sub_type)
             attachment.add_header(
                 "Content-Disposition",
                 "attachment",
-                filename=os.path.basename(attachment_path),
+                filename=basename(attachment_path),
             )
             msg.attach(attachment)
 
-        raw_email = base64.b64encode(msg.as_bytes()).decode("utf-8")
+        raw_email = b64encode(msg.as_bytes()).decode("utf-8")
 
         # Create draft using the Gmail API
         try:
@@ -808,15 +809,15 @@ class ProcessViewModel(QtCore.QObject):
             
         message_box = general_utils.MessageBox()
         message_box.title = "Email Unprocessed Files"
-        message_box.icon = QtWidgets.QMessageBox.Question
+        message_box.icon = QMessageBox.Question
         message_box.text = "Would you like to email the unprocessed files?"
         message_box.buttons = [
-            QtWidgets.QPushButton("Yes"),
-            QtWidgets.QPushButton("No"),
+            QPushButton("Yes"),
+            QPushButton("No"),
         ]
         message_box.button_roles = [
-            QtWidgets.QMessageBox.YesRole,
-            QtWidgets.QMessageBox.NoRole,
+            QMessageBox.YesRole,
+            QMessageBox.NoRole,
         ]
         message_box.callback = [
             callback,
@@ -828,7 +829,7 @@ class ProcessViewModel(QtCore.QObject):
     def email_unprocessed_files(self):
         """Emails the unprocessed files"""
 
-        max_threads = int(os.cpu_count() * 0.5)
+        max_threads = int(cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
         for file_name in self._file_names:
@@ -844,7 +845,7 @@ class ProcessViewModel(QtCore.QObject):
 
         if not analysis_data or analysis_data[0] == 0:  # No file type detected therefore new template
             self.main_view_model.add_console_text(
-                f"Unprocessed Email Error: Could not determine file type for file: {os.path.basename(file_type[1])}"
+                f"Unprocessed Email Error: Could not determine file type for file: {basename(file_type[1])}"
             )
             return
         
@@ -859,16 +860,16 @@ class ProcessViewModel(QtCore.QObject):
         project_number = None
         if r"{project_number}" in file_name_pattern:
             # Escape any round brackets
-            escaped_template = re.sub(r"(\(|\))", r"\\\1", file_name_pattern)
+            escaped_template = sub(r"(\(|\))", r"\\\1", file_name_pattern)
 
             # Replace the {project_number} placeholder with a search string
-            unique_project_number_pattern = re.sub(r"\{project_number\}", "(.+?)", escaped_template)
+            unique_project_number_pattern = sub(r"\{project_number\}", "(.+?)", escaped_template)
 
             # Now replace all other placeholders with a generic regex pattern
-            final_regex_pattern = re.sub(r"\{.*?\}", ".*?", unique_project_number_pattern)
+            final_regex_pattern = sub(r"\{.*?\}", ".*?", unique_project_number_pattern)
 
             # Extracting the project number using the adjusted dynamic pattern
-            match = re.search(final_regex_pattern, os.path.basename(file_name))
+            match = search(final_regex_pattern, basename(file_name))
             project_number = match.group(1) if match else None
         
         file_data = {
@@ -878,7 +879,7 @@ class ProcessViewModel(QtCore.QObject):
             "profile_id": file_type,
         }
 
-        email_item = QtWidgets.QListWidgetItem(file_name)
-        email_item.setData(QtCore.Qt.UserRole, file_data)
+        email_item = QListWidgetItem(file_name)
+        email_item.setData(Qt.UserRole, file_data)
 
         self.email_files([email_item])

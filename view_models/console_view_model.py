@@ -1,10 +1,12 @@
-from view_models import main_view_model
-from PySide6 import QtCore
+from PySide6.QtCore import QObject, Signal
 
-class ConsoleViewModel(QtCore.QObject):
+from view_models import main_view_model
+
+
+class ConsoleViewModel(QObject):
     """ViewModel to manage console-related operations and interactions."""
     
-    console_text_insert = QtCore.Signal()
+    console_text_insert = Signal()
     
     def __init__(self, main_view_model: 'main_view_model.MainViewModel'):
         """Initializes the ConsoleViewModel with a connection to the main view model.

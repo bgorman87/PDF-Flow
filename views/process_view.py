@@ -1,4 +1,8 @@
-from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets, QtGui
+from PySide6.QtCore import Qt, QCoreApplication, QRect, QSize, QUrl
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QLineEdit, QPushButton, QVBoxLayout, QWidget, QFileDialog, QAbstractItemView, QProgressBar, QStyleFactory, QDialog
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtGui import QIcon
 
 from view_models import process_view_model
 from widgets import utility_widgets
@@ -6,22 +10,22 @@ from utils.image_utils import resource_path
 from utils.enums import EmailProvider
 
 
-class ProcessView(QtWidgets.QWidget):
+class ProcessView(QWidget):
     def __init__(self, view_model: process_view_model.ProcessViewModel):
         super().__init__()
         self.view_model = view_model
-        self.main_layout = QtWidgets.QVBoxLayout()
+        self.main_layout = QVBoxLayout()
 
-        self.input_tab_action_buttons = QtWidgets.QHBoxLayout()
+        self.input_tab_action_buttons = QHBoxLayout()
         # Action buttons on Input tab
-        self.select_files = QtWidgets.QPushButton()
+        self.select_files = QPushButton()
         self.select_files.clicked.connect(self.get_files)
         self.select_files.setObjectName("Select_files")
-        self.dialog = QtWidgets.QFileDialog()
+        self.dialog = QFileDialog()
         self.input_tab_action_buttons.addWidget(self.select_files)
 
         # Action button to start file analysis
-        self.process_button = QtWidgets.QPushButton()
+        self.process_button = QPushButton()
         self.process_button.clicked.connect(self.view_model.process_files)
         self.process_button.setObjectName("analyze_button")
         self.process_button.setEnabled(False)
@@ -32,7 +36,7 @@ class ProcessView(QtWidgets.QWidget):
         self.input_tab_action_buttons.addWidget(self.process_button)
 
         # Action button to start email process
-        self.email_button = QtWidgets.QPushButton()
+        self.email_button = QPushButton()
         self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
         self.email_button.setObjectName("email_button")
         self.email_button.setEnabled(False)
@@ -40,35 +44,35 @@ class ProcessView(QtWidgets.QWidget):
 
         # # Drop list box to choose analysis type (Live/Test)
         # # Live uses real client info, test uses dummy/local info
-        # self.test_box = QtWidgets.QComboBox()
+        # self.test_box = QComboBox()
         # self.test_box.setObjectName("test_box")
         # self.test_box.setEditable(True)
-        # self.test_box.lineEdit().setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        # self.test_box.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
         # self.test_box.addItems(["Test", "Live"])
         # self.test_box.setEditable(False)
         # self.input_tab_action_buttons.addWidget(self.test_box)
 
         self.main_layout.addLayout(self.input_tab_action_buttons)
 
-        self.line_below_action_buttons_layout = QtWidgets.QHBoxLayout()
+        self.line_below_action_buttons_layout = QHBoxLayout()
         # Line below action buttons
         self.input_tab_line_2 = utility_widgets.HorizontalLine()
         self.line_below_action_buttons_layout.addWidget(self.input_tab_line_2)
         self.main_layout.addLayout(self.line_below_action_buttons_layout)
 
         # Label for list widget below
-        self.processed_files_label = QtWidgets.QLabel()
-        self.processed_files_label.setGeometry(QtCore.QRect(10, 10, 81, 16))
+        self.processed_files_label = QLabel()
+        self.processed_files_label.setGeometry(QRect(10, 10, 81, 16))
         self.processed_files_label.setObjectName("processed_files_label")
         self.main_layout.addWidget(self.processed_files_label)
 
         # Widget to hold analyzed files
-        self.processed_files_list_widget = QtWidgets.QListWidget()
+        self.processed_files_list_widget = QListWidget()
         self.processed_files_list_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection
+            QAbstractItemView.SingleSelection
         )
         self.processed_files_list_widget.setGeometry(
-            QtCore.QRect(10, 30, 320, 100))
+            QRect(10, 30, 320, 100))
         self.processed_files_list_widget.setObjectName(
             "processed_files_list_widget")
         self.main_layout.addWidget(self.processed_files_list_widget)
@@ -79,16 +83,16 @@ class ProcessView(QtWidgets.QWidget):
             self.add_processed_list_widget_item)
 
         # Lines within the analyzed files widget above
-        self.processed_files_list_item = QtWidgets.QListWidgetItem()
+        self.processed_files_list_item = QListWidgetItem()
         self.processed_files_list_widget.itemClicked.connect(
             lambda: self.view_model.list_widget_handler(self.processed_files_list_widget.currentItem()))
         self.processed_files_list_widget.itemDoubleClicked.connect(
             self.rename_file_handler
         )
 
-        self.file_rename_layout = QtWidgets.QHBoxLayout()
+        self.file_rename_layout = QHBoxLayout()
         # Text editor line to edit file names
-        self.file_rename_line_edit = QtWidgets.QLineEdit()
+        self.file_rename_line_edit = QLineEdit()
         self.file_rename_line_edit.setObjectName("file_rename_line_edit")
         self.view_model.display_file_name.connect(self.display_file_name)
         self.file_rename_layout.addWidget(self.file_rename_line_edit)
@@ -97,7 +101,7 @@ class ProcessView(QtWidgets.QWidget):
         )
 
         # Action button to call rename function
-        self.file_rename_button = QtWidgets.QPushButton()
+        self.file_rename_button = QPushButton()
         self.file_rename_button.clicked.connect(self.file_rename_button_handler)
         self.file_rename_button.setObjectName("file_rename_button")
         self.file_rename_layout.addWidget(self.file_rename_button)
@@ -108,14 +112,14 @@ class ProcessView(QtWidgets.QWidget):
         self.main_layout.addLayout(self.file_rename_layout)
 
         # Title for JPG/PDF preview below
-        self.file_preview_label = QtWidgets.QLabel()
-        self.file_preview_label.setGeometry(QtCore.QRect(10, 140, 100, 16))
+        self.file_preview_label = QLabel()
+        self.file_preview_label.setGeometry(QRect(10, 140, 100, 16))
         self.file_preview_label.setObjectName("file_preview_label")
         self.main_layout.addWidget(self.file_preview_label)
 
         # Displays PDF
-        self.file_preview = QtWebEngineWidgets.QWebEngineView()
-        _qtweb_settings = QtWebEngineCore.QWebEngineSettings
+        self.file_preview = QWebEngineView()
+        _qtweb_settings = QWebEngineSettings
         self.file_preview.settings().setAttribute(_qtweb_settings.PluginsEnabled, True)
         self.file_preview.settings().setAttribute(_qtweb_settings.WebGLEnabled, True)
         self.file_preview.settings().setAttribute(
@@ -126,7 +130,7 @@ class ProcessView(QtWidgets.QWidget):
         )
 
         initialized_pdf = ""
-        self.file_preview.load(QtCore.QUrl(initialized_pdf))
+        self.file_preview.load(QUrl(initialized_pdf))
         self.file_preview.setHtml("<body bgcolor='#4a4a4a'></body>")
         self.view_model.display_pdf_preview.connect(self.display_pdf_preview)
         self.main_layout.addWidget(self.file_preview)
@@ -137,9 +141,9 @@ class ProcessView(QtWidgets.QWidget):
         # self.file_preview.show()
 
         # Progress bar to show analyze progress
-        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar = QProgressBar()
         self.progress_bar.setObjectName("progressBar")
-        self.progress_bar.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
+        self.progress_bar.setStyle(QStyleFactory.create("Fusion"))
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setFormat("Select Files to Begin...")
         self.view_model.main_view_model.process_progress_value_update.connect(
@@ -154,7 +158,7 @@ class ProcessView(QtWidgets.QWidget):
     def translate_ui(self):
         """Translates UI"""
         
-        _translate = QtCore.QCoreApplication.translate
+        _translate = QCoreApplication.translate
         self.select_files.setText(
             _translate("SettingsView", "Select Files")
         )
@@ -172,7 +176,7 @@ class ProcessView(QtWidgets.QWidget):
         """Displays PDF preview in webview"""
 
         pdf_dir = self.view_model.selected_file_dir
-        self.file_preview.load(QtCore.QUrl(f"file:{pdf_dir}"))
+        self.file_preview.load(QUrl(f"file:{pdf_dir}"))
 
     def display_file_name(self):
         """Displays file name in line edit"""
@@ -212,11 +216,11 @@ class ProcessView(QtWidgets.QWidget):
 
         self.process_button.setText(button_text)
 
-    def add_processed_list_widget_item(self, list_item: QtWidgets.QListWidgetItem):
+    def add_processed_list_widget_item(self, list_item: QListWidgetItem):
         """Adds item to list widget
 
         Args:
-            list_item (QtWidgets.QListWidgetItem): Item to add to list widget
+            list_item (QListWidgetItem): Item to add to list widget
         """
         self.processed_files_list_widget.addItem(list_item)
         self.email_button_handler()
@@ -231,7 +235,7 @@ class ProcessView(QtWidgets.QWidget):
         if new_name == current_name:
             return
         
-        file_data = current_item.data(QtCore.Qt.UserRole)
+        file_data = current_item.data(Qt.UserRole)
 
         source_path = str(file_data["source"])
         renamed_source_path = source_path.replace(current_name, new_name)
@@ -252,7 +256,7 @@ class ProcessView(QtWidgets.QWidget):
             self.file_rename_line_edit.text()
         )
         self.processed_files_list_widget.currentItem().setData(
-            QtCore.Qt.UserRole, file_data
+            Qt.UserRole, file_data
         )
 
     def email_button_handler(self):
@@ -282,35 +286,35 @@ class ProcessView(QtWidgets.QWidget):
         # Display a popup to choose between outlook or gmail with the logos
         # the two buttons should be vertically stacked
 
-        popup = QtWidgets.QDialog()
+        popup = QDialog()
         popup.setWindowTitle("Choose Email Provider")
     
-        popup_layout = QtWidgets.QVBoxLayout()
+        popup_layout = QVBoxLayout()
         popup.setLayout(popup_layout)
 
-        outlook_button = QtWidgets.QPushButton()
+        outlook_button = QPushButton()
         outlook_button.setIcon(
-            QtGui.QIcon(resource_path("assets/icons/outlook.png"))
+            QIcon(resource_path("assets/icons/outlook.png"))
         )
-        outlook_button.setIconSize(QtCore.QSize(215, 41))
+        outlook_button.setIconSize(QSize(215, 41))
         outlook_button.clicked.connect(lambda: self.email_handler(EmailProvider.OUTLOOK, processed))
         outlook_button.clicked.connect(popup.accept)
         popup_layout.addWidget(outlook_button)
 
-        gmail_button = QtWidgets.QPushButton()
+        gmail_button = QPushButton()
         gmail_button.setIcon(
-            QtGui.QIcon(resource_path("assets/icons/gmail.png"))
+            QIcon(resource_path("assets/icons/gmail.png"))
         )
-        gmail_button.setIconSize(QtCore.QSize(215, 46))
+        gmail_button.setIconSize(QSize(215, 46))
         gmail_button.clicked.connect(lambda: self.email_handler(EmailProvider.GMAIL, processed))
         gmail_button.clicked.connect(popup.accept)
         popup_layout.addWidget(gmail_button)
 
-        local_button = QtWidgets.QPushButton()
+        local_button = QPushButton()
         local_button.setIcon(
-            QtGui.QIcon(resource_path(self.view_model.get_local_email_icon_path()))
+            QIcon(resource_path(self.view_model.get_local_email_icon_path()))
         )
-        local_button.setIconSize(QtCore.QSize(215, 41))
+        local_button.setIconSize(QSize(215, 41))
         local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL, processed))
         local_button.clicked.connect(popup.accept)
         popup_layout.addWidget(local_button)

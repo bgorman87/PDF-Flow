@@ -1,26 +1,26 @@
-import collections
-import io
+from PySide6.QtCore import QObject, Signal, QThreadPool
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QInputDialog, QPushButton, QWidget
+from collections import namedtuple
 from typing import NamedTuple
-
-import pdf2image
-from PySide6 import QtCore, QtWidgets
+from io import BytesIO
+from pdf2image import convert_from_path
 
 from utils import image_utils, general_utils
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
 
-class TemplateViewModel(QtCore.QObject):
+class TemplateViewModel(QObject):
 
-    project_number_status_update = QtCore.Signal()
-    unique_parameter_status_update = QtCore.Signal()
-    loaded_profile_label_update = QtCore.Signal()
-    unique_file_identifier_button_status = QtCore.Signal()
-    template_pixmap_update = QtCore.Signal()
-    profile_file_loaded_status = QtCore.Signal()
-    rects_found = QtCore.Signal()
-    get_secondary_parameter_rect_signal = QtCore.Signal()
-    disable_template_buttons = QtCore.Signal()
+    project_number_status_update = Signal()
+    unique_parameter_status_update = Signal()
+    loaded_profile_label_update = Signal()
+    unique_file_identifier_button_status = Signal()
+    template_pixmap_update = Signal()
+    profile_file_loaded_status = Signal()
+    rects_found = Signal()
+    get_secondary_parameter_rect_signal = Signal()
+    disable_template_buttons = Signal()
 
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
@@ -68,11 +68,11 @@ class TemplateViewModel(QtCore.QObject):
         self._current_file_profile = 0
         # TODO: Update default search location before creating prod file
 
-        self._file_profile_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        self._file_profile_path, _ = QFileDialog.getOpenFileName(
             caption="Select a PDF To Use As Template", filter="PDF (*.pdf)"
         )
         if self._file_profile_path:
-            self._thread_pool = QtCore.QThreadPool()
+            self._thread_pool = QThreadPool()
             self._loaded_profile_label_text = ""
             self.loaded_profile_label_update.emit()
             self.progress_popup = loading_widget.LoadingWidget(
@@ -141,13 +141,13 @@ class TemplateViewModel(QtCore.QObject):
     def update_template_pixmap(self):
         """Displays PDF file to be used for updating/creating a file_profile"""
 
-        self._image_jpeg = pdf2image.convert_from_path(
+        self._image_jpeg = convert_from_path(
             self._file_profile_path,
             fmt="jpeg",
             poppler_path=image_utils.poppler_path,
             single_file=True,
         )
-        self._img_byte_arr = io.BytesIO()
+        self._img_byte_arr = BytesIO()
         self._image_jpeg[0].save(self._img_byte_arr, format="jpeg")
         self._img_byte_arr = self._img_byte_arr.getvalue()
 
@@ -162,7 +162,7 @@ class TemplateViewModel(QtCore.QObject):
         self.template_pixmap_update.emit()
         self._profile_file_loaded = True
 
-    def update_window_size_from_widgets(self, template_widget: file_template_creation.TemplateWidget, *widgets: QtWidgets.QWidget):
+    def update_window_size_from_widgets(self, template_widget: file_template_creation.TemplateWidget, *widgets: QWidget):
         """Scales the window size according to the template widget and any other vertically aligned widgets passed to function.
         """
 
@@ -194,7 +194,7 @@ class TemplateViewModel(QtCore.QObject):
         return self._profile_rect
 
     @property
-    def img_byte_array(self) -> io.BytesIO:
+    def img_byte_array(self) -> BytesIO:
         return self._img_byte_arr
 
     @property
@@ -215,10 +215,10 @@ class TemplateViewModel(QtCore.QObject):
         if not self._profile_file_loaded:
             message_box = general_utils.MessageBox()
             message_box.title = "No Profile Loaded"
-            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.icon = QMessageBox.Information
             message_box.text = "You must first select a template file to open."
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [None,]
 
             self.main_view_model.display_message_box(message_box=message_box)
@@ -228,10 +228,10 @@ class TemplateViewModel(QtCore.QObject):
         if template_display.begin.isNull():
             message_box = general_utils.MessageBox()
             message_box.title = "Select Identifier"
-            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.icon = QMessageBox.Information
             message_box.text = "Use the mouse to click and drag a bounding box around the desired profile identifier."
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [None,]
 
             self.main_view_model.display_message_box(message_box=message_box)
@@ -242,10 +242,10 @@ class TemplateViewModel(QtCore.QObject):
         if template_display.image_area_too_small:
             message_box = general_utils.MessageBox()
             message_box.title = "Area Too Small"
-            message_box.icon = QtWidgets.QMessageBox.Information
+            message_box.icon = QMessageBox.Information
             message_box.text = "Data area too small. Please choose a larger area."
-            message_box.buttons = [QtWidgets.QPushButton("Close")]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton("Close")]
+            message_box.button_roles = [QMessageBox.RejectRole]
             message_box.callback = [None,]
 
             self.main_view_model.display_message_box(message_box)
@@ -316,9 +316,9 @@ class TemplateViewModel(QtCore.QObject):
             message_box.text = f"{name.lower()} is a reserved template keyword."
             if "project_number" in name.lower():
                 message_box.text += " To set the project_number parameter, use the 'Apply Project Number' button."
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.buttons = ["Close",]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.button_roles = [QMessageBox.RejectRole,]
             message_box.callback = [lambda: self.apply_template_property(
                 property_type=property_type, template_display=template_display),]
 
@@ -329,9 +329,9 @@ class TemplateViewModel(QtCore.QObject):
             message_box = general_utils.MessageBox()
             message_box.title = "No Name"
             message_box.text = "Please enter a description/name."
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.buttons = ["Close",]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.button_roles = [QMessageBox.RejectRole,]
             message_box.callback = [lambda: self.apply_template_property(
                 property_type=property_type, template_display=template_display),]
 
@@ -342,9 +342,9 @@ class TemplateViewModel(QtCore.QObject):
             message_box = general_utils.MessageBox()
             message_box.title = "Name Not Unique"
             message_box.text = "Description/name already used for this profile. Please enter a unique value."
-            message_box.icon = QtWidgets.QMessageBox.Critical
+            message_box.icon = QMessageBox.Critical
             message_box.buttons = ["Close",]
-            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole,]
+            message_box.button_roles = [QMessageBox.RejectRole,]
             message_box.callback = [lambda: self.apply_template_property(
                 property_type=property_type, template_display=template_display),]
 
@@ -443,8 +443,8 @@ class TemplateViewModel(QtCore.QObject):
         self.disable_template_buttons.emit()
         callback = lambda: self.get_secondary_parameter_rect_signal.emit()
 
-        message_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, "Select Secondary Parameter", "Use the mouse to click and drag a bounding box around the desired secondary region of interest.")
-        message_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        message_box = QMessageBox(QMessageBox.Information, "Select Secondary Parameter", "Use the mouse to click and drag a bounding box around the desired secondary region of interest.")
+        message_box.setStandardButtons(QMessageBox.Ok)
         message_box.buttonClicked.connect(lambda: callback())
         message_box.exec()
     
@@ -473,7 +473,7 @@ class TemplateViewModel(QtCore.QObject):
             [db_x_1, db_x_2, db_y_1, db_y_2] = self.main_view_model.fetch_profile_rectangle_bounds_by_profile_id(
                 profile_id=profile_id)
 
-            RECTANGLE = collections.namedtuple("RECTANGLE", "x1 x2 y1 y2")
+            RECTANGLE = namedtuple("RECTANGLE", "x1 x2 y1 y2")
             current_box = RECTANGLE(x_1, x_2, y_1, y_2)
             found_box = RECTANGLE(db_x_1, db_x_2, db_y_1, db_y_2)
 
@@ -484,17 +484,17 @@ class TemplateViewModel(QtCore.QObject):
         if identifier_text_found and identifier_intersects:
             message_box = general_utils.MessageBox()
             message_box.title = "Problematic Text and Location"
-            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.icon = QMessageBox.Warning
             message_box.text = f"Potential profile conflict:\
                     \n\nThe location you chose produces identifying text '{identifier}'.\
                     \nExisting profile with name '{name}' has identifying text '{unique_text}' near the same location.\
                     \n\nIf you continue, these profiles may get mistaken for each other during normal processing\
                     \n\nSelect Continue to add entry into database anyways \
                     \nSelect Cancel to choose another unique identifier"
-            message_box.buttons = [QtWidgets.QPushButton(
-                "Continue"), QtWidgets.QPushButton("Cancel")]
-            message_box.button_roles = [QtWidgets.QMessageBox.YesRole,
-                            QtWidgets.QMessageBox.RejectRole]
+            message_box.buttons = [QPushButton(
+                "Continue"), QPushButton("Cancel")]
+            message_box.button_roles = [QMessageBox.YesRole,
+                            QMessageBox.RejectRole]
             message_box.callback = [
                 lambda: self.add_new_profile(
                     profile_identifier=identifier,
@@ -620,9 +620,9 @@ class TemplateViewModel(QtCore.QObject):
     
     def handle_template_profile_rename(self):
         # Create a dialog box to rename the profile
-        self.rename_template_profile_dialog = QtWidgets.QInputDialog()
+        self.rename_template_profile_dialog = QInputDialog()
         self.rename_template_profile_dialog.setInputMode(
-            QtWidgets.QInputDialog.TextInput)
+            QInputDialog.TextInput)
         self.rename_template_profile_dialog.setWindowTitle(
             "Rename Template Profile")
         self.rename_template_profile_dialog.setLabelText(
@@ -641,10 +641,10 @@ class TemplateViewModel(QtCore.QObject):
         if result is not None:
             self.rename_template_profile_dialog = general_utils.MessageBox()
             self.rename_template_profile_dialog.title = "Profile Template Rename Error"
-            self.rename_template_profile_dialog.icon = QtWidgets.QMessageBox.Critical
+            self.rename_template_profile_dialog.icon = QMessageBox.Critical
             self.rename_template_profile_dialog.text = result
-            self.rename_template_profile_dialog.buttons = [QtWidgets.QPushButton("Close")]
-            self.rename_template_profile_dialog.button_roles = [QtWidgets.QMessageBox.RejectRole]
+            self.rename_template_profile_dialog.buttons = [QPushButton("Close")]
+            self.rename_template_profile_dialog.button_roles = [QMessageBox.RejectRole]
             self.rename_template_profile_dialog.callback = [None,]
 
             self.main_view_model.display_message_box(message_box=self.rename_template_profile_dialog)
@@ -660,10 +660,10 @@ class TemplateViewModel(QtCore.QObject):
     def handle_template_profile_deletion(self):
         self.profile_template_deletion_dialog = general_utils.MessageBox()
         self.profile_template_deletion_dialog.title = "Delete Template Profile"
-        self.profile_template_deletion_dialog.icon = QtWidgets.QMessageBox.Warning
+        self.profile_template_deletion_dialog.icon = QMessageBox.Warning
         self.profile_template_deletion_dialog.text = f"Are you sure you want to delete the profile for template: {self._loaded_profile_label_text}?"
-        self.profile_template_deletion_dialog.buttons = [QtWidgets.QPushButton("Yes"), QtWidgets.QPushButton("No")]
-        self.profile_template_deletion_dialog.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
+        self.profile_template_deletion_dialog.buttons = [QPushButton("Yes"), QPushButton("No")]
+        self.profile_template_deletion_dialog.button_roles = [QMessageBox.YesRole, QMessageBox.RejectRole]
         self.profile_template_deletion_dialog.callback = [self.delete_template_profile, None]
 
         self.main_view_model.display_message_box(message_box=self.profile_template_deletion_dialog)
