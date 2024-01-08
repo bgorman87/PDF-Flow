@@ -1,21 +1,22 @@
-from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QInputDialog, QMessageBox, QPushButton
-from base64 import b64decode
-from os.path import join, splitext, exists, isdir, listdir, mkdir
-from shutil import copy2, rmtree
-from uuid import uuid4
+import base64
+import os
+import shutil
+import uuid
+
+from bs4 import BeautifulSoup
 from lxml import html
+from PySide6 import QtCore, QtWidgets
 
 from utils import general_utils, text_utils
 from view_models import main_view_model
 
 
-class EmailViewModel(QObject):
-    email_profiles_updated = Signal(list)
-    email_text_update = Signal()
-    clear_email_text = Signal()
-    email_list_update = Signal()
-    set_current_index_signal = Signal(int)
+class EmailViewModel(QtCore.QObject):
+    email_profiles_updated = QtCore.Signal(list)
+    email_text_update = QtCore.Signal()
+    clear_email_text = QtCore.Signal()
+    email_list_update = QtCore.Signal()
+    set_current_index_signal = QtCore.Signal(int)
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -60,7 +61,7 @@ class EmailViewModel(QObject):
         # If the user clicks ok, then save the new profile
         # If the user clicks cancel, then do nothing
         while True:
-            dialog = QInputDialog()
+            dialog = QtWidgets.QInputDialog()
             dialog.setLabelText("Enter a name for the new profile")
             dialog.setOkButtonText("Save")
             dialog.setCancelButtonText("Cancel")
@@ -74,10 +75,10 @@ class EmailViewModel(QObject):
                 else:
                     message_box = general_utils.MessageBox()
                     message_box.title = "Email Profile Name Already Exists"
-                    message_box.icon = QMessageBox.Information
+                    message_box.icon = QtWidgets.QMessageBox.Information
                     message_box.text = f"Please choose a different name for the new profile.\n\nIf you would like to edit the existing profile '{new_profile_name}', please select it from the dropdown menu to make your changes."
-                    message_box.buttons = [QPushButton("Close")]
-                    message_box.button_roles = [QMessageBox.RejectRole]
+                    message_box.buttons = [QtWidgets.QPushButton("Close")]
+                    message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
                     message_box.callback = [
                         None,
                     ]
@@ -92,19 +93,19 @@ class EmailViewModel(QObject):
         # If the user clicks no, then do nothing
         message_box = general_utils.MessageBox()
         message_box.title = "Save Changes"
-        message_box.icon = QMessageBox.Information
+        message_box.icon = QtWidgets.QMessageBox.Information
         message_box.text = (
             f"Save changes to '{self._email_profile_names[self._loaded_email_index]}'?"
         )
         message_box.buttons = [
-            QPushButton("Save Changes"),
-            QPushButton("Discard Changes"),
-            QPushButton("Cancel"),
+            QtWidgets.QPushButton("Save Changes"),
+            QtWidgets.QPushButton("Discard Changes"),
+            QtWidgets.QPushButton("Cancel"),
         ]
         message_box.button_roles = [
-            QMessageBox.YesRole,
-            QMessageBox.NoRole,
-            QMessageBox.RejectRole,
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
+            QtWidgets.QMessageBox.RejectRole,
         ]
         message_box.callback = [
             lambda: self.save_changes(index),
@@ -120,7 +121,7 @@ class EmailViewModel(QObject):
         # Update the email profile names
         # Update the email profile combo box
         directory = self.main_view_model.get_local_email_directory()
-        email_folder = join(
+        email_folder = os.path.join(
             directory, self._email_profile_names[self._loaded_email_index]
         )
         self.save_email_signature(email_folder)
@@ -145,16 +146,16 @@ class EmailViewModel(QObject):
 
         # Create the new directory
         directory = self.main_view_model.get_local_email_directory()
-        new_directory = join(directory, profile_name)
+        new_directory = os.path.join(directory, profile_name)
         try:
-            mkdir(new_directory)
+            os.mkdir(new_directory)
         except OSError as e:
             message_box = general_utils.MessageBox()
             message_box.title = "Email Creation Error"
-            message_box.icon = QMessageBox.Information
+            message_box.icon = QtWidgets.QMessageBox.Information
             message_box.text = f"Email creation error. Most likely invalid folder/file name: {profile_name}"
-            message_box.buttons = [QPushButton("Close")]
-            message_box.button_roles = [QMessageBox.RejectRole]
+            message_box.buttons = [QtWidgets.QPushButton("Close")]
+            message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
             message_box.callback = [
                 None,
             ]
@@ -165,7 +166,7 @@ class EmailViewModel(QObject):
 
         # Save the html data to the new directory
         self.save_email_signature(new_directory)
-        # html_file = join(new_directory, "email.html")
+        # html_file = os.path.join(new_directory, "email.html")
         # with open(html_file, "w") as f:
         #     f.write(self.email_raw_html)
 
@@ -195,11 +196,11 @@ class EmailViewModel(QObject):
                 base64_data = src.split(",")[1]
 
                 # Decoding the base64 data to get the image
-                image_data = b64decode(base64_data)
+                image_data = base64.b64decode(base64_data)
 
                 # Generating a random filename with the identified file type
-                random_filename = f"{uuid4()}.{file_type}"
-                new_img_path = join(new_directory, random_filename)
+                random_filename = f"{uuid.uuid4()}.{file_type}"
+                new_img_path = os.path.join(new_directory, random_filename)
 
                 # Saving the image to the new directory
                 with open(new_img_path, "wb") as f:
@@ -213,19 +214,19 @@ class EmailViewModel(QObject):
                 not "://" in src
             ):  # This ensures it's a local path and not an external URL
                 # Generate a random filename while preserving the image's extension
-                extension = splitext(src)[1]
-                random_filename = f"{uuid4()}{extension}"
-                new_img_path = join(new_directory, random_filename)
+                extension = os.path.splitext(src)[1]
+                random_filename = f"{uuid.uuid4()}{extension}"
+                new_img_path = os.path.join(new_directory, random_filename)
 
                 # Copy the image to the new directory
-                copy2(src, new_img_path)
+                shutil.copy2(src, new_img_path)
 
                 # Update the src attribute to point to the new image location
                 img_tag.set("src", new_img_path)
 
         self.email_raw_html = html.tostring(root, encoding="unicode")
 
-        html_file = join(new_directory, "email.html")
+        html_file = os.path.join(new_directory, "email.html")
         with open(html_file, "w") as f:
             f.write(self.email_raw_html)
 
@@ -248,8 +249,8 @@ class EmailViewModel(QObject):
         directory = self.main_view_model.get_local_email_directory()
         emails = [
             dir
-            for dir in listdir(directory)
-            if isdir(join(directory, dir))
+            for dir in os.listdir(directory)
+            if os.path.isdir(os.path.join(directory, dir))
         ]
 
         if not emails:
@@ -260,7 +261,7 @@ class EmailViewModel(QObject):
         # After getting local email signatures, try to add in Outlook signatures
         outlook_email_folder = self.main_view_model.get_outlook_email_directory()
         if outlook_email_folder:
-            for filename in listdir(outlook_email_folder):
+            for filename in os.listdir(outlook_email_folder):
                 if filename.endswith(".htm") or filename.endswith(
                     ".html"
                 ):  # For HTML signatures
@@ -297,15 +298,15 @@ class EmailViewModel(QObject):
         if self._text_changed and self._loaded_email_index == 0:
             message_box = general_utils.MessageBox()
             message_box.title = "Save Changes"
-            message_box.icon = QMessageBox.Information
+            message_box.icon = QtWidgets.QMessageBox.Information
             message_box.text = f"Save new email before proceeding?"
             message_box.buttons = [
-                QPushButton("Save New"),
-                QPushButton("Cancel"),
+                QtWidgets.QPushButton("Save New"),
+                QtWidgets.QPushButton("Cancel"),
             ]
             message_box.button_roles = [
-                QMessageBox.YesRole,
-                QMessageBox.RejectRole,
+                QtWidgets.QMessageBox.YesRole,
+                QtWidgets.QMessageBox.RejectRole,
             ]
             message_box.callback = [self.save_new_button_dialog, None]
 
@@ -326,20 +327,20 @@ class EmailViewModel(QObject):
         # For now, check if name has ' - Outlook' to determine if email is from outlook
         # TODO In future, update database to also store the location of the email Signature
         if " - Outlook" not in profile_name:
-            local_email_folder = join(
+            local_email_folder = os.path.join(
                 self.main_view_model.get_local_email_directory(), profile_name
             )
 
-            if not exists(local_email_folder):
+            if not os.path.exists(local_email_folder):
                 self.main_view_model.add_console_text(
                     f"Email folder {local_email_folder} does not exist"
                 )
                 self.main_view_model.add_console_alerts(1)
                 return
 
-            email_html_file = join(local_email_folder, "email.html")
+            email_html_file = os.path.join(local_email_folder, "email.html")
 
-            if not exists(email_html_file):
+            if not os.path.exists(email_html_file):
                 self.main_view_model.add_console_text(
                     f"Email file not found for {local_email_folder}"
                 )
@@ -356,23 +357,23 @@ class EmailViewModel(QObject):
             outlook_directory = self.main_view_model.get_outlook_email_directory()
 
             signature_name = ""
-            for filename in listdir(outlook_directory):
+            for filename in os.listdir(outlook_directory):
                 if (filename.endswith(".htm") or filename.endswith(".html")) and (
                     profile_base_name in filename
                 ):
                     signature_name = filename
                     break
 
-            if not exists(outlook_directory):
+            if not os.path.exists(outlook_directory):
                 self.main_view_model.add_console_text(
                     f"Email folder {local_email_folder} does not exist"
                 )
                 self.main_view_model.add_console_alerts(1)
                 return
 
-            email_html_file = join(outlook_directory, signature_name)
+            email_html_file = os.path.join(outlook_directory, signature_name)
 
-            if not exists(email_html_file):
+            if not os.path.exists(email_html_file):
                 self.main_view_model.add_console_text(
                     f"Email file not found for {local_email_folder}"
                 )
@@ -394,15 +395,15 @@ class EmailViewModel(QObject):
         # If the user clicks no, then do nothing
         message_box = general_utils.MessageBox()
         message_box.title = "Delete Email Profile"
-        message_box.icon = QMessageBox.Information
+        message_box.icon = QtWidgets.QMessageBox.Information
         message_box.text = f"Delete email template '{self._email_profile_names[self._loaded_email_index]}'?"
         message_box.buttons = [
-            QPushButton("Delete"),
-            QPushButton("Cancel"),
+            QtWidgets.QPushButton("Delete"),
+            QtWidgets.QPushButton("Cancel"),
         ]
         message_box.button_roles = [
-            QMessageBox.YesRole,
-            QMessageBox.RejectRole,
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.RejectRole,
         ]
         message_box.callback = [self.delete_email_profile, None]
 
@@ -411,10 +412,10 @@ class EmailViewModel(QObject):
 
     def delete_email_profile(self):
         profile_name = self._email_profile_names[self._loaded_email_index]
-        email_folder = join(
+        email_folder = os.path.join(
             self.main_view_model.get_local_email_directory(), profile_name
         )
-        if not exists(email_folder):
+        if not os.path.exists(email_folder):
             self.main_view_model.add_console_text(
                 f"Email deletion error: Email folder {email_folder} does not exist"
             )
@@ -422,7 +423,7 @@ class EmailViewModel(QObject):
             return
 
         try:
-            rmtree(email_folder)
+            shutil.rmtree(email_folder)
         except OSError as e:
             self.main_view_model.add_console_text(f"Email deletion error: {e}")
             self.main_view_model.add_console_alerts(1)

@@ -1,64 +1,64 @@
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget, QSizePolicy, QSizePolicy, QApplication
-from PySide6.QtGui import QPalette, QColor, QIcon, QFontDatabase, QGuiApplication
-from os import sys as os_sys, getenv, makedirs
-from os.path import exists
-if os_sys.platform == "win32":
+import os
+if os.sys.platform == "win32":
     from win32com.client import Dispatch  # 'SyntaxError: invalid or missing encoding declaration' if not initialized here and passed down to process_view_model.py
 else:
     Dispatch=None
-from json import dump, load
-from uuid import uuid4
+from PySide6 import QtCore, QtGui, QtWidgets
+
+from datetime import date
+import json
+import uuid
 import sys
-if getattr(sys, 'frozen', False):
-    import pyi_splash
 
 from models import main_model
 from view_models import main_view_model, message_box_view_model
 from views import message_box_view, navigation_view, stacked_view
+
 from utils import path_utils, general_utils
 
+if getattr(sys, 'frozen', False):
+    import pyi_splash
 
-class MainView(QMainWindow):
+class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
 
-        self.central_widget = QWidget()
+        self.central_widget = QtWidgets.QWidget()
 
         self.main_view_model = main_view_model
         self.main_view_model.message_box_alert.connect(self.show_message_alert)
 
         self.stacked_view = stacked_view.StackedWidget(self.main_view_model, Dispatch)
-        self.navigation_view = QWidget()
+        self.navigation_view = QtWidgets.QWidget()
         self.navigation_view.setLayout(
             navigation_view.NavigationView(self.main_view_model)
         )
         self.navigation_view.setProperty("class", "nav-widget")
 
-        self.main_layout = QHBoxLayout()
+        self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.addWidget(self.navigation_view)
         self.main_layout.addWidget(self.stacked_view)
         self.main_layout.setStretch(0, 0)
         self.main_layout.setStretch(1, 1)
 
-        self.copyright_label = QLabel(
+        self.copyright_label = QtWidgets.QLabel(
             f"© 2023 Brandon Gorman."
         )
         self.copyright_label.setProperty("class", "copyright-label")
-        self.copyright_layout = QHBoxLayout()
+        self.copyright_layout = QtWidgets.QHBoxLayout()
         self.copyright_layout.setContentsMargins(0, 0, 0, 0)
         self.copyright_layout.addWidget(self.copyright_label)
-        self.copyright_layout.setAlignment(Qt.AlignHCenter) # type: ignore
+        self.copyright_layout.setAlignment(QtCore.Qt.AlignHCenter) # type: ignore
         self.copyright_label.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Minimum # type: ignore
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum # type: ignore
          )
 
-        self.copyright_widget = QWidget()
+        self.copyright_widget = QtWidgets.QWidget()
         self.copyright_widget.setLayout(self.copyright_layout)
         self.copyright_widget.setProperty("class", "copyright-label")
 
-        self.central_layout = QVBoxLayout()
+        self.central_layout = QtWidgets.QVBoxLayout()
         self.central_layout.setContentsMargins(0, 0, 0, 0)
         self.central_layout.addLayout(self.main_layout)
         self.central_layout.setStretch(self.central_layout.indexOf(self.main_layout), 1)
@@ -68,7 +68,7 @@ class MainView(QMainWindow):
 
         self.setCentralWidget(self.central_widget)
         self.navigation_view.setProperty("class", "nav-widget")
-        screen = QGuiApplication.primaryScreen().size()
+        screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(800, 950)
         self.main_view_model.window_size_update.connect(self.resize)
         
@@ -91,7 +91,7 @@ def main(version: str):
 
     config = get_config_data(version)
 
-    app = QApplication([])
+    app = QtWidgets.QApplication([])
     
     # Open the qss styles file and read in the css-alike styling code
     style_file_path = path_utils.resource_path("style/styles.qss")
@@ -102,13 +102,13 @@ def main(version: str):
     app.setStyleSheet(style)
     app.setStyle("Fusion")
 
-    palette = QPalette()
-    palette.setColor(QPalette.Highlight, QColor(Qt.gray))
+    palette = QtGui.QPalette()
+    palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(QtCore.Qt.gray))
     app.setPalette(palette)
-    QFontDatabase.addApplicationFont(path_utils.resource_path("assets/Roboto-Regular.ttf"))
+    QtGui.QFontDatabase.addApplicationFont(path_utils.resource_path("assets/Roboto-Regular.ttf"))
     window = MainView(main_view_model.MainViewModel(main_model.MainModel(), config=config))
     window.setWindowTitle("PDF Flow")
-    window.setWindowIcon(QIcon(path_utils.resource_path("assets/icons/icon.png")))
+    window.setWindowIcon(QtGui.QIcon(path_utils.resource_path("assets/icons/icon.png")))
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
 
@@ -123,30 +123,30 @@ def get_config_data(version: str) -> dict:
     Returns:
         dict: The configuration data.
     """
-    config_file_path = getenv("APPDATA") + "\\PDF Flow\\config.json"
-    if exists(config_file_path):
+    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    if os.path.exists(config_file_path):
 
         with open(config_file_path, "r") as f:
-            config = load(f)
+            config = json.load(f)
         
         if config['version'] != version:
             config['version'] = version
             with open(config_file_path, "w") as f:
-                dump(config, f, indent=4)
+                json.dump(config, f, indent=4)
 
     else:
-        makedirs(getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
+        os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
         
         config = {
             "version": "0.1.0",
             "telemetry": {
                 "annonymous": False,
-                "identifier": str(uuid4()),
+                "identifier": str(uuid.uuid4()),
             }
         }
 
         with open(config_file_path, "w") as f:
-            dump(config, f, indent=4)
+            json.dump(config, f, indent=4)
     return config
 
 if __name__ == "__main__":

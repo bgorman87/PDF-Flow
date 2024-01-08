@@ -1,27 +1,24 @@
-from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
-
+from PySide6 import QtWidgets, QtCore
 from widgets import email_widget
 from view_models import email_view_model
 
-
-class EmailView(QWidget):
+class EmailView(QtWidgets.QWidget):
     def __init__(self, view_model: email_view_model.EmailViewModel):
         super().__init__()
         self.view_model = view_model
-        self.main_layout = QVBoxLayout()
+        self.main_layout = QtWidgets.QVBoxLayout()
         self.setObjectName("email_stack_item")
 
-        self.email_profile_layout = QHBoxLayout()
+        self.email_profile_layout = QtWidgets.QHBoxLayout()
         # Label for dropdown menu
-        self.email_profile_label = QLabel()
+        self.email_profile_label = QtWidgets.QLabel()
         self.email_profile_label.setObjectName(
             "email_profile_label"
         )
         self.email_profile_layout.addWidget(self.email_profile_label)
 
         # Dropdown menu containing e-mail profiles
-        self.email_profile_combo_box = QComboBox()
+        self.email_profile_combo_box = QtWidgets.QComboBox()
         self.email_profile_combo_box.setObjectName(
             "email_profile_combo_box"
         )
@@ -38,7 +35,7 @@ class EmailView(QWidget):
             self.email_profile_layout.indexOf(self.email_profile_combo_box), 6
         )
 
-        self.email_profile_delete_button = QPushButton()
+        self.email_profile_delete_button = QtWidgets.QPushButton()
         self.email_profile_delete_button.setObjectName(
             "email_profile_delete_button"
         )
@@ -66,7 +63,7 @@ class EmailView(QWidget):
         )
 
         # Add a save button positioned to the right, below the email text edit
-        self.save_button = QPushButton()
+        self.save_button = QtWidgets.QPushButton()
         self.save_button.setObjectName("save_button")
         self.save_button.clicked.connect(self.save_email)
         self.main_layout.addWidget(self.save_button)
@@ -96,7 +93,7 @@ class EmailView(QWidget):
         self.load_email_options()
 
     def translate_ui(self):
-        _translate = QCoreApplication.translate
+        _translate = QtCore.QCoreApplication.translate
         self.email_profile_label.setText(
             _translate("EmailView", "Loaded Email:")
         )
