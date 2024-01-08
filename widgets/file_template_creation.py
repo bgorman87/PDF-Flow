@@ -2,8 +2,7 @@ from PySide6.QtCore import Qt, QPoint, QRect, QRectF, QLineF, Signal
 from PySide6.QtGui import QPen, QColor, QPainter, QPixmap, QImage, QFontMetrics, QTextOption
 from PySide6.QtWidgets import QWidget, QSizePolicy, QWidget
 from os.path import join
-from pytesseract import image_to_string
-from pytesseract.pytesseract import tesseract_cmd
+from pytesseract import image_to_string, pytesseract
 
 from utils.path_utils import resource_path
 
@@ -352,7 +351,7 @@ class TemplateWidget(QWidget):
             self.found_text = "Image Area Too Small"
             return
         
-        tesseract_cmd = resource_path(join("Tesseract","tesseract.exe"))
+        pytesseract.tesseract_cmd = resource_path(join("Tesseract","tesseract.exe"))
 
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"
