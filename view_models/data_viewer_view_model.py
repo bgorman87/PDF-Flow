@@ -1,18 +1,17 @@
-from PySide6.QtCore import QCoreApplication, QObject, Signal
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QTableWidget
-from csv import reader as csv_reader, Error as csv_Error
-from typing import List
+import csv
 
+from PySide6 import QtCore, QtWidgets
+from typing import List
 from view_models import main_view_model
 from utils import general_utils
 
 
-class DataViewerViewModel(QObject):
-    export_project_data_button_enabled = Signal(int)
-    data_table_index_update = Signal(int)
-    data_table_update = Signal()
-    project_data_entry_deleted = Signal()
-    email_profile_list_update = Signal()
+class DataViewerViewModel(QtCore.QObject):
+    export_project_data_button_enabled = QtCore.Signal(int)
+    data_table_index_update = QtCore.Signal(int)
+    data_table_update = QtCore.Signal()
+    project_data_entry_deleted = QtCore.Signal()
+    email_profile_list_update = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -52,7 +51,7 @@ class DataViewerViewModel(QObject):
 
     def get_project_data_import_file(self) -> None:
         """Opens a file dialog for the user to select a CSV file and initiates its import."""
-        file_name, _ = QFileDialog.getOpenFileName(
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
             caption="Open Project Data File",
             dir="../../",
             filter="Comma Seperated Values (*.csv *.txt)",
@@ -63,21 +62,21 @@ class DataViewerViewModel(QObject):
 
         try:
             with open(file_name, "r") as imported_file:
-                reader = csv_reader(imported_file)
+                reader = csv.reader(imported_file)
                 data_to_import = []
                 for row in reader:
                     data_to_import.append(row)
             self.import_project_data(data_to_import=data_to_import)
-        except csv_Error as e:
+        except csv.Error as e:
             message_box = general_utils.MessageBox()
             message_box.title = "Invalid Import File"
-            message_box.icon = QMessageBox.Information
+            message_box.icon = QtWidgets.QMessageBox.Information
             message_box.text = f"File unable to be read as a csv.\n\n{e}"
             message_box.buttons = [
                 "Okay",
             ]
             message_box.button_roles = [
-                QMessageBox.RejectRole,
+                QtWidgets.QMessageBox.RejectRole,
             ]
             message_box.callback = [
                 None,
@@ -123,15 +122,15 @@ class DataViewerViewModel(QObject):
         self.importing = False
         self.process_button.setEnabled(True)
         self.process_button.setText(
-            QCoreApplication.translate("MainWindow", "Process Files")
+            QtCore.QCoreApplication.translate("MainWindow", "Process Files")
         )
         self.export_project_data_button.setEnabled(True)
         self.export_project_data_button.setText(
-            QCoreApplication.translate("MainWindow", "Export Project Data")
+            QtCore.QCoreApplication.translate("MainWindow", "Export Project Data")
         )
         if results and results[0] is not None:
-            import_error_dialog = QMessageBox()
-            import_error_dialog.setIcon(QMessageBox.Warning)
+            import_error_dialog = QtWidgets.QMessageBox()
+            import_error_dialog.setIcon(QtWidgets.QMessageBox.Warning)
             import_error_dialog.setWindowTitle("Project Data Import Error")
             import_error_dialog.setText(
                 f"Error when trying to import values into database.\n\n \
@@ -144,7 +143,7 @@ class DataViewerViewModel(QObject):
 
     def get_project_data_export_location(self) -> None:
         """Opens a file dialog for user to select a location to export the project data to."""
-        export_location = QFileDialog.getSaveFileName(
+        export_location = QtWidgets.QFileDialog.getSaveFileName(
             caption="Export Project Data",
             dir="../../",
             filter="Comma Seperated Values (*.csv)",
@@ -178,13 +177,13 @@ class DataViewerViewModel(QObject):
 
         message_box = general_utils.MessageBox()
         message_box.title = "Delete Project Data"
-        message_box.icon = QMessageBox.Warning
+        message_box.icon = QtWidgets.QMessageBox.Warning
         message_box.text = f"It is advised to backup your project data via exporting before deleting.\n\n\
         Are you sure you want to delete all project data?"
         message_box.buttons = ["Delete", "Cancel"]
         message_box.button_roles = [
-            QMessageBox.YesRole,
-            QMessageBox.NoRole,
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
         ]
         message_box.callback = [self.delete_all_project_data, None]
 
@@ -215,12 +214,12 @@ class DataViewerViewModel(QObject):
 
         message_box = general_utils.MessageBox()
         message_box.title = "Delete Project Data"
-        message_box.icon = QMessageBox.Warning
+        message_box.icon = QtWidgets.QMessageBox.Warning
         message_box.text = f"Are you sure you want to delete project data for project: {project_data['project_number']}?"
         message_box.buttons = ["Delete", "Cancel"]
         message_box.button_roles = [
-            QMessageBox.YesRole,
-            QMessageBox.NoRole,
+            QtWidgets.QMessageBox.YesRole,
+            QtWidgets.QMessageBox.NoRole,
         ]
         message_box.callback = [
             lambda: self.delete_project_data_entry(project_data),
@@ -239,10 +238,10 @@ class DataViewerViewModel(QObject):
         if result is not None:
             message_box = general_utils.MessageBox()
             message_box.title = "Delete Project Data"
-            message_box.icon = QMessageBox.Warning
+            message_box.icon = QtWidgets.QMessageBox.Warning
             message_box.text = f"There was an error deleting project data for project: {project_data['project_number']}\n\n{result}"
             message_box.buttons = ["Close"]
-            message_box.button_roles = [QMessageBox.YesRole]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
             message_box.callback = [None]
 
             self.main_view_model.display_message_box(message_box=message_box)
@@ -251,13 +250,13 @@ class DataViewerViewModel(QObject):
             self.update_data_table()
 
     def get_next_visible_row_index(
-        self, current_row_index: int, table_widget: QTableWidget
+        self, current_row_index: int, table_widget: QtWidgets.QTableWidget
     ) -> int:
         """Get the next visible row index from the current index, with priority to previous row. Takes into account active filter.
 
         Args:
             current_index (int): current row index
-            table_widget (QTableWidget): Table widget to check
+            table_widget (QtWidgets.QTableWidget): Table widget to check
 
         Returns:
             int: row index
@@ -280,7 +279,7 @@ class DataViewerViewModel(QObject):
         return -1
 
     def database_populate_project_edit_fields(
-        self, data_table: QTableWidget
+        self, data_table: QtWidgets.QTableWidget
     ) -> None:
         # self.database_save_edited_project_data_button.setText("Save Changes")
         # self.database_save_edited_project_data_button.clicked.disconnect()
@@ -302,8 +301,8 @@ class DataViewerViewModel(QObject):
 
         # If user edited the project data ask if they want to discard or cancel
         # if self.project_data_changed:
-        #     overwrite = QMessageBox()
-        #     overwrite.setIcon(QMessageBox.Warning)
+        #     overwrite = QtWidgets.QMessageBox()
+        #     overwrite.setIcon(QtWidgets.QMessageBox.Warning)
         #     overwrite.setWindowTitle("Project Data Changed")
         #     overwrite.setText(
         #         f"Project Data has been changed.\
@@ -311,8 +310,8 @@ class DataViewerViewModel(QObject):
         #             \nPress 'Proceed' to discard changes\
         #             \nPress 'Cancel' to go back"
         #     )
-        #     overwrite.addButton("Proceed", QMessageBox.YesRole)
-        #     overwrite.addButton("Cancel", QMessageBox.RejectRole)
+        #     overwrite.addButton("Proceed", QtWidgets.QMessageBox.YesRole)
+        #     overwrite.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
         #     overwrite_reply = overwrite.exec()
         #     if overwrite_reply != 0:
         #         return
@@ -334,10 +333,10 @@ class DataViewerViewModel(QObject):
         if update_return is not None:
             message_box = general_utils.MessageBox()
             message_box.title = "Update Project Data Error"
-            message_box.icon = QMessageBox.Warning
+            message_box.icon = QtWidgets.QMessageBox.Warning
             message_box.text = f"There was an error updating project data for project: {project_data['project_number']}\n\n{update_return}"
             message_box.buttons = ["Close"]
-            message_box.button_roles = [QMessageBox.YesRole]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
             message_box.callback = [None]
 
             self.main_view_model.display_message_box(message_box=message_box)
@@ -352,10 +351,10 @@ class DataViewerViewModel(QObject):
         if insert_return is not None:
             message_box = general_utils.MessageBox()
             message_box.title = "Insert Project Data Error"
-            message_box.icon = QMessageBox.Warning
+            message_box.icon = QtWidgets.QMessageBox.Warning
             message_box.text = f"There was an error inserting project data for project: {project_data['project_number']}\n\n{insert_return}"
             message_box.buttons = ["Close"]
-            message_box.button_roles = [QMessageBox.YesRole]
+            message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
             message_box.callback = [None]
 
             self.main_view_model.display_message_box(message_box=message_box)
@@ -367,10 +366,10 @@ class DataViewerViewModel(QObject):
 
         message_box = general_utils.MessageBox()
         message_box.title = "Warning"
-        message_box.icon = QMessageBox.Warning
+        message_box.icon = QtWidgets.QMessageBox.Warning
         message_box.text = f"{message}"
         message_box.buttons = ["Close"]
-        message_box.button_roles = [QMessageBox.YesRole]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
         message_box.callback = [None]
 
         self.main_view_model.display_message_box(message_box=message_box)
@@ -392,10 +391,10 @@ class DataViewerViewModel(QObject):
 
         message_box = general_utils.MessageBox()
         message_box.title = "Email Information"
-        message_box.icon = QMessageBox.Information
+        message_box.icon = QtWidgets.QMessageBox.Information
         message_box.text = f"{text}"
         message_box.buttons = ["Close"]
-        message_box.button_roles = [QMessageBox.YesRole]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
         message_box.callback = [None]
 
         self.main_view_model.display_message_box(message_box=message_box)
