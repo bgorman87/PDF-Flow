@@ -9,9 +9,9 @@ else:
     Dispatch=None
 from json import dump, load
 from uuid import uuid4
-import sys
-if getattr(sys, 'frozen', False):
-    import pyi_splash
+# import sys
+# if getattr(sys, 'frozen', False):
+#     import pyi_splash
 
 from models import main_model
 from view_models import main_view_model, message_box_view_model
@@ -112,8 +112,8 @@ def main(version: str):
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
 
-    if getattr(sys, 'frozen', False):
-        pyi_splash.close()
+    # if getattr(sys, 'frozen', False):
+    #     pyi_splash.close()
 
     app.exec()
 

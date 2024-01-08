@@ -1,7 +1,8 @@
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QPushButton
 from base64 import b64decode
-from os.path import join, splitext, exists, isdir, listdir, mkdir
+from os.path import join, splitext, exists, isdir
+from os import listdir, mkdir
 from shutil import copy2, rmtree
 from uuid import uuid4
 from lxml import html

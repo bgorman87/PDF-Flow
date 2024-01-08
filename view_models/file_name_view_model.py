@@ -1,4 +1,4 @@
-from Pyside6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox, QListWidgetItem, QLineEdit
 
 from view_models import main_view_model
