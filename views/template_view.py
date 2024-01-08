@@ -1,29 +1,28 @@
-from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6 import QtCore, QtWidgets
 
 from view_models import template_view_model
 from widgets import file_template_creation, utility_widgets
 
 
-class TemplateView(QWidget):
+class TemplateView(QtWidgets.QWidget):
     def __init__(self, view_model: template_view_model.TemplateViewModel):
         super().__init__()
         self.view_model = view_model
-        self.main_layout = QVBoxLayout()
+        self.main_layout = QtWidgets.QVBoxLayout()
 
-        self.file_template_tab_cta_button_layout = QHBoxLayout()
+        self.file_template_tab_cta_button_layout = QtWidgets.QHBoxLayout()
 
         # Button to load template file
-        self.select_template_file = QPushButton()
+        self.select_template_file = QtWidgets.QPushButton()
         self.select_template_file.setObjectName("select_template_file")
         self.select_template_file.clicked.connect(
             self.view_model.file_profile_template_dialog)
-        self.select_template_file_dialog = QFileDialog()
+        self.select_template_file_dialog = QtWidgets.QFileDialog()
         self.file_template_tab_cta_button_layout.addWidget(
             self.select_template_file)
 
         # Button to apply selection as coords for unique file identifier
-        self.apply_unique_file_identifier_button = QPushButton()
+        self.apply_unique_file_identifier_button = QtWidgets.QPushButton()
         self.apply_unique_file_identifier_button.setObjectName(
             "apply_unique_file_identifier_button"
         )
@@ -34,13 +33,13 @@ class TemplateView(QWidget):
         self.apply_unique_file_identifier_button.setEnabled(False)
         self.view_model.unique_file_identifier_button_status.connect(
             lambda: self.apply_unique_file_identifier_button.setEnabled(self.view_model.unique_file_id_button_enabled))
-        self.apply_unique_file_identifier_dialog = QFileDialog()
+        self.apply_unique_file_identifier_dialog = QtWidgets.QFileDialog()
         self.file_template_tab_cta_button_layout.addWidget(
             self.apply_unique_file_identifier_button
         )
 
         # Button to apply selection as coords for project number
-        self.apply_unique_profile_project_number_button = QPushButton()
+        self.apply_unique_profile_project_number_button = QtWidgets.QPushButton()
         self.apply_unique_profile_project_number_button.setObjectName(
             "apply_unique_profile_project_number_button"
         )
@@ -52,13 +51,13 @@ class TemplateView(QWidget):
         self.apply_unique_profile_project_number_button.setEnabled(False)
         self.view_model.project_number_status_update.connect(
             lambda: self.apply_unique_profile_project_number_button.setEnabled(self.view_model.project_button_enabled))
-        self.apply_unique_profile_project_number_dialog = QFileDialog()
+        self.apply_unique_profile_project_number_dialog = QtWidgets.QFileDialog()
         self.file_template_tab_cta_button_layout.addWidget(
             self.apply_unique_profile_project_number_button
         )
 
         # Button to apply selection as coords for unique data information
-        self.apply_unique_profile_parameter_button = QPushButton()
+        self.apply_unique_profile_parameter_button = QtWidgets.QPushButton()
         self.apply_unique_profile_parameter_button.setObjectName(
             "apply_unique_profile_parameter_button"
         )
@@ -69,7 +68,7 @@ class TemplateView(QWidget):
         self.apply_unique_profile_parameter_button.setEnabled(False)
         self.view_model.unique_parameter_status_update.connect(
             lambda: self.apply_unique_profile_parameter_button.setEnabled(self.view_model.parameter_button_enabled))
-        self.apply_unique_profile_parameter_dialog = QFileDialog()
+        self.apply_unique_profile_parameter_dialog = QtWidgets.QFileDialog()
         self.file_template_tab_cta_button_layout.addWidget(
             self.apply_unique_profile_parameter_button
         )
@@ -85,13 +84,13 @@ class TemplateView(QWidget):
             self.file_template_tab_line_below_cta_layout
         )
 
-        self.loaded_template_name_layout = QHBoxLayout()
+        self.loaded_template_name_layout = QtWidgets.QHBoxLayout()
         # Label for profile name
-        self.file_template_profile_name_label = QLabel()
+        self.file_template_profile_name_label = QtWidgets.QLabel()
         self.loaded_template_name_layout.addWidget(
             self.file_template_profile_name_label
         )
-        self.file_template_profile_name_input = QLabel()
+        self.file_template_profile_name_input = QtWidgets.QLabel()
         self.view_model.loaded_profile_label_update.connect(self.new_loaded_profile)
         self.file_template_profile_name_input.setEnabled(False)
 
@@ -102,7 +101,7 @@ class TemplateView(QWidget):
             self.loaded_template_name_layout.indexOf(self.file_template_profile_name_input), 4
         )
 
-        self.file_template_profile_name_rename_button = QPushButton()
+        self.file_template_profile_name_rename_button = QtWidgets.QPushButton()
         self.file_template_profile_name_rename_button.clicked.connect(
             self.view_model.handle_template_profile_rename)
         self.file_template_profile_name_rename_button.setEnabled(False)
@@ -112,7 +111,7 @@ class TemplateView(QWidget):
         self.loaded_template_name_layout.setStretch(
             self.loaded_template_name_layout.indexOf(self.file_template_profile_name_rename_button), 1
         )
-        self.file_template_delete_profile_button = QPushButton()
+        self.file_template_delete_profile_button = QtWidgets.QPushButton()
         self.file_template_delete_profile_button.clicked.connect(
             self.view_model.handle_template_profile_deletion
         )
@@ -154,7 +153,7 @@ class TemplateView(QWidget):
         self.translate_ui()
 
     def translate_ui(self):
-        _translate = QCoreApplication.translate
+        _translate = QtCore.QCoreApplication.translate
         self.select_template_file.setText(
             _translate("TemplateView", "Open Template File"))
         self.apply_unique_file_identifier_button.setText(_translate(

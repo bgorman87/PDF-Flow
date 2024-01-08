@@ -1,5 +1,5 @@
 import sys
-from os.path import join, abspath
+import os
 
 
 def resource_path(relative_path: str) -> str:
@@ -12,5 +12,5 @@ def resource_path(relative_path: str) -> str:
         str: formatted path to resource
     """
     if hasattr(sys, "_MEIPASS"):
-        return join(sys._MEIPASS, relative_path)
-    return join(abspath("."), relative_path)
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)

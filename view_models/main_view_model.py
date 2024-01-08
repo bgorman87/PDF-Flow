@@ -1,30 +1,29 @@
-from PySide6.QtCore import QObject, Signal
-from os import sys, makedirs, getenv
-from os.path import exists, abspath, join, PathLike
-from typing import Callable
-from threading import Thread
+import os
+import typing
 
+from PySide6 import QtCore
+import threading
 from models import main_model
 from utils.general_utils import MessageBox
 from utils.text_utils import post_telemetry_data
 
 
-class MainViewModel(QObject):
-    console_text_update = Signal()
-    stack_item_change_id = Signal()
-    message_box_alert = Signal(MessageBox)
-    console_alerts_update = Signal()
-    loaded_files_count_update = Signal()
-    processed_files_update = Signal()
-    emailed_files_count_update = Signal()
-    process_progress_text_update = Signal()
-    process_progress_value_update = Signal()
-    process_button_state_update = Signal()
-    process_button_count_update = Signal()
-    window_size_update = Signal()
-    profile_update_list = Signal()
-    parameter_update_list = Signal()
-    email_profiles_updated = Signal(list)
+class MainViewModel(QtCore.QObject):
+    console_text_update = QtCore.Signal()
+    stack_item_change_id = QtCore.Signal()
+    message_box_alert = QtCore.Signal(MessageBox)
+    console_alerts_update = QtCore.Signal()
+    loaded_files_count_update = QtCore.Signal()
+    processed_files_update = QtCore.Signal()
+    emailed_files_count_update = QtCore.Signal()
+    process_progress_text_update = QtCore.Signal()
+    process_progress_value_update = QtCore.Signal()
+    process_button_state_update = QtCore.Signal()
+    process_button_count_update = QtCore.Signal()
+    window_size_update = QtCore.Signal()
+    profile_update_list = QtCore.Signal()
+    parameter_update_list = QtCore.Signal()
+    email_profiles_updated = QtCore.Signal(list)
 
     def __init__(self, main_model: main_model.MainModel, config: dict = None):
         super().__init__()
@@ -40,7 +39,7 @@ class MainViewModel(QObject):
         self.process_progress_value = 0
         self.process_button_state = True
         self.process_button_count = 0
-        self.os = sys.platform
+        self.os = os.sys.platform
         self.version = config["version"]
         self._telemetry_id = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
 
@@ -294,7 +293,7 @@ class MainViewModel(QObject):
 
     def message_box_handler(
         self,
-        callback: Callable,
+        callback: typing.Callable,
     ):
         if callback is None:
             return
@@ -346,16 +345,16 @@ class MainViewModel(QObject):
         self.email_profiles_updated.emit(email_profile_names)
         return
 
-    def get_local_email_directory(self) -> str | PathLike:
+    def get_local_email_directory(self) -> str | os.PathLike:
         relative_directory = "signatures"
-        if not exists(relative_directory):
-            makedirs(relative_directory)
-        return abspath(relative_directory)
+        if not os.path.exists(relative_directory):
+            os.makedirs(relative_directory)
+        return os.path.abspath(relative_directory)
     
-    def get_outlook_email_directory(self) -> str | PathLike:
-        appdata_path = getenv("APPDATA")
-        signatures_path = join(appdata_path, "Microsoft", "Signatures")
-        if exists(signatures_path):
+    def get_outlook_email_directory(self) -> str | os.PathLike:
+        appdata_path = os.getenv("APPDATA")
+        signatures_path = os.path.join(appdata_path, "Microsoft", "Signatures")
+        if os.path.exists(signatures_path):
             return signatures_path
         else:
             return ""
@@ -399,5 +398,5 @@ class MainViewModel(QObject):
         def telemetry_thread():
             response = post_telemetry_data(usage_count=quantity, identifier=self._telemetry_id)
 
-        telemetry_thread = Thread(target=telemetry_thread)
+        telemetry_thread = threading.Thread(target=telemetry_thread)
         telemetry_thread.start()

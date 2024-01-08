@@ -1,13 +1,9 @@
-from PySide6.QtCore import QUrl, Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6 import QtCore, QtGui, QtWidgets, QtSvgWidgets
 
 from view_models import main_view_model, navigation_view_model
 from utils import path_utils
 
-
-class NavigationView(QVBoxLayout):
+class NavigationView(QtWidgets.QVBoxLayout):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
         self.main_view_model = main_view_model
@@ -15,61 +11,61 @@ class NavigationView(QVBoxLayout):
             self.main_view_model
         )
 
-        self.company_logo_layout = QHBoxLayout()
+        self.company_logo_layout = QtWidgets.QHBoxLayout()
         self.company_logo_layout.setContentsMargins(0, 0, 0, 0)
-        self.company_logo_layout.setAlignment(Qt.AlignHCenter)  # type: ignore
+        self.company_logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
 
-        self.company_logo = QSvgWidget(path_utils.resource_path("assets/icons/englobe_logo.svg"))
+        self.company_logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/englobe_logo.svg"))
         self.company_logo.setProperty("class", "company-logo")
         self.company_logo.setFixedSize(100, 100)
         # self.company_logo.setPixmap(
-        #     QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
+        #     QtGui.QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
         # )
 
         self.company_logo_layout.addWidget(self.company_logo)
 
-        self.navigation_title = QLabel()
+        self.navigation_title = QtWidgets.QLabel()
         self.navigation_title.setText("Navigation")
 
-        self.process_nav_button = QPushButton()
+        self.process_nav_button = QtWidgets.QPushButton()
         self.process_nav_button.setText("Process")
         self.view_model.currently_active_button = self.process_nav_button
 
-        self.console_nav_button = QPushButton()
+        self.console_nav_button = QtWidgets.QPushButton()
         self.console_nav_button.setText("Console (0)")
 
-        self.data_viewer_nav_button = QPushButton()
+        self.data_viewer_nav_button = QtWidgets.QPushButton()
         self.data_viewer_nav_button.setText("Project Data")
 
-        self.template_nav_button = QPushButton()
+        self.template_nav_button = QtWidgets.QPushButton()
         self.template_nav_button.setText("Template")
 
-        self.file_name_nav_button = QPushButton()
+        self.file_name_nav_button = QtWidgets.QPushButton()
         self.file_name_nav_button.setText("File Name")
 
-        self.email_nav_button = QPushButton()
+        self.email_nav_button = QtWidgets.QPushButton()
         self.email_nav_button.setText("E-Mail")
 
-        self.stats_title = QLabel()
+        self.stats_title = QtWidgets.QLabel()
         self.stats_title.setText("Stats")
 
-        self.loaded_files_button = QPushButton()
+        self.loaded_files_button = QtWidgets.QPushButton()
         self.loaded_files_button.setText("Loaded Files: 0")
 
-        self.processed_files_button = QPushButton()
+        self.processed_files_button = QtWidgets.QPushButton()
         self.processed_files_button.setText("Processed Files: 0")
 
-        self.emailed_files_button = QPushButton()
+        self.emailed_files_button = QtWidgets.QPushButton()
         self.emailed_files_button.setText("Emailed Files: 0")
 
-        self.program_info_title = QLabel()
+        self.program_info_title = QtWidgets.QLabel()
         self.program_info_title.setText("Program Info")
 
-        self.version_button = QPushButton()
+        self.version_button = QtWidgets.QPushButton()
         self.version_button.setText(f"Version {self.main_view_model.version}")
         self.version_button.clicked.connect(self.open_documentation_link)
 
-        self.feedback_button = QPushButton()
+        self.feedback_button = QtWidgets.QPushButton()
         self.feedback_button.setText("Feedback")
         # Add a click event to open a mailto link to send feedback
         self.feedback_button.clicked.connect(
@@ -179,7 +175,7 @@ class NavigationView(QVBoxLayout):
             )
         )
 
-    def handle_nav_change(self, button: QPushButton):
+    def handle_nav_change(self, button: QtWidgets.QPushButton):
         """Handles the logic of switching current stack index"""
 
         self.view_model.currently_active_button.setProperty("class", "nav-button")
@@ -195,6 +191,6 @@ class NavigationView(QVBoxLayout):
     def open_documentation_link(self):
         """Opens the documentation link in the default browser."""
 
-        QDesktopServices.openUrl(
-            QUrl("https://pdfflow.godevservices.com/")
+        QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl("https://pdfflow.godevservices.com/")
         )

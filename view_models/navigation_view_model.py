@@ -1,24 +1,24 @@
-from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QPushButton
-from os import startfile, system
+import os
+
+from PySide6 import QtCore, QtWidgets
 
 from view_models import main_view_model
 
 
-class NavigationViewModel(QObject):
+class NavigationViewModel(QtCore.QObject):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         self.main_view_model = main_view_model
         self._currently_active_button = None
 
     @property
-    def currently_active_button(self) -> QPushButton:
+    def currently_active_button(self) -> QtWidgets.QPushButton:
         return self._currently_active_button
 
     @currently_active_button.setter
-    def currently_active_button(self, button: QPushButton):
+    def currently_active_button(self, button: QtWidgets.QPushButton):
         self._currently_active_button = button
 
-    def stacked_item_change(self, button: QPushButton):
+    def stacked_item_change(self, button: QtWidgets.QPushButton):
         self.main_view_model.set_current_stack_item_id(button.property("id"))
         self._currently_active_button = button
         
@@ -28,8 +28,8 @@ class NavigationViewModel(QObject):
         mailto_link = f"mailto:brandon.gorman@englobecorp.com?subject=PDF%20Flow%20v{self.main_view_model.version}%20Feedback"
 
         if self.main_view_model.os == "win32":
-            startfile(mailto_link)
+            os.startfile(mailto_link)
         elif self.main_view_model.os == "darwin":
-            system(f'open "{mailto_link}"')
+            os.system(f'open "{mailto_link}"')
         elif self.main_view_model.os == "linux":
-            system(f'xdg-open "{mailto_link}"')
+            os.system(f'xdg-open "{mailto_link}"')
