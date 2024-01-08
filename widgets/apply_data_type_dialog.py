@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from PySide6.QtCore import Signal
-
 from widgets import utility_widgets
 from utils import text_utils
 

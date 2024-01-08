@@ -1,7 +1,6 @@
-from enum import Enum
+import enum
 
-
-class EmailProvider(Enum):
+class EmailProvider(enum.Enum):
     LOCAL = 0
     OUTLOOK = 1
     GMAIL = 2

@@ -1,9 +1,9 @@
 name: Build and Deploy
 
-on:
-  push:
-    branches:
-      - master
+# on:
+#   push:
+#     branches:
+#       - master
 
 env:
   AWS_REGION: us-east-1

@@ -1,9 +1,7 @@
-from PySide6.QtWidgets import QMessageBox
-
+from PySide6 import QtWidgets
 from view_models import message_box_view_model
 
-
-class MessageBoxView(QMessageBox):
+class MessageBoxView(QtWidgets.QMessageBox):
     def __init__(self, view_model: message_box_view_model.MessageBoxViewModel):
         super().__init__()
         self.view_model = view_model

@@ -1,39 +1,35 @@
-from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QTableWidget, QFrame, QLineEdit, QListWidget
-from PySide6.QtGui import QPixmap
-
+from PySide6 import QtWidgets, QtGui, QtCore
 from widgets import email_list_widget, utility_widgets
-from utils.path_utils import resource_path
 
-class DataViewerTableWidget(QWidget):
+class DataViewerTableWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
     
         # Layout for data viewer table and related buttons
-        self.data_viewer_layout = QVBoxLayout()
+        self.data_viewer_layout = QtWidgets.QVBoxLayout()
         self.data_viewer_layout.setObjectName("data_viewer_layout")
 
         self.data_viewer_layout.addWidget(utility_widgets.HorizontalLine())
 
         # Layout for row of buttons (new/import/export/delete all)
-        self.project_data_cta_layout = QHBoxLayout()
+        self.project_data_cta_layout = QtWidgets.QHBoxLayout()
 
         # Add new data button
-        self.project_data_add_new_button = QPushButton()
+        self.project_data_add_new_button = QtWidgets.QPushButton()
         self.project_data_add_new_button.clicked.connect(self.project_data_add_new)
         self.project_data_cta_layout.addWidget(self.project_data_add_new_button)
 
         # Import project data button
-        self.import_project_data_button = QPushButton()
+        self.import_project_data_button = QtWidgets.QPushButton()
         self.import_project_data_button.clicked.connect(self.import_project_data)
         self.project_data_cta_layout.addWidget(self.import_project_data_button)
 
         # Export project data button
-        self.export_project_data_button = QPushButton()
+        self.export_project_data_button = QtWidgets.QPushButton()
         self.export_project_data_button.clicked.connect(self.export_project_data)
         self.project_data_cta_layout.addWidget(self.export_project_data_button)
 
         # Delete all project data button
-        self.delete_all_project_data_button = QPushButton()
+        self.delete_all_project_data_button = QtWidgets.QPushButton()
         self.delete_all_project_data_button.clicked.connect(
             self.delete_all_project_data
         )
@@ -43,23 +39,23 @@ class DataViewerTableWidget(QWidget):
         self.data_viewer_layout.addLayout(self.project_data_cta_layout)
 
         # Line below action buttons
-        self.project_data_line_below_cta_layout = QHBoxLayout()
-        self.database_tab_line_2 = QFrame(self.database_viewer_tab)
-        self.database_tab_line_2.setFrameShape(QFrame.HLine)
-        self.database_tab_line_2.setFrameShadow(QFrame.Sunken)
+        self.project_data_line_below_cta_layout = QtWidgets.QHBoxLayout()
+        self.database_tab_line_2 = QtWidgets.QFrame(self.database_viewer_tab)
+        self.database_tab_line_2.setFrameShape(QtWidgets.QFrame.HLine)
+        self.database_tab_line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.database_tab_line_2.setObjectName("database_tab_line_2")
         self.project_data_line_below_cta_layout.addWidget(self.database_tab_line_2)
 
         self.data_viewer_layout.addWidget(utility_widgets.HorizontalLine())
 
-        self.database_search_layout = QHBoxLayout()
+        self.database_search_layout = QtWidgets.QHBoxLayout()
         self.database_search_layout.addStretch(2)
 
-        self.database_search_icon = QLabel()
-        self.database_search_icon.setPixmap(QPixmap(resource_path("assets/icons/search.svg")))
+        self.database_search_icon = QtWidgets.QLabel()
+        self.database_search_icon.setPixmap(QtGui.QPixmap(path_utils.resource_path("assets/icons/search.svg")))
         self.database_search_icon.setScaledContents(True)
 
-        self.database_search_bar = QLineEdit()
+        self.database_search_bar = QtWidgets.QLineEdit()
         self.database_search_bar.textChanged.connect(self.filter_table)
         self.database_search_bar.setPlaceholderText("Filter...")
 
@@ -72,16 +68,16 @@ class DataViewerTableWidget(QWidget):
         self.data_viewer_layout.addLayout(self.database_search_layout)
 
         # Table widget to display DB results
-        self.database_viewer_table = QTableWidget()
+        self.database_viewer_table = QtWidgets.QTableWidget()
         # Enable sorting for table widget
         # self.database_viewer_table.setSortingEnabled(True)
         self.database_viewer_table.setSelectionMode(
-            QTableWidget.SingleSelection
+            QtWidgets.QTableWidget.SingleSelection
         )
         self.database_viewer_table.setEditTriggers(
-            QTableWidget.NoEditTriggers
+            QtWidgets.QTableWidget.NoEditTriggers
         )
-        # self.database_viewer_table.setModel(QSortFilterProxyModel())
+        # self.database_viewer_table.setModel(QtCore.QSortFilterProxyModel())
         self.database_viewer_table.currentItemChanged.connect(
             self.database_populate_project_edit_fields
         )
@@ -94,7 +90,7 @@ class DataViewerTableWidget(QWidget):
         self.translate_ui()
 
     def translate_ui(self):
-        _translate = QCoreApplication.translate
+        _translate = QtCore.QCoreApplication.translate
 
         self.import_project_data_button.setText(
             _translate("MainWindow", "Import Project Data")
@@ -145,12 +141,12 @@ class DataViewerTableWidget(QWidget):
 
 
 
-class DataViewerEditWidget(QWidget):
+class DataViewerEditWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
-        self.project_data_project_number_line_layout = QHBoxLayout()
+        self.project_data_project_number_line_layout = QtWidgets.QHBoxLayout()
 
         # Label for project number line edit
-        self.database_project_number_label = QLabel()
+        self.database_project_number_label = QtWidgets.QLabel()
         self.database_project_number_label.setObjectName(
             "database_project_number_label"
         )
@@ -159,7 +155,7 @@ class DataViewerEditWidget(QWidget):
         )
 
         # Project number line edit
-        self.database_project_number_line_edit = QLineEdit()
+        self.database_project_number_line_edit = QtWidgets.QLineEdit()
         self.database_project_number_line_edit.setObjectName(
             "database_project_number_line_edit"
         )
@@ -176,15 +172,15 @@ class DataViewerEditWidget(QWidget):
             self.project_data_project_number_line_layout
         )
 
-        self.project_data_directory_layout = QHBoxLayout()
+        self.project_data_directory_layout = QtWidgets.QHBoxLayout()
 
         # Label for directory line edit
-        self.database_directory_label = QLabel()
+        self.database_directory_label = QtWidgets.QLabel()
         self.database_directory_label.setObjectName("database_directory_label")
         self.project_data_directory_layout.addWidget(self.database_directory_label)
 
         # Project directory line edit
-        self.database_project_directory_line_edit = QLineEdit()
+        self.database_project_directory_line_edit = QtWidgets.QLineEdit()
         self.database_project_directory_line_edit.setObjectName(
             "database_project_directory_line_edit"
         )
@@ -198,7 +194,7 @@ class DataViewerEditWidget(QWidget):
         )
 
         # Action button to call rename function
-        self.database_project_directory_button = QPushButton()
+        self.database_project_directory_button = QtWidgets.QPushButton()
         self.database_project_directory_button.clicked.connect(
             self.database_project_directory
         )
@@ -214,17 +210,17 @@ class DataViewerEditWidget(QWidget):
         self.project_data_directory_layout.setStretch(2, 2)
         self.database_viewer_tab_layout.addLayout(self.project_data_directory_layout)
 
-        self.project_data_email_subject_layout = QHBoxLayout()
+        self.project_data_email_subject_layout = QtWidgets.QHBoxLayout()
 
         # Label for email subject line edit
-        self.database_email_subject_label = QLabel()
+        self.database_email_subject_label = QtWidgets.QLabel()
         self.database_email_subject_label.setObjectName("database_email_subject_label")
         self.project_data_email_subject_layout.addWidget(
             self.database_email_subject_label
         )
 
         # Project email subject line edit
-        self.database_project_email_subject_line_edit = QLineEdit()
+        self.database_project_email_subject_line_edit = QtWidgets.QLineEdit()
         self.database_project_email_subject_line_edit.setObjectName(
             "database_project_email_subject_line_edit"
         )
@@ -240,20 +236,20 @@ class DataViewerEditWidget(QWidget):
             self.project_data_email_subject_layout
         )
 
-        self.project_data_email_lists_layout = QHBoxLayout()
-        self.project_data_email_to_layout = QVBoxLayout()
+        self.project_data_email_lists_layout = QtWidgets.QHBoxLayout()
+        self.project_data_email_to_layout = QtWidgets.QVBoxLayout()
 
         # Label for email to list widget
-        self.database_email_to_label = QLabel()
+        self.database_email_to_label = QtWidgets.QLabel()
         self.database_email_to_label.setObjectName("database_email_to_label")
         self.project_data_email_to_layout.addWidget(self.database_email_to_label)
 
         # Email to list widget
         self.database_email_to_list_widget = email_list_widget.EmailListWidget()
         # Enable dragging and dropping of items within the list widget
-        # self.database_email_to_list_widget.setDragDropMode(QListWidget.InternalMove)
+        # self.database_email_to_list_widget.setDragDropMode(QtWidgets.QListWidget.InternalMove)
         # Enable editing of items by double-clicking on them
-        # self.database_email_to_list_widget.setEditTriggers(QListWidget.DoubleClicked)
+        # self.database_email_to_list_widget.setEditTriggers(QtWidgets.QListWidget.DoubleClicked)
         self.database_email_to_list_widget.itemClicked.connect(
             lambda: self.database_list_widget_add_blank(
                 self.database_email_to_list_widget
@@ -270,9 +266,9 @@ class DataViewerEditWidget(QWidget):
             self.project_data_email_to_layout
         )
 
-        self.project_data_email_cc_layout = QVBoxLayout()
+        self.project_data_email_cc_layout = QtWidgets.QVBoxLayout()
         # Label for email cc list widget
-        self.database_email_cc_label = QLabel()
+        self.database_email_cc_label = QtWidgets.QLabel()
         self.database_email_cc_label.setObjectName("database_email_tcc_label")
         self.project_data_email_cc_layout.addWidget(self.database_email_cc_label)
 
@@ -280,11 +276,11 @@ class DataViewerEditWidget(QWidget):
         self.database_email_cc_list_widget = email_list_widget.EmailListWidget()
         # Enable dragging and dropping of items within the list widget
         self.database_email_cc_list_widget.setDragDropMode(
-            QListWidget.InternalMove
+            QtWidgets.QListWidget.InternalMove
         )
         # Enable editing of items by double-clicking on them
         self.database_email_cc_list_widget.setEditTriggers(
-            QListWidget.DoubleClicked
+            QtWidgets.QListWidget.DoubleClicked
         )
         self.database_email_cc_list_widget.itemChanged.connect(
             lambda: self.project_data_change_check(
@@ -297,9 +293,9 @@ class DataViewerEditWidget(QWidget):
             self.project_data_email_cc_layout
         )
 
-        self.project_data_email_bcc_layout = QVBoxLayout()
+        self.project_data_email_bcc_layout = QtWidgets.QVBoxLayout()
         # Label for email bcc list widget
-        self.database_email_bcc_label = QLabel()
+        self.database_email_bcc_label = QtWidgets.QLabel()
         self.database_email_bcc_label.setObjectName("database_email_bcc_label")
         self.project_data_email_bcc_layout.addWidget(self.database_email_bcc_label)
 
@@ -307,11 +303,11 @@ class DataViewerEditWidget(QWidget):
         self.database_email_bcc_list_widget = email_list_widget.EmailListWidget()
         # Enable dragging and dropping of items within the list widget
         self.database_email_bcc_list_widget.setDragDropMode(
-            QListWidget.InternalMove
+            QtWidgets.QListWidget.InternalMove
         )
         # Enable editing of items by double-clicking on them
         self.database_email_bcc_list_widget.setEditTriggers(
-            QListWidget.DoubleClicked
+            QtWidgets.QListWidget.DoubleClicked
         )
         self.database_email_bcc_list_widget.itemChanged.connect(
             lambda: self.project_data_change_check(
@@ -327,10 +323,10 @@ class DataViewerEditWidget(QWidget):
         )
         self.database_viewer_tab_layout.addLayout(self.project_data_email_lists_layout)
 
-        self.project_data_bottom_cta_layout = QHBoxLayout()
+        self.project_data_bottom_cta_layout = QtWidgets.QHBoxLayout()
 
         # Action button to save manual changes
-        self.database_save_edited_project_data_button = QPushButton()
+        self.database_save_edited_project_data_button = QtWidgets.QPushButton()
         self.database_save_edited_project_data_button.clicked.connect(
             self.project_data_save_new
         )
@@ -343,7 +339,7 @@ class DataViewerEditWidget(QWidget):
         )
 
         # Action button to discard manual changes
-        self.database_discard_edited_project_data_button = QPushButton()
+        self.database_discard_edited_project_data_button = QtWidgets.QPushButton()
         self.database_discard_edited_project_data_button.clicked.connect(
             self.database_populate_project_edit_fields
         )
@@ -356,7 +352,7 @@ class DataViewerEditWidget(QWidget):
         )
 
         # Action button to delete database entry
-        self.database_delete_project_data_button = QPushButton()
+        self.database_delete_project_data_button = QtWidgets.QPushButton()
         self.database_delete_project_data_button.clicked.connect(
             self.database_delete_project_data
         )
@@ -372,7 +368,7 @@ class DataViewerEditWidget(QWidget):
         self.translate_ui()
 
     def translate_ui(self):
-        _translate = QCoreApplication.translate
+        _translate = QtCore.QCoreApplication.translate
         
         self.database_discard_edited_project_data_button.setText(
             _translate("MainWindow", "Discard Changes")

@@ -1,18 +1,17 @@
-from datetime import datetime
-from re import search, M as re_M
-from os.path import join, splitext
+import datetime
+import re
+import os
 from bs4 import BeautifulSoup
 from lxml import html
-from base64 import b64encode
-from json import dumps
-from requests import post, Response
-from requests.exceptions import SSLError
-from uuid import UUID
+import base64
+import json
+import requests
+import uuid
 
 
 def valid_date(date_string):
     try:
-        datetime.strptime(date_string, "%d %b %Y")
+        datetime.datetime.strptime(date_string, "%d %b %Y")
         return True
     except (ValueError, TypeError):
         return False
@@ -171,12 +170,12 @@ def detect_englobe_project_number(text):
     project_number = "NA"
 
     for i in range(6):
-        if search(expressions[i], text, re_M) is not None:
+        if re.search(expressions[i], text, re.M) is not None:
             try:
-                project_number = search(expressions[i], text, re_M).groups()
+                project_number = re.search(expressions[i], text, re.M).groups()
             except AttributeError as e:
                 print(e)
-                project_number = str(search(expressions[i], text, re_M))
+                project_number = str(re.search(expressions[i], text, re.M))
             project_number = project_number[-1]
             project_number = project_number.replace(" ", "")
             break
@@ -191,7 +190,7 @@ def format_external_html(folder_path: str, html: str) -> str:
             rel_path = tag[attribute]
             # Check if the path is relative and not an external link
             if rel_path and not rel_path.startswith(('http:', 'https:', 'mailto:', '#')):
-                abs_path = join(folder_path, *rel_path.split("/"))
+                abs_path = os.path.join(folder_path, *rel_path.split("/"))
                 tag[attribute] = abs_path
 
     # Update src and href attributes
@@ -222,11 +221,11 @@ def embed_images_as_base64(html_content: str) -> str:
         if not src.startswith("data:image/"):
             # Read the image and encode it in base64
             with open(src, "rb") as image_file:
-                encoded_string = b64encode(image_file.read()).decode("utf-8")
+                encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
 
             # Get the image's format from its extension (e.g., .jpg -> jpeg)
             image_format = (
-                splitext(src)[1].replace(".", "").replace("jpg", "jpeg")
+                os.path.splitext(src)[1].replace(".", "").replace("jpg", "jpeg")
             )
 
             # Replace the src with the base64 encoded version
@@ -234,7 +233,7 @@ def embed_images_as_base64(html_content: str) -> str:
 
     return html.tostring(root, encoding="unicode")
 
-def post_telemetry_data(usage_count: int, identifier: UUID, info: str = "") -> Response:
+def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "") -> requests.Response:
     """Sends telemetry data to the API Gateway endpoint
 
     Args:
@@ -254,7 +253,7 @@ def post_telemetry_data(usage_count: int, identifier: UUID, info: str = "") -> R
         "info": info if info else None
     }
 
-    json_data = dumps(data)
+    json_data = json.dumps(data)
 
     # Headers, set 'Content-Type' to 'application/json'
     headers = {
@@ -262,10 +261,10 @@ def post_telemetry_data(usage_count: int, identifier: UUID, info: str = "") -> R
     }
 
     try:
-        response = post(url, data=json_data, headers=headers)
+        response = requests.post(url, data=json_data, headers=headers)
         print("Verified")
-    except SSLError:
-        response = post(url, data=json_data, headers=headers, verify=False)
+    except requests.exceptions.SSLError:
+        response = requests.post(url, data=json_data, headers=headers, verify=False)
         print("Unverified")
 
     return response
