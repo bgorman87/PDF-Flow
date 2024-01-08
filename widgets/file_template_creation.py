@@ -1,5 +1,5 @@
-from PySide6.QtCore import Qt, QPoint, QRect, QRectF, QLineF, Signal, QTextOption
-from PySide6.QtGui import QPen, QColor, QPainter, QPixmap, QImage, QFontMetrics
+from PySide6.QtCore import Qt, QPoint, QRect, QRectF, QLineF, Signal
+from PySide6.QtGui import QPen, QColor, QPainter, QPixmap, QImage, QFontMetrics, QTextOption
 from PySide6.QtWidgets import QWidget, QSizePolicy, QWidget
 from os.path import join
 from pytesseract import image_to_string

@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, Signal
-from os import sys, makedirs, getenv
-from os.path import exists, abspath, join, PathLike
+from os import sys, makedirs, getenv, PathLike
+from os.path import exists, abspath, join
 from typing import Callable
 from threading import Thread
 

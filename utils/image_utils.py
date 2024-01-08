@@ -1,12 +1,10 @@
 from PySide6.QtCore import Signal, Slot, QRunnable, QObject
 from os import listdir, path, rename
-from regex import search
+import re
 from pdf2image import convert_from_path
 from io import BytesIO
 from shutil import copy, SameFileError
-from pytesseract import image_to_string
-from pytesseract.pytesseract import tesseract_cmd
-
+from pytesseract import image_to_string, pytesseract
 from view_models import main_view_model
 from utils import text_utils
 from utils.path_utils import resource_path
@@ -399,7 +397,7 @@ class WorkerAnalyzeThread(QRunnable):
                 else:
 
                     if parameter_regex:
-                        data_point = search(rf"{parameter_regex}", result, re.M + re.I)
+                        data_point = re.search(rf"{parameter_regex}", result, re.M + re.I)
                         if data_point:
                             data_point = data_point.groups()
                             processed_data = self.main_view_model.scrub(data_point[-1].replace(" ", "-"))
@@ -427,6 +425,6 @@ class WorkerAnalyzeThread(QRunnable):
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path) -> str:
-        tesseract_cmd = tesseract_path
+        pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return image_to_string(img_path, config=config_str).strip()

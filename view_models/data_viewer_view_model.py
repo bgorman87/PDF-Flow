@@ -1,6 +1,6 @@
 from PySide6.QtCore import QCoreApplication, QObject, Signal
 from PySide6.QtWidgets import QMessageBox, QFileDialog, QTableWidget
-from csv import reader, Error as csv_Error
+from csv import reader as csv_reader, Error as csv_Error
 from typing import List
 
 from view_models import main_view_model
@@ -63,7 +63,7 @@ class DataViewerViewModel(QObject):
 
         try:
             with open(file_name, "r") as imported_file:
-                reader = reader(imported_file)
+                reader = csv_reader(imported_file)
                 data_to_import = []
                 for row in reader:
                     data_to_import.append(row)
