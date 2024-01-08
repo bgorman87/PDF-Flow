@@ -16,8 +16,8 @@ from views import message_box_view, navigation_view, stacked_view
 
 from utils import path_utils, general_utils
 
-if getattr(sys, 'frozen', False):
-    import pyi_splash
+# if getattr(sys, 'frozen', False):
+#     import pyi_splash
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):

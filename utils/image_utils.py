@@ -8,7 +8,6 @@ import shutil
 import pytesseract
 from view_models import main_view_model
 import regex as re
-import debugpy
 from utils import text_utils
 
 
@@ -77,7 +76,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
 
     @QtCore.Slot()
     def run(self):
-        debugpy.debug_this_thread()
         # Each pdf page is stored as image info in an array called images_jpg
 
         images_jpeg = convert_from_path(
