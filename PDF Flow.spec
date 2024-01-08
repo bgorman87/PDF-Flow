@@ -24,7 +24,7 @@ exe = EXE(
     icon='assets/icons/icon.png',
     upx=True,
     upx_exclude=[],
-    console=True,
+    console=False,
 )
 
 coll = COLLECT(
