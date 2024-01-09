@@ -42,6 +42,7 @@ class MainViewModel(QtCore.QObject):
         self.os = os.sys.platform
         self.version = config["version"]
         self._telemetry_id = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
+        self.config = config
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
