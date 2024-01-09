@@ -1,6 +1,7 @@
 from PySide6 import QtWidgets, QtCore
 from view_models import settings_view_model
 from widgets.utility_widgets import HorizontalLine
+from functools import partial
 
 
 class SettingsView(QtWidgets.QWidget):
@@ -18,24 +19,26 @@ class SettingsView(QtWidgets.QWidget):
         # create a vertical list where each item has a check box and a label
         self.template_list = QtWidgets.QVBoxLayout()
         self.template_list.setContentsMargins(5, 5, 5, 5)
-        self.template_list.setSpacing(0)
+        self.template_list.setSpacing(5)
         self.template_list.setAlignment(QtCore.Qt.AlignTop)
         self.template_list.setObjectName("template_list")
-
-        self.populate_template_profile_list()
         
-        scroll_widget = QtWidgets.QWidget()
-        scroll_widget.setLayout(self.template_list)
+        self.scroll_widget = QtWidgets.QWidget()
+        self.scroll_widget.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        self.populate_template_profile_list()
+        self.scroll_widget.setLayout(self.template_list)
+        
 
         # Set background color using QSs
-        scroll_widget.setProperty("class", "template-list")
+        self.scroll_widget.setProperty("class", "template-list")
         # Create the QScrollArea and add the widget to it
-        scroll_area = QtWidgets.QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(scroll_widget)
+        self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_area.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.scroll_widget)
 
         # Add the QScrollArea to your main layout
-        self.main_layout.addWidget(scroll_area)
+        self.main_layout.addWidget(self.scroll_area)
 
         self.delete_button_layout = QtWidgets.QHBoxLayout()
         self.delete_template_button = QtWidgets.QPushButton()
@@ -48,7 +51,7 @@ class SettingsView(QtWidgets.QWidget):
 
         self.main_layout.addLayout(self.delete_button_layout)
 
-        self.main_layout.addSpacing(10)
+        self.main_layout.addSpacing(100)
         self.main_layout.addWidget(HorizontalLine())
         self.main_layout.addWidget(HorizontalLine())
         self.main_layout.addSpacing(10)
@@ -69,14 +72,17 @@ class SettingsView(QtWidgets.QWidget):
         self.anonymous_label = QtWidgets.QLabel("Enable anonymous usage statistics:")
         self.anonymous_label.setContentsMargins(0, 5, 20, 5)
         self.anonymous_checkbox = QtWidgets.QCheckBox()
+        self.anonymous_checkbox.setToolTip("Removes unique identifier from usage statistics if enabled.")
         self.anonymous_checkbox.setChecked(self.view_model.get_anonymous_state())
         self.anonymous_checkbox.clicked.connect(self.view_model.toggle_anonymous_usage)
         anonymous_layout.addWidget(self.anonymous_label)
         anonymous_layout.addWidget(self.anonymous_checkbox)
+
+        anonymous_layout.addStretch(1)
         self.config_list.addLayout(anonymous_layout)        
 
         unique_id_layout = QtWidgets.QHBoxLayout()
-        unique_id_layout.setContentsMargins(0, 5, 5, 5)
+        unique_id_layout.setContentsMargins(0, 5, 5, 0)
         unique_id_layout.setSpacing(0)
         unique_id_layout.setAlignment(QtCore.Qt.AlignLeft)
         unique_id_layout.setObjectName("unique_id_layout")
@@ -87,13 +93,22 @@ class SettingsView(QtWidgets.QWidget):
         unique_id_layout.addWidget(unique_id_label)
         
         self.unique_id_textbox = QtWidgets.QLineEdit()
-        self.unique_id_textbox.setPlaceholderText(self.view_model.get_unique_id())
-        self.unique_id_textbox.setEnabled(False)
+        self.unique_id_textbox.setText(self.view_model.get_unique_id())
+        self.unique_id_textbox.setReadOnly(True)
         unique_id_layout.addWidget(self.unique_id_textbox)
         self.config_list.addLayout(unique_id_layout)
+        
+
+        anonymous_clarification_label = QtWidgets.QLabel()
+        anonymous_clarification_label.setText("Note: A unique identifier is generated for each user and is used to track usage statistics. This identifier does not contain any personal information.")
+        anonymous_clarification_label.setWordWrap(True)
+        anonymous_clarification_label.setContentsMargins(0, 2, 5, 0)
+        anonymous_clarification_label.setProperty("class", "anonymous-clarification-label")
+        self.config_list.addWidget(anonymous_clarification_label)
         self.main_layout.addLayout(self.config_list)
 
-        self.main_layout.addStretch(1)
+        self.main_layout.addStretch(2)
+        
         self.setLayout(self.main_layout)
 
         self.view_model.anonymous_usage_update.connect(self.update_anonymous_config_options)
@@ -112,9 +127,9 @@ class SettingsView(QtWidgets.QWidget):
 
     def update_anonymous_config_options(self, anonymous: bool):
         if anonymous:
-            self.unique_id_textbox.setPlaceholderText("")
+            self.unique_id_textbox.setText("")
         else:
-            self.unique_id_textbox.setPlaceholderText(self.view_model.get_unique_id())
+            self.unique_id_textbox.setText(self.view_model.get_unique_id())
 
     def update_template_deletion_button(self, quantity: int):
         
@@ -143,6 +158,9 @@ class SettingsView(QtWidgets.QWidget):
             template_checkbox = QtWidgets.QCheckBox()
             template_checkbox.setText(profile)
             template_checkbox.setChecked(False)
-            template_checkbox.clicked.connect(lambda: self.view_model.template_item_clicked(template_checkbox.isChecked(), profile))
+            callback = partial(self.view_model.template_item_clicked, checkbox=template_checkbox, profile_line=profile)
+            template_checkbox.clicked.connect(callback)
             template_checkbox.setProperty("class", "template-checkbox")
             self.template_list.addWidget(template_checkbox)
+
+        self.template_list.update()

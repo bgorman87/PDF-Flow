@@ -128,9 +128,6 @@ QPushButton.nav-button {
     background-color: #5a5a5a;
 }
 
-.template-list, .template-checkbox {
-    background-color: #5a5a5a;
-}
 
 .company-logo {
     background-color: #5a5a5a;
@@ -331,4 +328,13 @@ QScrollBar::sub-line:vertical {
     border-image: url(none);
     width: 0px;
     height: 0px;
+}
+
+.template-list, .template-checkbox {
+    background-color: #5a5a5a;
+    border: 0px;
+}
+
+.anonymous-clarification-label {
+    font-size: 10px;
 }
