@@ -5,7 +5,7 @@ A simple setup script to create an executable using PySide6.
 # Ensure pdf2image.py has Popen creation flags set to: creationflags=0x08000000
 
 from cx_Freeze import Executable, setup
-from main_view import __version__ as VERSION
+from version import VERSION
 
 # Additional options
 build_exe_options = {
