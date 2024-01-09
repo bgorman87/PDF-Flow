@@ -31,9 +31,6 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.process_nav_button.setText("Process")
         self.view_model.currently_active_button = self.process_nav_button
 
-        self.console_nav_button = QtWidgets.QPushButton()
-        self.console_nav_button.setText("Console (0)")
-
         self.data_viewer_nav_button = QtWidgets.QPushButton()
         self.data_viewer_nav_button.setText("Project Data")
 
@@ -45,6 +42,12 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         self.email_nav_button = QtWidgets.QPushButton()
         self.email_nav_button.setText("E-Mail")
+
+        self.console_nav_button = QtWidgets.QPushButton()
+        self.console_nav_button.setText("Console (0)")
+
+        self.settings_button = QtWidgets.QPushButton()
+        self.settings_button.setText("Settings")
 
         self.stats_title = QtWidgets.QLabel()
         self.stats_title.setText("Stats")
@@ -83,11 +86,13 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         # self.addWidget(self.navigation_title)
         self.addWidget(self.process_nav_button)
-        self.addWidget(self.console_nav_button)
+        
         self.addWidget(self.data_viewer_nav_button)
         self.addWidget(self.template_nav_button)
         self.addWidget(self.file_name_nav_button)
         self.addWidget(self.email_nav_button)
+        self.addWidget(self.console_nav_button)
+        self.addWidget(self.settings_button)
 
         self.addStretch()
 
@@ -105,9 +110,6 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.process_nav_button.setProperty(
             "id", self.indexOf(self.process_nav_button) - self.layout_index_count
         )
-        self.console_nav_button.setProperty(
-            "id", self.indexOf(self.console_nav_button) - self.layout_index_count
-        )
         self.data_viewer_nav_button.setProperty(
             "id", self.indexOf(self.data_viewer_nav_button) - self.layout_index_count
         )
@@ -120,13 +122,20 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.email_nav_button.setProperty(
             "id", self.indexOf(self.email_nav_button) - self.layout_index_count
         )
+        self.console_nav_button.setProperty(
+            "id", self.indexOf(self.console_nav_button) - self.layout_index_count
+        )
+        self.settings_button.setProperty(
+            "id", self.indexOf(self.settings_button) - self.layout_index_count
+        )
 
         self.process_nav_button.setProperty("class", "nav-button-active")
-        self.console_nav_button.setProperty("class", "nav-button")
         self.data_viewer_nav_button.setProperty("class", "nav-button")
         self.file_name_nav_button.setProperty("class", "nav-button")
         self.template_nav_button.setProperty("class", "nav-button")
         self.email_nav_button.setProperty("class", "nav-button")
+        self.console_nav_button.setProperty("class", "nav-button")
+        self.settings_button.setProperty("class", "nav-button")
 
         self.processed_files_button.setProperty("class", "stats-button")
         self.loaded_files_button.setProperty("class", "stats-button")
@@ -137,9 +146,6 @@ class NavigationView(QtWidgets.QVBoxLayout):
 
         self.process_nav_button.clicked.connect(
             lambda: self.handle_nav_change(self.process_nav_button)
-        )
-        self.console_nav_button.clicked.connect(
-            lambda: self.handle_nav_change(self.console_nav_button)
         )
         self.data_viewer_nav_button.clicked.connect(
             lambda: self.handle_nav_change(self.data_viewer_nav_button)
@@ -152,6 +158,12 @@ class NavigationView(QtWidgets.QVBoxLayout):
         )
         self.email_nav_button.clicked.connect(
             lambda: self.handle_nav_change(self.email_nav_button)
+        )
+        self.console_nav_button.clicked.connect(
+            lambda: self.handle_nav_change(self.console_nav_button)
+        )
+        self.settings_button.clicked.connect(
+            lambda: self.handle_nav_change(self.settings_button)
         )
 
         self.main_view_model.console_alerts_update.connect(
