@@ -1,6 +1,9 @@
 from typing import List, Optional, Callable
 from PySide6.QtWidgets import QMessageBox, QPushButton
-
+import os
+import json
+import uuid
+from version import VERSION
 
 class MessageBox:
     def __init__(
@@ -24,3 +27,43 @@ class FauxResponse:
     def __init__(self, status_code: int, text: str):
         self.status_code = status_code
         self.text = text
+
+def get_config_data(version: str = VERSION) -> dict:
+    """Gets the configuration data from the config.json file.
+
+    Returns:
+        dict: The configuration data.
+    """
+    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    if os.path.exists(config_file_path):
+
+        with open(config_file_path, "r") as f:
+            config = json.load(f)
+        
+        if config['version'] != version:
+            # Can display update data here
+            config['version'] = version
+            set_config_data(config)
+    else:
+        os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
+        
+        config = {
+            "version": VERSION,
+            "telemetry": {
+                "annonymous": False,
+                "identifier": str(uuid.uuid4()),
+            }
+        }
+        set_config_data(config)
+    return config
+
+def set_config_data(config: dict) -> None:
+    """Sets the configuration data in the config.json file.
+
+    Args:
+        config (dict): The configuration data.
+    """
+    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    with open(config_file_path, "w") as f:
+        json.dump(config, f, indent=4)
+    

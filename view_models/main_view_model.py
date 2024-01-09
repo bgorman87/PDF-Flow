@@ -4,7 +4,7 @@ import typing
 from PySide6 import QtCore
 import threading
 from models import main_model
-from utils.general_utils import MessageBox
+from utils.general_utils import MessageBox, set_config_data
 from utils.text_utils import post_telemetry_data
 
 
@@ -24,6 +24,7 @@ class MainViewModel(QtCore.QObject):
     profile_update_list = QtCore.Signal()
     parameter_update_list = QtCore.Signal()
     email_profiles_updated = QtCore.Signal(list)
+    anonymous_usage_update = QtCore.Signal(bool)
 
     def __init__(self, main_model: main_model.MainModel, config: dict = None):
         super().__init__()
@@ -401,3 +402,29 @@ class MainViewModel(QtCore.QObject):
 
         telemetry_thread = threading.Thread(target=telemetry_thread)
         telemetry_thread.start()
+
+    def fetch_unique_id(self) -> str:
+        return self._telemetry_id
+    
+    def set_unique_id(self, new_id: str) ->  bool:
+        
+        if new_id : 
+            self._telemetry_id = str(new_id)
+            return True
+        
+        return False
+    
+    def toggle_anonymous_usage(self, check_state: bool) -> None:
+
+        self.config["telemetry"]["annonymous"] = check_state
+        if check_state:
+            self._telemetry_id = None
+        else:
+            self._telemetry_id = self.config["telemetry"]["identifier"]
+        self.anonymous_usage_update.emit(check_state)
+        set_config_data(self.config)
+        
+        return
+    
+    def fetch_anonymous_usage(self) -> bool:
+        return self.config['telemetry']['annonymous']
