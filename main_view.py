@@ -5,10 +5,8 @@ else:
     Dispatch=None
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from datetime import date
 import json
 import uuid
-import sys
 
 from models import main_model
 from view_models import main_view_model, message_box_view_model
@@ -16,8 +14,7 @@ from views import message_box_view, navigation_view, stacked_view
 
 from utils import path_utils, general_utils
 
-# if getattr(sys, 'frozen', False):
-#     import pyi_splash
+__version__ = "0.1.1"
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
@@ -112,9 +109,6 @@ def main(version: str):
     window.navigation_view.setProperty("class", "nav-widget")
     window.show()
 
-    # if getattr(sys, 'frozen', False):
-    #     pyi_splash.close()
-
     app.exec()
 
 def get_config_data(version: str) -> dict:
@@ -138,7 +132,7 @@ def get_config_data(version: str) -> dict:
         os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
         
         config = {
-            "version": "0.1.0",
+            "version": __version__,
             "telemetry": {
                 "annonymous": False,
                 "identifier": str(uuid.uuid4()),
@@ -150,5 +144,4 @@ def get_config_data(version: str) -> dict:
     return config
 
 if __name__ == "__main__":
-    version = "0.1.0"
-    main(version)
+    main(__version__)

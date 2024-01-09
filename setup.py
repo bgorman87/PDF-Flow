@@ -5,6 +5,7 @@ A simple setup script to create an executable using PySide6.
 # Ensure pdf2image.py has Popen creation flags set to: creationflags=0x08000000
 
 from cx_Freeze import Executable, setup
+from main_view import __version__ as VERSION
 
 # Additional options
 build_exe_options = {
@@ -20,7 +21,7 @@ executables = [Executable("main_view.py", base="Win32GUI", icon="assets/icons/ic
 # Setup configuration
 setup(
     name="PDF Flow",
-    version="0.1.0",
+    version=VERSION,
     description="PDF Processing Tool",
     options={"build_exe": build_exe_options},
     executables=executables,
