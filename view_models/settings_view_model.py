@@ -54,13 +54,13 @@ class SettingsViewModel(QtCore.QObject):
         """
         return self.main_view_model.fetch_anonymous_usage()
     
-    def template_item_clicked(self, state: bool, profile_line: str) -> None:
+    def template_item_clicked(self, checkbox: QtWidgets.QCheckBox, profile_line: str) -> None:
         """Handles the template item being clicked
 
         Args:
             state (bool): True if checked, False if unchecked
         """
-        
+        state = checkbox.isChecked()
         print("template_item_clicked", state, profile_line)
         if state:
             self._chosen_templates.append(profile_line)
