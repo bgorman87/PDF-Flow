@@ -204,5 +204,5 @@ class NavigationView(QtWidgets.QVBoxLayout):
         """Opens the documentation link in the default browser."""
 
         QtGui.QDesktopServices.openUrl(
-            QtCore.QUrl("https://pdfflow.godevservices.com/")
+            QtCore.QUrl("https://pdfflow.godevservices.com/englobe/")
         )

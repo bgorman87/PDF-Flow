@@ -5,6 +5,7 @@ from utils import general_utils
 
 class SettingsViewModel(QtCore.QObject):
     anonymous_usage_update = QtCore.Signal(bool)
+    batch_email_update = QtCore.Signal(bool)
     selected_templates_update = QtCore.Signal(int)
     profile_list_update = QtCore.Signal()
 
@@ -15,7 +16,8 @@ class SettingsViewModel(QtCore.QObject):
         self._chosen_templates = []
 
         self.main_view_model.anonymous_usage_update.connect(self.anonymous_usage_update.emit)
-        self.main_view_model.profile_update_list.connect(lambda: self.profile_list_update.emit())
+        self.main_view_model.profile_update_list.connect(self.profile_list_update.emit)
+        self.main_view_model.batch_email_update.connect(self.batch_email_update.emit)
 
     def format_file_profile_list(self) -> list[str]:
         """Transforms profiles into a list with profile name and identifier text. profiles list comes from fetch_file_profiles from data_handler.
@@ -45,6 +47,14 @@ class SettingsViewModel(QtCore.QObject):
             check_state (bool): True if checked, False if unchecked
         """
         self.main_view_model.toggle_anonymous_usage(check_state)
+
+    def toggle_batch_email(self, check_state: bool) -> None:
+        """Toggles batch email in the data handler
+
+        Args:
+            check_state (bool): True if checked, False if unchecked
+        """
+        self.main_view_model.toggle_batch_email(check_state)
         
     def get_anonymous_state(self) -> bool:
         """Gets the anonymous usage state from the data handler
@@ -53,6 +63,14 @@ class SettingsViewModel(QtCore.QObject):
             bool: True if checked, False if unchecked
         """
         return self.main_view_model.fetch_anonymous_usage()
+    
+    def get_batch_email_state(self) -> bool:
+        """Gets the batch email state from the data handler
+
+        Returns:
+            bool: True if checked, False if unchecked
+        """
+        return self.main_view_model.fetch_batch_email()
     
     def template_item_clicked(self, checkbox: QtWidgets.QCheckBox, profile_line: str) -> None:
         """Handles the template item being clicked

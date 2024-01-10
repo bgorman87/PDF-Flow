@@ -882,3 +882,19 @@ class ProcessViewModel(QtCore.QObject):
         email_item.setData(QtCore.Qt.UserRole, file_data)
 
         self.email_files([email_item])
+
+    def get_batch_email_state(self) -> bool:
+        """Gets the batch email state from the data handler
+
+        Returns:
+            bool: True if checked, False if unchecked
+        """
+        return self.main_view_model.fetch_batch_email()
+    
+    def toggle_batch_email(self, check_state: bool) -> None:
+        """Toggles batch email in the data handler
+
+        Args:
+            check_state (bool): True if checked, False if unchecked
+        """
+        self.main_view_model.toggle_batch_email(check_state)

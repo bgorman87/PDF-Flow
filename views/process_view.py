@@ -4,6 +4,7 @@ from view_models import process_view_model
 from widgets import utility_widgets
 from utils.image_utils import resource_path
 from utils.enums import EmailProvider
+from widgets.utility_widgets import HorizontalLine
 
 
 class ProcessView(QtWidgets.QWidget):
@@ -314,6 +315,16 @@ class ProcessView(QtWidgets.QWidget):
         local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL, processed))
         local_button.clicked.connect(popup.accept)
         popup_layout.addWidget(local_button)
+
+        popup_layout.addWidget(HorizontalLine())
+
+        # Display batch email checkbox
+        batch_email_checkbox = QtWidgets.QCheckBox()
+        batch_email_checkbox.setText("Combine similar e-mails?")
+        batch_email_checkbox.setToolTip("Will combine similar e-mails to prevent spamming recipients.")
+        batch_email_checkbox.setChecked(self.view_model.get_batch_email_state())
+        batch_email_checkbox.stateChanged.connect(self.view_model.toggle_batch_email)
+        popup_layout.addWidget(batch_email_checkbox)        
 
         popup.exec()
 

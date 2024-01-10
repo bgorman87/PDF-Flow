@@ -25,6 +25,7 @@ class MainViewModel(QtCore.QObject):
     parameter_update_list = QtCore.Signal()
     email_profiles_updated = QtCore.Signal(list)
     anonymous_usage_update = QtCore.Signal(bool)
+    batch_email_update = QtCore.Signal(bool)
 
     def __init__(self, main_model: main_model.MainModel, config: dict = None):
         super().__init__()
@@ -428,3 +429,17 @@ class MainViewModel(QtCore.QObject):
     
     def fetch_anonymous_usage(self) -> bool:
         return self.config['telemetry']['annonymous']
+    
+    def fetch_batch_email(self) -> bool:
+        try:
+            return self.config['batch-email']
+        except KeyError:
+            self.config['batch-email'] = False
+            set_config_data(self.config)
+            return self.config['batch-email']
+    
+    def toggle_batch_email(self, check_state: bool) -> None:
+        self.config['batch-email'] = check_state
+        set_config_data(self.config)
+        self.batch_email_update.emit(check_state)
+        return
