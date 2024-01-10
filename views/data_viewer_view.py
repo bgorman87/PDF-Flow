@@ -289,6 +289,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Email to list widget
         self.database_email_to_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_to_list_widget.setProperty("email_type", "email_to")
         # Enable dragging and dropping of items within the list widget
         self.database_email_to_list_widget.setDragDropMode(
             QtWidgets.QListWidget.InternalMove
@@ -309,6 +310,39 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.project_data_email_to_layout.addWidget(self.database_email_to_list_widget)
 
+        # Add 2 buttons to add new item and edit bulk items
+        self.database_email_to_list_button_layout = QtWidgets.QHBoxLayout()
+
+        # Add new item button
+        self.database_email_to_list_add_button = QtWidgets.QPushButton()
+        self.database_email_to_list_add_button.clicked.connect(
+            self.database_email_to_list_widget.add_new_email
+        )
+        self.database_email_to_list_add_button.setObjectName(
+            "database_email_to_list_add_button"
+        )
+        self.database_email_to_list_button_layout.addWidget(
+            self.database_email_to_list_add_button
+        )
+
+        # Edit bulk items button
+        self.database_email_to_list_edit_button = QtWidgets.QPushButton()
+        self.database_email_to_list_edit_button.clicked.connect(
+            lambda: self.database_list_widget_edit_bulk(
+                self.database_email_to_list_widget
+            )
+        )
+        self.database_email_to_list_edit_button.setObjectName(
+            "database_email_to_list_edit_button"
+        )
+        self.database_email_to_list_button_layout.addWidget(
+            self.database_email_to_list_edit_button
+        )
+
+        self.project_data_email_to_layout.addLayout(
+            self.database_email_to_list_button_layout
+        )
+
         self.project_data_email_lists_layout.addLayout(
             self.project_data_email_to_layout
         )
@@ -321,6 +355,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Email cc list widget
         self.database_email_cc_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_cc_list_widget.setProperty("email_type", "email_cc")
         # Enable dragging and dropping of items within the list widget
         self.database_email_cc_list_widget.setDragDropMode(
             QtWidgets.QListWidget.InternalMove
@@ -336,6 +371,39 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.project_data_email_cc_layout.addWidget(self.database_email_cc_list_widget)
 
+        # Add 2 buttons to add new item and edit bulk items
+        self.database_email_cc_list_button_layout = QtWidgets.QHBoxLayout()
+
+        # Add new item button
+        self.database_email_cc_list_add_button = QtWidgets.QPushButton()
+        self.database_email_cc_list_add_button.clicked.connect(
+            self.database_email_cc_list_widget.add_new_email
+        )
+        self.database_email_cc_list_add_button.setObjectName(
+            "database_email_cc_list_add_button"
+        )
+        self.database_email_cc_list_button_layout.addWidget(
+            self.database_email_cc_list_add_button
+        )
+
+        # Edit bulk items button
+        self.database_email_cc_list_edit_button = QtWidgets.QPushButton()
+        self.database_email_cc_list_edit_button.clicked.connect(
+            lambda: self.database_list_widget_edit_bulk(
+                self.database_email_cc_list_widget
+            )
+        )
+        self.database_email_cc_list_edit_button.setObjectName(
+            "database_email_cc_list_edit_button"
+        )
+        self.database_email_cc_list_button_layout.addWidget(
+            self.database_email_cc_list_edit_button
+        )
+
+        self.project_data_email_cc_layout.addLayout(
+            self.database_email_cc_list_button_layout
+        )
+
         self.project_data_email_lists_layout.addLayout(
             self.project_data_email_cc_layout
         )
@@ -348,6 +416,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Email bcc list widget
         self.database_email_bcc_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_bcc_list_widget.setProperty("email_type", "email_bcc")
         # Enable dragging and dropping of items within the list widget
         self.database_email_bcc_list_widget.setDragDropMode(
             QtWidgets.QListWidget.InternalMove
@@ -363,6 +432,39 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.project_data_email_bcc_layout.addWidget(
             self.database_email_bcc_list_widget
+        )
+
+        # Add 2 buttons to add new item and edit bulk items
+        self.database_email_bcc_list_button_layout = QtWidgets.QHBoxLayout()
+
+        # Add new item button
+        self.database_email_bcc_list_add_button = QtWidgets.QPushButton()
+        self.database_email_bcc_list_add_button.clicked.connect(
+            self.database_email_bcc_list_widget.add_new_email
+        )
+        self.database_email_bcc_list_add_button.setObjectName(
+            "database_email_bcc_list_add_button"
+        )
+        self.database_email_bcc_list_button_layout.addWidget(
+            self.database_email_bcc_list_add_button
+        )
+
+        # Edit bulk items button
+        self.database_email_bcc_list_edit_button = QtWidgets.QPushButton()
+        self.database_email_bcc_list_edit_button.clicked.connect(
+            lambda: self.database_list_widget_edit_bulk(
+                self.database_email_bcc_list_widget
+            )
+        )
+        self.database_email_bcc_list_edit_button.setObjectName(
+            "database_email_bcc_list_edit_button"
+        )
+        self.database_email_bcc_list_button_layout.addWidget(
+            self.database_email_bcc_list_edit_button
+        )
+
+        self.project_data_email_bcc_layout.addLayout(
+            self.database_email_bcc_list_button_layout
         )
 
         self.project_data_email_lists_layout.addLayout(
@@ -472,6 +574,24 @@ class DataViewerView(QtWidgets.QWidget):
         )
         self.profile_email_label.setText(
             _translate("MainWindow", "Project Email Profile:")
+        )
+        self.database_email_to_list_add_button.setText(
+            _translate("MainWindow", "Add New")
+        )
+        self.database_email_to_list_edit_button.setText(
+            _translate("MainWindow", "Edit Bulk")
+        )
+        self.database_email_cc_list_add_button.setText(
+            _translate("MainWindow", "Add New")
+        )
+        self.database_email_cc_list_edit_button.setText(
+            _translate("MainWindow", "Edit Bulk")
+        )
+        self.database_email_bcc_list_add_button.setText(
+            _translate("MainWindow", "Add New")
+        )
+        self.database_email_bcc_list_edit_button.setText(
+            _translate("MainWindow", "Edit Bulk")
         )
 
     def database_project_directory(self):
@@ -717,14 +837,8 @@ class DataViewerView(QtWidgets.QWidget):
             self._project_data_loaded_data["email_subject"]
         )
 
-        for index, widget in zip(
-            ["email_to", "email_cc", "email_bcc"],
-            [
-                self.database_email_to_list_widget,
-                self.database_email_cc_list_widget,
-                self.database_email_bcc_list_widget,
-            ],
-        ):
+        for widget in [self.database_email_to_list_widget, self.database_email_cc_list_widget, self.database_email_bcc_list_widget]:
+            index = widget.property("email_type")
             email_addresses = self._project_data_loaded_data[index].split(";")
             email_addresses = [address.strip() for address in email_addresses]
             for email_address in email_addresses:
@@ -766,31 +880,36 @@ class DataViewerView(QtWidgets.QWidget):
             self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
+            return
         
         # If user is adding new entry and there is text, then enable save/discard buttons
         elif self._adding_new_entry and new_text:
             self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
+            return
 
         # If user presses new entry, loaded data gets changed to None,   
         elif new_text and self._project_data_loaded_data.get(project_data_type) is None:
             self.save_button_reset_new_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
+            return
 
         # If there is data loaded, and the data in the field being checked is different than the loaded data, then
         # user is changing the data. 
-        elif new_text and self._project_data_loaded_data.get(project_data_type) is not None and self._project_data_loaded_data.get(project_data_type) != new_text:
+        elif new_text is not None and self._project_data_loaded_data is not None and self._project_data_loaded_data.get(project_data_type) != new_text:
             self._project_data_changed = True
             self.save_button_reset_change_entry()
             self.database_discard_edited_project_data_button.setEnabled(True)
             self.database_save_edited_project_data_button.setEnabled(True)
+            return
 
         else:
             self.save_button_reset_change_entry()
             self.database_discard_edited_project_data_button.setEnabled(False)
             self.database_save_edited_project_data_button.setEnabled(False)
+            return
 
     def discard_project_data_changes(self):
         self.database_discard_edited_project_data_button.setEnabled(False)
@@ -906,3 +1025,24 @@ class DataViewerView(QtWidgets.QWidget):
         "\nLeave this blank to use the specific file type email template."
 
         self.view_model.display_tooltip(text=text)
+
+    def database_list_widget_edit_bulk(self, email_widget: email_list_widget.EmailListWidget):
+        """Opens a dialog to edit all items in a list widget at once."""
+        
+        emails = []
+        for i in range(email_widget.count()):
+            emails.append(email_widget.item(i).text())
+
+        title = "Bulk Edit Email Addresses"
+        email_type = str(email_widget.property("email_type")).replace('email_','').upper()
+        label = f"Email Addresses (separate with ';')"
+        default_text = "; ".join(emails)
+
+        line_edit_text = utility_widgets.LineEditDialog(self, title=title, label=label, prefix=email_type, default_text=default_text)
+        if line_edit_text is not None and line_edit_text != default_text:
+            new_emails = line_edit_text.split(";")
+            new_emails = [email.strip() for email in new_emails]
+            email_widget.set_items(new_emails)
+
+            self.project_data_change_check(email_widget, email_type)
+
