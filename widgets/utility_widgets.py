@@ -191,3 +191,35 @@ class ROIGroupBox(QtWidgets.QGroupBox):
             self.extra_value_label.setText("Returned Value: ")
 
         self.process_method_changed.emit()
+
+def LineEditDialog(parent, title: str, label: str, prefix: str = "", default_text: str = ""):
+    dialog = QtWidgets.QDialog(parent)
+    dialog.setWindowTitle(title)
+    dialog.setWindowFlags(dialog.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+    dialog.setWindowIcon(parent.windowIcon())
+
+    layout = QtWidgets.QVBoxLayout(dialog)
+    label = QtWidgets.QLabel(label)
+    layout.addWidget(label)
+
+    line_edit_layout = QtWidgets.QHBoxLayout()
+    line_edit_prefix = QtWidgets.QLabel(f"{prefix}:")
+    line_edit_layout.addWidget(line_edit_prefix)
+
+    line_edit = QtWidgets.QLineEdit()
+    line_edit.setText(default_text)
+    line_edit.setMinimumWidth(400)
+    line_edit_layout.addWidget(line_edit)
+
+    layout.addLayout(line_edit_layout)
+
+    button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+    layout.addWidget(button_box)
+
+    button_box.accepted.connect(dialog.accept)
+    button_box.rejected.connect(dialog.reject)
+
+    if dialog.exec_() == QtWidgets.QDialog.Accepted:
+        return line_edit.text()
+    else:
+        return None

@@ -41,20 +41,7 @@ class EmailListWidget(QtWidgets.QListWidget):
 
                     # If list is empty just add blank item without checking last item
                     # Do this before checking last items text as well since it'll throw error otherwise
-                    if self.count() == 0:
-                        new_item = QtWidgets.QListWidgetItem()
-                        new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
-                        self.addItem(new_item)
-
-                    # If last item already blank, dont add another
-                    elif self.item(self.count() - 1).text() == "":
-                        return
-
-                    # If last item isnt blank and count greater than zero add a blank item
-                    else:
-                        new_item = QtWidgets.QListWidgetItem()
-                        new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
-                        self.addItem(new_item)
+                    self.add_new_email()
                 else:
                     # Start editing item
                     self.editItem(item)
@@ -65,3 +52,22 @@ class EmailListWidget(QtWidgets.QListWidget):
         if event.source() == self:
             event.setDropAction(QtCore.Qt.MoveAction)
             super().dropEvent(event)
+
+    def add_new_email(self):
+        # If last item already blank, dont add another
+        if self.count() > 0 and self.item(self.count() - 1).text() == "":
+            item = self.item(self.count() - 1)
+        else:
+            new_item = QtWidgets.QListWidgetItem()
+            new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
+            self.addItem(new_item)
+            item = new_item
+        
+        self.editItem(item)
+
+    def set_items(self, emails):
+        self.clear()
+        for email in emails:
+            new_item = QtWidgets.QListWidgetItem(email)
+            new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
+            self.addItem(new_item)
