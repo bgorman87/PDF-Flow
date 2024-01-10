@@ -41,6 +41,7 @@ class ProcessViewModel(QtCore.QObject):
         self._token = ""
         self.email_provider = None
         self.Dispatch = Dispatch
+        self._email_items = []
 
     def get_files(self):
         """Opens a file dialog to select files for input"""
@@ -360,15 +361,16 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             email_items (List[QtWidgets.QListWidgetItem]): List of Email items from processed files list widget
         """
-
+        emails = []
         for email_item in email_items:
+            email_dict = {}
             file_data = email_item.data(QtCore.Qt.UserRole)
             source_path = file_data["source"]
-
+            project_number = file_data.get("project_number")
             # Project specific email templates override report specific email templates
             email_template = (
                 self.main_view_model.fetch_email_profile_name_by_project_number(
-                    file_data["project_number"]
+                    project_number
                 )
             )
 
@@ -378,7 +380,6 @@ class ProcessViewModel(QtCore.QObject):
                         file_data["profile_id"]
                     )
                 )
-            self.main_view_model.update_emailed_files_update_count(1)
             body_content = ""
             if email_template:
                 if " - Outlook" in email_template:
@@ -413,8 +414,7 @@ class ProcessViewModel(QtCore.QObject):
             recipients = []
             cc_recipients = []
             bcc_recipients = []
-            if file_data["project_number"] is not None:
-                project_number = file_data["project_number"]
+            if project_number is not None:
                 email_template_info = (
                     self.main_view_model.fetch_project_data_by_project_number(
                         project_number
@@ -429,49 +429,104 @@ class ProcessViewModel(QtCore.QObject):
             attachments = [
                 source_path,
             ]
-            if self.email_provider == EmailProvider.OUTLOOK:
-                email_info = self.create_outlook_draft_email(
-                    subject,
-                    body_content,
-                    recipients,
-                    cc_recipients,
-                    bcc_recipients,
-                    attachments,
-                    email_template,
-                )
-            elif self.email_provider == EmailProvider.GMAIL:
-                email_info = self.create_gmail_draft_email(
-                    subject,
-                    body_content,
-                    recipients,
-                    cc_recipients,
-                    bcc_recipients,
-                    attachments,
-                    email_template,
-                )
-            elif self.email_provider == EmailProvider.LOCAL:
-                email_info = self.create_local_draft_email(
-                    subject,
-                    body_content,
-                    recipients,
-                    cc_recipients,
-                    bcc_recipients,
-                    attachments,
-                    email_template,
-                )
-            if email_info.status_code == 201:
-                self.main_view_model.add_console_text(
-                    f"Draft email created for: {os.path.basename(source_path)}"
-                )
-                self.main_view_model.add_console_alerts(1)
-            else:
-                self.main_view_model.add_console_text(
-                    f"Error creating draft email for: {os.path.basename(source_path)}"
-                )
-                self.main_view_model.add_console_text(
-                    f"{email_info.status_code} - {email_info.text}"
-                )
-                self.main_view_model.add_console_alerts(1)
+
+            email_dict["project_number"] = project_number
+            email_dict["subject"] = subject
+            email_dict["body_content"] = body_content
+            email_dict["recipients"] = recipients
+            email_dict["cc_recipients"] = cc_recipients
+            email_dict["bcc_recipients"] = bcc_recipients
+            email_dict["attachments"] = attachments
+            email_dict["email_template"] = email_template
+
+            emails.append(email_dict)
+
+        if self.main_view_model.config['batch-email']:
+            merged_emails = {}
+            emails_without_project_number = []
+
+            for email in emails:
+                project_number = email.get("project_number")
+
+                if project_number:
+                    if project_number not in merged_emails:
+                        # Initialize with the first email's details for this project number
+                        merged_emails[project_number] = email.copy()
+                    else:
+                        # Add attachments from subsequent emails with the same project number
+                        merged_emails[project_number]["attachments"].extend(email["attachments"])
+                else:
+                    # Keep emails without a project number separate
+                    emails_without_project_number.append(email)
+
+            # Combine the merged emails with the ones without a project number
+            emails = list(merged_emails.values()) + emails_without_project_number
+
+        for email in emails:
+            self.send_email(
+                email["subject"],
+                email["body_content"],
+                email["recipients"],
+                email["cc_recipients"],
+                email["bcc_recipients"],
+                email["attachments"],
+                email["email_template"],
+            )
+            self.main_view_model.update_emailed_files_update_count(1)
+
+    def send_email(
+        self,
+        subject: str,
+        body_content: str,
+        recipients: List[str],
+        cc_recipients: List[str] = None,
+        bcc_recipients: List[str] = None,
+        attachments: List[str] = None,
+        email_template: str = None,
+    ) -> None:
+        if self.email_provider == EmailProvider.OUTLOOK:
+            email_info = self.create_outlook_draft_email(
+                subject,
+                body_content,
+                recipients,
+                cc_recipients,
+                bcc_recipients,
+                attachments,
+                email_template,
+            )
+        elif self.email_provider == EmailProvider.GMAIL:
+            email_info = self.create_gmail_draft_email(
+                subject,
+                body_content,
+                recipients,
+                cc_recipients,
+                bcc_recipients,
+                attachments,
+                email_template,
+            )
+        elif self.email_provider == EmailProvider.LOCAL:
+            email_info = self.create_local_draft_email(
+                subject,
+                body_content,
+                recipients,
+                cc_recipients,
+                bcc_recipients,
+                attachments,
+                email_template,
+            )
+        if email_info.status_code == 201:
+            self.main_view_model.add_console_text(
+                f"Draft email created for: {os.path.basename(attachments[0])}"
+            )
+            self.main_view_model.add_console_alerts(1)
+        else:
+            self.main_view_model.add_console_text(
+                f"Error creating draft email for: {os.path.basename(attachments[0])}"
+            )
+            self.main_view_model.add_console_text(
+                f"{email_info.status_code} - {email_info.text}"
+            )
+            self.main_view_model.add_console_alerts(1)
 
     def create_outlook_draft_email(
         self,
@@ -881,7 +936,18 @@ class ProcessViewModel(QtCore.QObject):
         email_item = QtWidgets.QListWidgetItem(file_name)
         email_item.setData(QtCore.Qt.UserRole, file_data)
 
-        self.email_files([email_item])
+        self.email_tracker(email_item)
+
+    def email_tracker(self, email_item: QtWidgets.QListWidgetItem):
+        """Tracks the email in the data handler
+
+        Args:
+            email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
+        """
+        self._email_items.append(email_item)
+        # Once all files have been processed, email them
+        if len(self._email_items) == len(self._file_names):
+            self.email_files(self._email_items)
 
     def get_batch_email_state(self) -> bool:
         """Gets the batch email state from the data handler
