@@ -52,7 +52,8 @@ def get_config_data(version: str = VERSION) -> dict:
             "telemetry": {
                 "annonymous": False,
                 "identifier": str(uuid.uuid4()),
-            }
+            },
+            "batch-email": False,
         }
         set_config_data(config)
     return config

@@ -68,6 +68,19 @@ class SettingsView(QtWidgets.QWidget):
         self.config_list.setAlignment(QtCore.Qt.AlignTop)
         self.config_list.setObjectName("config_list")
 
+        batch_email_layout = QtWidgets.QHBoxLayout()
+        self.batch_email_label = QtWidgets.QLabel("Enable batch email: ")
+        self.batch_email_label.setContentsMargins(0, 5, 20, 5)
+        self.batch_email_checkbox = QtWidgets.QCheckBox()
+        self.batch_email_checkbox.setToolTip("Enables batch email functionality.")
+        self.batch_email_checkbox.setChecked(self.view_model.get_batch_email_state())
+        self.batch_email_checkbox.clicked.connect(self.view_model.toggle_batch_email)
+        batch_email_layout.addWidget(self.batch_email_label)
+        batch_email_layout.addWidget(self.batch_email_checkbox)
+
+        batch_email_layout.addStretch(1)
+        self.config_list.addLayout(batch_email_layout)
+
         anonymous_layout = QtWidgets.QHBoxLayout()
         self.anonymous_label = QtWidgets.QLabel("Enable anonymous usage statistics:")
         self.anonymous_label.setContentsMargins(0, 5, 20, 5)
@@ -116,6 +129,9 @@ class SettingsView(QtWidgets.QWidget):
         self.view_model.profile_list_update.connect(
             self.update_profile_list
         )
+        self.view_model.batch_email_update.connect(
+            self.update_batch_email
+        )
 
 
     def translate_ui(self):
@@ -124,6 +140,9 @@ class SettingsView(QtWidgets.QWidget):
         self.settings_profile_template_label.setText(
             _translate("FileNameView", "Choose Profile:")
         )
+
+    def update_batch_email(self):
+        self.batch_email_checkbox.setChecked(self.view_model.get_batch_email_state())
 
     def update_anonymous_config_options(self, anonymous: bool):
         if anonymous:
