@@ -385,9 +385,9 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                     potential_list = result.split("\n")
 
                     try:
-                        primary_list = [line.strip() for line in potential_list]
+                        primary_list = [line.strip() for line in potential_list if line != ""]
                         if secondary_parameter_data:
-                            secondary_list = [line.strip() for line in secondary_result.split("\n")]
+                            secondary_list = [line.strip() for line in secondary_result.split("\n") if line != ""]
                             processed_data = text_utils.process_list_comparison(primary_list, advanced_option, secondary_list, secondary_advanced_option, comparison_type)
                         else:
                             processed_data = text_utils.process_list_comparison(primary_list, advanced_option)
