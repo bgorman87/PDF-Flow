@@ -137,7 +137,7 @@ def process_list(list_data, list_type, advanced_option):
     elif advanced_option == "max_index":
         result = list_data.index(max(list_data))
     elif advanced_option == "length":
-        result = len(list_data)
+        result = len(list_data) - 1
     elif advanced_option == "sum":
         result = sum(list_data)
     elif advanced_option == "first_value":
