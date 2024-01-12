@@ -31,6 +31,7 @@ class ProcessViewModel(QtCore.QObject):
     processed_files_list_widget_update = QtCore.Signal(QtWidgets.QListWidgetItem)
     display_pdf_preview = QtCore.Signal()
     display_file_name = QtCore.Signal()
+    active_files_update = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
@@ -44,6 +45,7 @@ class ProcessViewModel(QtCore.QObject):
         self.email_provider = None
         self.Dispatch = Dispatch
         self._email_items = []
+        self.active_files_table_items = []
 
     def get_files(self):
         """Opens a file dialog to select files for input"""
@@ -84,6 +86,7 @@ class ProcessViewModel(QtCore.QObject):
         )
 
         # Signals for this are defined in main_view_model because nav needs the info as well
+        self.create_active_files_table_items()
         self.main_view_model.add_console_text(file_names_string)
         self.main_view_model.add_console_alerts(number_files)
         self.main_view_model.set_loaded_files_count(number_files)
@@ -132,6 +135,17 @@ class ProcessViewModel(QtCore.QObject):
 
             self.evt_analyze_progress(10)
         self.main_view_model.set_process_button_count(0)
+
+    def table_widget_handler(self, table_widget_item: QtWidgets.QTableWidgetItem):
+
+        file_dirs = table_widget_item.data(QtCore.Qt.UserRole)
+        source_dir = file_dirs["source"].replace("\\", "/")
+
+        self._selected_file_dir = source_dir
+        self.display_pdf_preview.emit()
+
+        self._selected_file_name = table_widget_item.text()
+        self.display_file_name.emit()
 
     def list_widget_handler(self, list_widget_item: QtWidgets.QListWidgetItem):
         """Displays the currently selected list widget item"""
@@ -985,3 +999,35 @@ class ProcessViewModel(QtCore.QObject):
             check_state (bool): True if checked, False if unchecked
         """
         self.main_view_model.toggle_batch_email(check_state)
+
+    def update_active_files(self, files: List[str]) -> None:
+        self._file_names = files
+
+    def create_active_files_table_items(self):
+        if not self._file_names:
+            return
+        
+        for file_name in self._file_names:
+            row_items = []
+            file_data = {
+                "source": file_name,
+            }
+            
+            checkbox_item = QtWidgets.QTableWidgetItem()
+            checkbox_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            checkbox_item.setCheckState(QtCore.Qt.Unchecked)
+            row_items.append(checkbox_item)
+
+            active_files_table_item = QtWidgets.QTableWidgetItem(os.path.basename(file_name))
+            active_files_table_item.setToolTip(os.path.basename(file_name))
+            active_files_table_item.setData(QtCore.Qt.UserRole, file_data)
+            row_items.append(active_files_table_item)
+
+            processed_item = QtWidgets.QTableWidgetItem("No")
+            row_items.append(processed_item)
+
+            emailed_item = QtWidgets.QTableWidgetItem("No")
+            row_items.append(emailed_item)
+
+            self.active_files_table_items.append(row_items)
+        self.active_files_update.emit()
