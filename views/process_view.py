@@ -1,9 +1,9 @@
-from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui, QtWebEngineCore, QtWebEngineWidgets, QtWidgets
 
+from utils.enums import EmailProvider
+from utils.image_utils import resource_path
 from view_models import process_view_model
 from widgets import utility_widgets
-from utils.image_utils import resource_path
-from utils.enums import EmailProvider
 from widgets.utility_widgets import HorizontalLine
 
 
@@ -27,9 +27,15 @@ class ProcessView(QtWidgets.QWidget):
         self.process_button.setObjectName("analyze_button")
         self.process_button.setEnabled(False)
         self.view_model.main_view_model.process_button_state_update.connect(
-            lambda: self.process_button.setEnabled(self.view_model.main_view_model.process_button_state))
+            lambda: self.process_button.setEnabled(
+                self.view_model.main_view_model.process_button_state
+            )
+        )
         self.view_model.main_view_model.process_button_count_update.connect(
-            lambda: self.process_button_text_update(self.view_model.main_view_model.process_button_count))
+            lambda: self.process_button_text_update(
+                self.view_model.main_view_model.process_button_count
+            )
+        )
         self.input_tab_action_buttons.addWidget(self.process_button)
 
         # Action button to start email process
@@ -57,32 +63,74 @@ class ProcessView(QtWidgets.QWidget):
         self.line_below_action_buttons_layout.addWidget(self.input_tab_line_2)
         self.main_layout.addLayout(self.line_below_action_buttons_layout)
 
-        # Label for list widget below
-        self.processed_files_label = QtWidgets.QLabel()
-        self.processed_files_label.setGeometry(QtCore.QRect(10, 10, 81, 16))
-        self.processed_files_label.setObjectName("processed_files_label")
-        self.main_layout.addWidget(self.processed_files_label)
+        # Table to hold all of the files
+        self.files_table = QtWidgets.QTableWidget()
+        self.files_table.setObjectName("files_table")
+        self.files_table.setColumnCount(4)
+        self.files_table.setRowCount(0)
+
+        self.header_select = QtWidgets.QTableWidgetItem()
+        self.files_table.setHorizontalHeaderItem(0, self.header_select)
+
+        self.header_file_name = QtWidgets.QTableWidgetItem()
+        self.header_file_name.setText("File Name")
+        self.files_table.setHorizontalHeaderItem(1, self.header_file_name)
+
+        self.header_processed = QtWidgets.QTableWidgetItem()
+        self.header_processed.setText("Processed")
+        self.files_table.setHorizontalHeaderItem(2, self.header_processed)
+
+        self.header_email = QtWidgets.QTableWidgetItem()
+        self.header_email.setText("Email")
+        self.files_table.setHorizontalHeaderItem(3, self.header_email)
+
+        self.files_table.setSortingEnabled(True)
+        self.files_table.setSelectionMode(QtWidgets.QTableWidget.SingleSelection)
+        self.files_table.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        header = self.files_table.horizontalHeader()
+
+        # Set the first column to resize to its contents
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+
+        # Set the second column to stretch
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+
+        # Set the remaining columns to resize to their contents
+        for i in range(2, self.files_table.columnCount()):
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
+
+        self.files_table.currentItemChanged.connect(
+            lambda: self.view_model.table_widget_handler(
+                self.files_table.item(self.files_table.currentRow(), 1)
+            )
+        )
+
+        self.view_model.active_files_update.connect(self.update_table_data)
+
+        self.main_layout.addWidget(self.files_table)
 
         # Widget to hold analyzed files
         self.processed_files_list_widget = QtWidgets.QListWidget()
         self.processed_files_list_widget.setSelectionMode(
             QtWidgets.QAbstractItemView.SingleSelection
         )
-        self.processed_files_list_widget.setGeometry(
-            QtCore.QRect(10, 30, 320, 100))
-        self.processed_files_list_widget.setObjectName(
-            "processed_files_list_widget")
+        self.processed_files_list_widget.setGeometry(QtCore.QRect(10, 30, 320, 100))
+        self.processed_files_list_widget.setObjectName("processed_files_list_widget")
         self.main_layout.addWidget(self.processed_files_list_widget)
         self.main_layout.setStretch(
             self.main_layout.indexOf(self.processed_files_list_widget), 2
         )
         self.view_model.processed_files_list_widget_update.connect(
-            self.add_processed_list_widget_item)
+            self.add_processed_list_widget_item
+        )
 
         # Lines within the analyzed files widget above
         self.processed_files_list_item = QtWidgets.QListWidgetItem()
         self.processed_files_list_widget.itemClicked.connect(
-            lambda: self.view_model.list_widget_handler(self.processed_files_list_widget.currentItem()))
+            lambda: self.view_model.list_widget_handler(
+                self.processed_files_list_widget.currentItem()
+            )
+        )
         self.processed_files_list_widget.itemDoubleClicked.connect(
             self.rename_file_handler
         )
@@ -131,9 +179,7 @@ class ProcessView(QtWidgets.QWidget):
         self.file_preview.setHtml("<body bgcolor='#4a4a4a'></body>")
         self.view_model.display_pdf_preview.connect(self.display_pdf_preview)
         self.main_layout.addWidget(self.file_preview)
-        self.main_layout.setStretch(
-            self.main_layout.indexOf(self.file_preview), 8
-        )
+        self.main_layout.setStretch(self.main_layout.indexOf(self.file_preview), 8)
 
         # self.file_preview.show()
 
@@ -144,9 +190,15 @@ class ProcessView(QtWidgets.QWidget):
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setFormat("Select Files to Begin...")
         self.view_model.main_view_model.process_progress_value_update.connect(
-            lambda: self.progress_bar.setValue(self.view_model.main_view_model.process_progress_value))
+            lambda: self.progress_bar.setValue(
+                self.view_model.main_view_model.process_progress_value
+            )
+        )
         self.view_model.main_view_model.process_progress_text_update.connect(
-            lambda: self.progress_bar.setFormat(self.view_model.main_view_model.process_progress_text))
+            lambda: self.progress_bar.setFormat(
+                self.view_model.main_view_model.process_progress_text
+            )
+        )
         self.main_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_layout)
 
@@ -154,20 +206,34 @@ class ProcessView(QtWidgets.QWidget):
 
     def translate_ui(self):
         """Translates UI"""
-        
+
         _translate = QtCore.QCoreApplication.translate
-        self.select_files.setText(
-            _translate("SettingsView", "Select Files")
-        )
-        self.process_button.setText(
-            _translate("SettingsView", "Process")
-        )
-        self.email_button.setText(_translate("SettingsView", "Email"))
-        self.processed_files_label.setText(
-            _translate("SettingsView", "Processed Files"))
-        self.file_rename_button.setText(_translate("SettingsView", "Rename"))
-        self.file_preview_label.setText(
-            _translate("SettingsView", "File Previewer"))
+        self.select_files.setText(_translate("ProcessView", "Import Files"))
+        self.process_button.setText(_translate("ProcessView", "Process"))
+        self.email_button.setText(_translate("ProcessView", "Email"))
+        self.file_rename_button.setText(_translate("ProcessView", "Rename"))
+        self.file_preview_label.setText(_translate("ProcessView", "File Previewer"))
+
+    def check_selection_handler(self, state: bool):
+        for i in range(1, self.files_table.rowCount()):
+            checkbox = self.files_table.cellWidget(i, 0)
+            checkbox.setChecked(state)
+
+    def delete_selected(self):
+        for i in range(1, self.files_table.rowCount()):
+            checkbox = self.files_table.cellWidget(i, 0)
+            if checkbox.isChecked():
+                # Delete the row
+                self.files_table.removeRow(i)
+                self.update_active_files()
+
+    def update_active_files(self):
+        active_files = []
+        for i in range(1, self.files_table.rowCount()):
+            file_path = self.files_table.item(i, 1).data(QtCore.Qt.UserRole)
+            file_path = file_path["source"]
+            active_files.append(file_path)
+        self.view_model.update_active_files(active_files)
 
     def display_pdf_preview(self):
         """Displays PDF preview in webview"""
@@ -177,7 +243,7 @@ class ProcessView(QtWidgets.QWidget):
 
     def display_file_name(self):
         """Displays file name in line edit"""
-        
+
         pdf_name = self.view_model.selected_file_name
         self.file_rename_line_edit.setText(pdf_name)
 
@@ -224,14 +290,14 @@ class ProcessView(QtWidgets.QWidget):
 
     def file_rename_button_handler(self):
         """Renames file in list widget and on disk"""
-        
+
         current_item = self.processed_files_list_widget.currentItem()
         current_name = current_item.text()
         new_name = self.file_rename_line_edit.text()
 
         if new_name == current_name:
             return
-        
+
         file_data = current_item.data(QtCore.Qt.UserRole)
 
         source_path = str(file_data["source"])
@@ -243,8 +309,12 @@ class ProcessView(QtWidgets.QWidget):
 
         project_data_path = file_data["project_data"]
         if project_data_path:
-            renamed_project_data_path = project_data_path.replace(current_name, new_name)
-            renamed = self.view_model.rename_file(project_data_path, renamed_project_data_path)
+            renamed_project_data_path = project_data_path.replace(
+                current_name, new_name
+            )
+            renamed = self.view_model.rename_file(
+                project_data_path, renamed_project_data_path
+            )
 
             if renamed:
                 file_data["project_data"] = renamed_project_data_path
@@ -263,9 +333,9 @@ class ProcessView(QtWidgets.QWidget):
             self.email_button.setEnabled(True)
         else:
             self.email_button.setEnabled(False)
-        
+
         return
-        
+
     def email_processed_files(self):
         """Emails processed files
 
@@ -279,31 +349,31 @@ class ProcessView(QtWidgets.QWidget):
 
     def get_email_provider(self, processed: bool):
         """Displays a popup for user to choose email client to send emails with"""
-        
+
         # Display a popup to choose between outlook or gmail with the logos
         # the two buttons should be vertically stacked
 
         popup = QtWidgets.QDialog()
         popup.setWindowTitle("Choose Email Provider")
-    
+
         popup_layout = QtWidgets.QVBoxLayout()
         popup.setLayout(popup_layout)
 
         outlook_button = QtWidgets.QPushButton()
-        outlook_button.setIcon(
-            QtGui.QIcon(resource_path("assets/icons/outlook.png"))
-        )
+        outlook_button.setIcon(QtGui.QIcon(resource_path("assets/icons/outlook.png")))
         outlook_button.setIconSize(QtCore.QSize(215, 41))
-        outlook_button.clicked.connect(lambda: self.email_handler(EmailProvider.OUTLOOK, processed))
+        outlook_button.clicked.connect(
+            lambda: self.email_handler(EmailProvider.OUTLOOK, processed)
+        )
         outlook_button.clicked.connect(popup.accept)
         popup_layout.addWidget(outlook_button)
 
         gmail_button = QtWidgets.QPushButton()
-        gmail_button.setIcon(
-            QtGui.QIcon(resource_path("assets/icons/gmail.png"))
-        )
+        gmail_button.setIcon(QtGui.QIcon(resource_path("assets/icons/gmail.png")))
         gmail_button.setIconSize(QtCore.QSize(215, 46))
-        gmail_button.clicked.connect(lambda: self.email_handler(EmailProvider.GMAIL, processed))
+        gmail_button.clicked.connect(
+            lambda: self.email_handler(EmailProvider.GMAIL, processed)
+        )
         gmail_button.clicked.connect(popup.accept)
         popup_layout.addWidget(gmail_button)
 
@@ -312,7 +382,9 @@ class ProcessView(QtWidgets.QWidget):
             QtGui.QIcon(resource_path(self.view_model.get_local_email_icon_path()))
         )
         local_button.setIconSize(QtCore.QSize(215, 41))
-        local_button.clicked.connect(lambda: self.email_handler(EmailProvider.LOCAL, processed))
+        local_button.clicked.connect(
+            lambda: self.email_handler(EmailProvider.LOCAL, processed)
+        )
         local_button.clicked.connect(popup.accept)
         popup_layout.addWidget(local_button)
 
@@ -321,10 +393,12 @@ class ProcessView(QtWidgets.QWidget):
         # Display batch email checkbox
         batch_email_checkbox = QtWidgets.QCheckBox()
         batch_email_checkbox.setText("Combine similar e-mails?")
-        batch_email_checkbox.setToolTip("Will combine similar e-mails to prevent spamming recipients.")
+        batch_email_checkbox.setToolTip(
+            "Will combine similar e-mails to prevent spamming recipients."
+        )
         batch_email_checkbox.setChecked(self.view_model.get_batch_email_state())
         batch_email_checkbox.stateChanged.connect(self.view_model.toggle_batch_email)
-        popup_layout.addWidget(batch_email_checkbox)        
+        popup_layout.addWidget(batch_email_checkbox)
 
         popup.exec()
 
@@ -341,15 +415,38 @@ class ProcessView(QtWidgets.QWidget):
                 self.email_processed_files()
             else:
                 self.view_model.email_unprocessed_files()
-        
 
     def email_unprocessed_processed_handler(self):
-        """Checks if all files have been processed, if not, emails unprocessed files, if so, gets email provider
-        """
+        """Checks if all files have been processed, if not, emails unprocessed files, if so, gets email provider"""
 
         # If files havent been processed then we need the metadata to determine who to email and with what template
-        if self.view_model.selected_file_count > self.processed_files_list_widget.count():
-            self.view_model.unprocessed_email_check(lambda: self.get_email_provider(processed=False))
+        if (
+            self.view_model.selected_file_count
+            > self.processed_files_list_widget.count()
+        ):
+            self.view_model.unprocessed_email_check(
+                lambda: self.get_email_provider(processed=False)
+            )
             return
-        
+
         self.get_email_provider(processed=True)
+
+    def update_table_data(self):
+        """Updates table data"""
+
+        self.files_table.setRowCount(0)
+
+        for row, row_items in enumerate(self.view_model.active_files_table_items):
+            self.files_table.insertRow(row)
+            for col, col_item in enumerate(row_items):
+                self.files_table.setItem(row, col, col_item)
+
+        for col in range(self.files_table.columnCount()):
+            self.files_table.resizeColumnToContents(col)
+
+        metrics = QtGui.QFontMetrics(self.files_table.font())
+        metrics.setEllipsisMode(QtCore.Qt.ElideLeft)
+        
+        self.files_table.verticalHeader().setVisible(False)
+        
+        self.update()
