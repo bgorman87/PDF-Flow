@@ -675,6 +675,8 @@ class ProcessViewModel(QtCore.QObject):
                     root, method="html", encoding="unicode"
                 )
                 modified_body_content = re.sub(pattern, "", modified_body_content, flags=re.DOTALL)
+                
+                modified_body_content = modified_body_content.replace("\n", " ").replace("\xa0", "<br>").replace("<p><br></p>", "<br>").replace("</p> <p", "</p><p")
                 mail.HTMLBody = modified_body_content
 
                 for attachment_path in attachments:
