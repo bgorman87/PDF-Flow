@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
 from urllib.parse import unquote
+from base64 import b64decode as Load
+from json import loads as load
 
 import msal
 import requests
@@ -277,7 +279,7 @@ class ProcessViewModel(QtCore.QObject):
             message_box = general_utils.MessageBox()
             message_box.title = "Email Authentication Error"
             message_box.icon = QtWidgets.QMessageBox.Critical
-            message_box.text = f"Authentication Error: {result['error']}\nDescription: {result['error_description']}"
+            message_box.text = f"Email Authentication Error: {result['error']}"
             message_box.buttons = [QtWidgets.QPushButton("Close")]
             message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
             message_box.callback = [
@@ -299,9 +301,7 @@ class ProcessViewModel(QtCore.QObject):
 
         SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
         try:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "assets/credentials.json", SCOPES
-            )
+            flow = InstalledAppFlow.from_client_config(load(Load(self.main_view_model.s0230dfa4108b).decode('utf-8')), SCOPES)
             credentials = flow.run_local_server(port=0)
         except (GoogleAuthError, FileNotFoundError) as e:
             self.main_view_model.add_console_text(f"Email Authentication Error: {e}")
@@ -947,7 +947,26 @@ class ProcessViewModel(QtCore.QObject):
         self._email_items.append(email_item)
         # Once all files have been processed, email them
         if len(self._email_items) == len(self._file_names):
-            self.email_files(self._email_items)
+            try:
+                self.email_files(self._email_items)
+            except Exception as e:
+                self.main_view_model.add_console_text(
+                    f"Email Error: {e}"
+                )
+                self.main_view_model.add_console_alerts(1)
+                message_box = general_utils.MessageBox()
+                message_box.title = "Email Error"
+                message_box.icon = QtWidgets.QMessageBox.Critical
+                message_box.text = f"Email Error: {e}"
+                message_box.buttons = [QtWidgets.QPushButton("Close")]
+                message_box.button_roles = [QtWidgets.QMessageBox.RejectRole]
+                message_box.callback = [
+                    None,
+                ]
+
+                self.main_view_model.display_message_box(message_box)
+            finally:
+                self._email_items = []
 
     def get_batch_email_state(self) -> bool:
         """Gets the batch email state from the data handler

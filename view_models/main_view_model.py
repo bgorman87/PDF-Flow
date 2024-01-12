@@ -230,6 +230,10 @@ class MainViewModel(QtCore.QObject):
             y_2=y_2,
         )
 
+    @property
+    def s0230dfa4108b(self):
+        return self.main_model.d88b714ad241d77beb4782a7
+
     def add_new_parameter(
         self,
         profile_id: int,
