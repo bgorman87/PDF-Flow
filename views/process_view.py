@@ -81,7 +81,7 @@ class ProcessView(QtWidgets.QWidget):
         self.files_table.setHorizontalHeaderItem(2, self.header_processed)
 
         self.header_email = QtWidgets.QTableWidgetItem()
-        self.header_email.setText("Email")
+        self.header_email.setText("Emailed")
         self.files_table.setHorizontalHeaderItem(3, self.header_email)
 
         self.files_table.setSortingEnabled(True)
