@@ -36,7 +36,7 @@ class ProcessViewModel(QtCore.QObject):
     def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
         self.main_view_model = main_view_model
-        self._file_names = None
+        self._file_names = []
         self._selected_file_dir = None
         self._selected_file_name = None
         self._progress = 0
@@ -51,13 +51,12 @@ class ProcessViewModel(QtCore.QObject):
         """Opens a file dialog to select files for input"""
 
         # When clicking Select Files, clear any previously selected files, and reset the file status box
-        self._file_names = None
         self.main_view_model.set_loaded_files_count(0)
 
-        self._file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
+        file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
             caption="Select Files to Process", filter="PDF (*.pdf)"
         )
-
+        self._file_names += [file_name for file_name in file_names if file_name not in self._file_names]
         self.main_view_model.set_process_progress_bar_value(0)
         if not self._file_names:
             self.main_view_model.set_process_button_state(False)
@@ -72,11 +71,7 @@ class ProcessViewModel(QtCore.QObject):
 
         number_files = len(self._file_names)
 
-        file_names_string = f"New Selection of ({number_files}) file"
-        if number_files == 0:
-            file_names_string += ":"
-        else:
-            file_names_string += "s:"
+        file_names_string = f"Total files imported: {number_files}"
 
         for item in self._file_names:
             file_names_string += f"\n{item}"
@@ -86,9 +81,9 @@ class ProcessViewModel(QtCore.QObject):
         )
 
         # Signals for this are defined in main_view_model because nav needs the info as well
-        self.create_active_files_table_items()
+        self.update_active_files_table_items()
         self.main_view_model.add_console_text(file_names_string)
-        self.main_view_model.add_console_alerts(number_files)
+        self.main_view_model.add_console_alerts(1)
         self.main_view_model.set_loaded_files_count(number_files)
         self.main_view_model.set_process_button_state(True)
         self.main_view_model.set_process_button_count(number_files)
@@ -1002,12 +997,22 @@ class ProcessViewModel(QtCore.QObject):
 
     def update_active_files(self, files: List[str]) -> None:
         self._file_names = files
+        self.update_active_files_table_items(emit=False)
 
-    def create_active_files_table_items(self):
+    def update_active_files_table_items(self, emit: bool = True):
         if not self._file_names:
             return
         
+        # Get list of files src paths in tablewidget
+        active_files_table_src_paths = []
+        for row in self.active_files_table_items:
+            active_files_table_src_paths.append(row[1].data(QtCore.Qt.UserRole)["source"])
+
         for file_name in self._file_names:
+            # Check if file path is in tablewidget
+            if file_name in active_files_table_src_paths:
+                continue
+
             row_items = []
             file_data = {
                 "source": file_name,
@@ -1016,6 +1021,7 @@ class ProcessViewModel(QtCore.QObject):
             checkbox_item = QtWidgets.QTableWidgetItem()
             checkbox_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
             checkbox_item.setCheckState(QtCore.Qt.Unchecked)
+            checkbox_item.setTextAlignment(QtCore.Qt.AlignCenter)
             row_items.append(checkbox_item)
 
             active_files_table_item = QtWidgets.QTableWidgetItem(os.path.basename(file_name))
@@ -1024,10 +1030,14 @@ class ProcessViewModel(QtCore.QObject):
             row_items.append(active_files_table_item)
 
             processed_item = QtWidgets.QTableWidgetItem("No")
+            processed_item.setTextAlignment(QtCore.Qt.AlignCenter)
             row_items.append(processed_item)
 
             emailed_item = QtWidgets.QTableWidgetItem("No")
+            emailed_item.setTextAlignment(QtCore.Qt.AlignCenter)
             row_items.append(emailed_item)
 
             self.active_files_table_items.append(row_items)
-        self.active_files_update.emit()
+        
+        if emit:
+            self.active_files_update.emit()
