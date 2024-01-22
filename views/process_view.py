@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWebEngineCore, QtWebEngineWidgets, QtWidgets
 
 from utils.enums import EmailProvider
-from utils.image_utils import resource_path
+from utils.path_utils import resource_path
 from view_models import process_view_model
 from widgets import utility_widgets
 from widgets.utility_widgets import HorizontalLine
@@ -15,16 +15,80 @@ class ProcessView(QtWidgets.QWidget):
 
         self.input_tab_action_buttons = QtWidgets.QHBoxLayout()
         # Action buttons on Input tab
-        self.select_files = QtWidgets.QPushButton()
-        self.select_files.clicked.connect(self.get_files)
-        self.select_files.setObjectName("Select_files")
-        self.dialog = QtWidgets.QFileDialog()
-        self.input_tab_action_buttons.addWidget(self.select_files)
+        # self.import_files = QtWidgets.QPushButton()
+        # self.import_files.clicked.connect(self.get_files)
+        # self.import_files.setObjectName("Select_files")
+        # self.dialog = QtWidgets.QFileDialog()
+        # self.input_tab_action_buttons.addWidget(self.import_files)
 
-        # Action button to start file analysis
+        self.import_files = QtWidgets.QPushButton()
+        self.import_files.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/import.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.import_files.setIcon(icon)
+        self.import_files.setProperty("class", "invert-icon")
+        self.import_files.setObjectName("import_files")
+        self.import_files.setToolTip("Import Files")
+        self.import_files.setIconSize(QtCore.QSize(12, 12))
+        self.import_files.setCheckable(False)
+        self.import_files.clicked.connect(self.get_files)
+        self.input_tab_action_buttons.addWidget(self.import_files)
+
+        # Action button to select all files
+        self.select_all = QtWidgets.QPushButton()
+        self.select_all.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/select_all.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.select_all.setIcon(icon)
+        self.select_all.setProperty("class", "invert-icon")
+        self.select_all.setObjectName("select_all")
+        self.select_all.setToolTip("Select All")
+        self.select_all.setIconSize(QtCore.QSize(12, 12))
+        self.select_all.setCheckable(False)
+        self.select_all.clicked.connect(self.get_files)
+        self.input_tab_action_buttons.addWidget(self.select_all)
+
+        # Action button to deselect all files
+        self.deselect_all = QtWidgets.QPushButton()
+        self.deselect_all.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/deselect_all.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.deselect_all.setIcon(icon)
+        self.deselect_all.setProperty("class", "invert-icon")
+        self.deselect_all.setObjectName("deselect_all")
+        self.deselect_all.setToolTip("Deselect All")
+        self.deselect_all.setIconSize(QtCore.QSize(12, 12))
+        self.deselect_all.setCheckable(False)
+        self.deselect_all.clicked.connect(self.get_files)
+        self.input_tab_action_buttons.addWidget(self.deselect_all)
+
+        # Action button to delete selected files
+        self.delete = QtWidgets.QPushButton()
+        self.delete.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/delete.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.delete.setIcon(icon)
+        self.delete.setProperty("class", "invert-icon")
+        self.delete.setObjectName("delete")
+        self.delete.setToolTip("Delete Selected")
+        self.delete.setIconSize(QtCore.QSize(12, 12))
+        self.delete.setCheckable(False)
+        self.delete.clicked.connect(self.get_files)
+        self.input_tab_action_buttons.addWidget(self.delete)
+
+        self.input_tab_action_buttons.addStretch()
+
         self.process_button = QtWidgets.QPushButton()
-        self.process_button.clicked.connect(self.view_model.process_files)
+        self.process_button.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/process.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.process_button.setIcon(icon)
+        self.process_button.setProperty("class", "invert-icon")
         self.process_button.setObjectName("analyze_button")
+        self.process_button.setToolTip("Process Selected Files")
+        self.process_button.setIconSize(QtCore.QSize(12, 12))
+        self.process_button.setCheckable(False)
+        self.process_button.clicked.connect(self.view_model.process_files)
         self.process_button.setEnabled(False)
         self.view_model.main_view_model.process_button_state_update.connect(
             lambda: self.process_button.setEnabled(
@@ -38,12 +102,43 @@ class ProcessView(QtWidgets.QWidget):
         )
         self.input_tab_action_buttons.addWidget(self.process_button)
 
+        # # Action button to start file analysis
+        # self.process_button = QtWidgets.QPushButton()
+        # self.process_button.clicked.connect(self.view_model.process_files)
+        # self.process_button.setObjectName("analyze_button")
+        # self.process_button.setEnabled(False)
+        # self.view_model.main_view_model.process_button_state_update.connect(
+        #     lambda: self.process_button.setEnabled(
+        #         self.view_model.main_view_model.process_button_state
+        #     )
+        # )
+        # self.view_model.main_view_model.process_button_count_update.connect(
+        #     lambda: self.process_button_text_update(
+        #         self.view_model.main_view_model.process_button_count
+        #     )
+        # )
+        # self.input_tab_action_buttons.addWidget(self.process_button)
+
         # Action button to start email process
         self.email_button = QtWidgets.QPushButton()
-        self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
+        self.email_button.setMaximumSize(QtCore.QSize(30, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(resource_path(u"assets/icons/email.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.email_button.setIcon(icon)
+        self.email_button.setProperty("class", "invert-icon")
         self.email_button.setObjectName("email_button")
+        self.email_button.setToolTip("Email Selected Files")
+        self.email_button.setIconSize(QtCore.QSize(24, 18))
+        self.email_button.setCheckable(False)
         self.email_button.setEnabled(False)
+        self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
         self.input_tab_action_buttons.addWidget(self.email_button)
+
+        # self.email_button = QtWidgets.QPushButton()
+        # self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
+        # self.email_button.setObjectName("email_button")
+        # self.email_button.setEnabled(False)
+        # self.input_tab_action_buttons.addWidget(self.email_button)
 
         # # Drop list box to choose analysis type (Live/Test)
         # # Live uses real client info, test uses dummy/local info
@@ -56,12 +151,6 @@ class ProcessView(QtWidgets.QWidget):
         # self.input_tab_action_buttons.addWidget(self.test_box)
 
         self.main_layout.addLayout(self.input_tab_action_buttons)
-
-        self.line_below_action_buttons_layout = QtWidgets.QHBoxLayout()
-        # Line below action buttons
-        self.input_tab_line_2 = utility_widgets.HorizontalLine()
-        self.line_below_action_buttons_layout.addWidget(self.input_tab_line_2)
-        self.main_layout.addLayout(self.line_below_action_buttons_layout)
 
         # Table to hold all of the files
         self.files_table = QtWidgets.QTableWidget()
@@ -208,9 +297,6 @@ class ProcessView(QtWidgets.QWidget):
         """Translates UI"""
 
         _translate = QtCore.QCoreApplication.translate
-        self.select_files.setText(_translate("ProcessView", "Import Files"))
-        self.process_button.setText(_translate("ProcessView", "Process"))
-        self.email_button.setText(_translate("ProcessView", "Email"))
         self.file_rename_button.setText(_translate("ProcessView", "Rename"))
         self.file_preview_label.setText(_translate("ProcessView", "File Previewer"))
 
