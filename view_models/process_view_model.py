@@ -8,7 +8,7 @@ import uuid
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import List
+from typing import List, Dict
 from urllib.parse import unquote
 from base64 import b64decode as Load
 from json import loads as load
@@ -44,59 +44,81 @@ class ProcessViewModel(QtCore.QObject):
         self._token = ""
         self.email_provider = None
         self.Dispatch = Dispatch
-        self._email_items = []
-        self.active_files_table_items = []
+        self._unprocessed_email_items = []
+        self.active_files_data: List[Dict[str, any]] = []
+        self.selected_file_count_for_processing = 0
 
     def get_files(self):
         """Opens a file dialog to select files for input"""
 
         # When clicking Select Files, clear any previously selected files, and reset the file status box
-        self.main_view_model.set_loaded_files_count(0)
+        # self.main_view_model.set_loaded_files_count(0)
 
         file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
             caption="Select Files to Process", filter="PDF (*.pdf)"
         )
-        self._file_names += [file_name for file_name in file_names if file_name not in self._file_names]
-        self.main_view_model.set_process_progress_bar_value(0)
-        if not self._file_names:
-            self.main_view_model.set_process_button_state(False)
-            self.main_view_model.set_process_progress_bar_text(
-                "Select Files to Begin..."
-            )
+        source_set = set(item.get('source') for item in self.active_files_data)
+        new_files = [file_name for file_name in file_names if file_name not in source_set]
+
+        if not new_files:
             return
 
+        for file in new_files:
+            file_dict = {
+                "checked": False,
+                "source": file,
+                "processed": False,
+                "emailed": False,
+                "metadata": {
+                    "project_data": "",
+                    "project_number": None,
+                    "profile_id": None,
+                },
+            }
+            self.active_files_data.append(file_dict)
+        self.main_view_model.set_process_progress_bar_value(0)
+        number_files = len(self.active_files_data)
+        self.main_view_model.set_loaded_files_count(number_files)
+        if number_files == 0:
+            self.main_view_model.set_process_button_state(False)
+            self.main_view_model.set_process_progress_bar_text(
+                "Import Files to Begin..."
+            )
+            return
+        
         self.main_view_model.set_process_progress_bar_text(
             "Press 'Process' Button to Start Processing Files..."
         )
 
-        number_files = len(self._file_names)
-
         file_names_string = f"Total files imported: {number_files}"
 
-        for item in self._file_names:
+        for item in source_set:
             file_names_string += f"\n{item}"
 
-        self.main_view_model.set_process_button_count(
-            f"Process ({len(self._file_names)} Selected)"
-        )
 
         # Signals for this are defined in main_view_model because nav needs the info as well
-        self.update_active_files_table_items()
+        # self.get_formatted_row_items()
+        self.active_files_update.emit()
         self.main_view_model.add_console_text(file_names_string)
         self.main_view_model.add_console_alerts(1)
         self.main_view_model.set_loaded_files_count(number_files)
-        self.main_view_model.set_process_button_state(True)
         self.main_view_model.set_process_button_count(number_files)
 
     @property
     def selected_file_count(self):
         """Returns the number of selected files"""
+        checked_files = [item for item in self.active_files_data if item["checked"]]
+        return len(checked_files)
 
-        return len(self._file_names)
-
-    # For each file in self._file_names create a thread to process
+    # For each selected file in list create a thread to process
     def process_files(self):
         """Processes the selected files"""
+
+        selected_files = [file_data for file_data in self.active_files_data if file_data["checked"]]
+        if not selected_files:
+            return
+        
+        self.selected_file_count_for_processing = len(selected_files)
 
         self.main_view_model.set_process_button_state(False)
         self._progress = 0
@@ -116,15 +138,16 @@ class ProcessViewModel(QtCore.QObject):
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
-        for i, file_name in enumerate(self._file_names):
+        for i, file_data in enumerate(selected_files):
+
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
-                file_name=file_name, main_view_model=self.main_view_model
+                file_name=file_data["source"], main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_progress.connect(
                 self.evt_analyze_progress
             )
             self.analyze_worker.signals.analysis_result.connect(
-                self.evt_analyze_complete
+                lambda results, data=dict(file_data) : self.evt_analyze_complete(results, data)
             )
             self._thread_pool.start(self.analyze_worker)
 
@@ -181,13 +204,13 @@ class ProcessViewModel(QtCore.QObject):
         # Since val is progress of each individual file, need to ensure whole progress accounts for all files
         self._progress += val
         self.main_view_model.set_process_progress_bar_value(
-            int(self._progress / len(self._file_names))
+            int(self._progress / self.selected_file_count_for_processing)
         )
-        if int(self._progress / len(self._file_names)) >= 100:
+        if int(self._progress / self.selected_file_count_for_processing) >= 100:
             self.main_view_model.set_process_progress_bar_text("Processing Complete.")
-            self.main_view_model.send_telemetry_data(len(self._file_names))
+            self.main_view_model.send_telemetry_data(self.selected_file_count)
 
-    def evt_analyze_complete(self, results: List[str]):
+    def evt_analyze_complete(self, results: List[str], data: Dict[str, any]):
         """Appends processed files list widget with new processed file data
 
         Args:
@@ -199,20 +222,29 @@ class ProcessViewModel(QtCore.QObject):
         project_data_dir = results[3]
         project_number = results[4]
         profile_id = results[5]
-
-        file_data = {
+        
+        existing_data = dict(data)
+        new_file_data = {
             "source": file_path,
-            "project_data": project_data_dir,
-            "project_number": project_number,
-            "profile_id": profile_id,
+            "metadata": {
+                "project_data": project_data_dir,
+                "project_number": project_number,
+                "profile_id": profile_id,
+            },
+            "checked": False,
+            "processed": True,
         }
+        
+        data.update(new_file_data)
+
         self.main_view_model.add_console_text(print_string)
-        processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
-        processed_files_list_item.setData(QtCore.Qt.UserRole, file_data)
-        self.processed_files_list_widget_update.emit(processed_files_list_item)
+        self.active_files_data[self.active_files_data.index(existing_data)] = data
+        self.active_files_update.emit()
+
+        # processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
+        # processed_files_list_item.setData(QtCore.Qt.UserRole, file_data)
+        # self.processed_files_list_widget_update.emit(processed_files_list_item)
         self.main_view_model.update_processed_files_count(1)
-        self.main_view_model.set_process_button_state(False)
-        self.main_view_model.set_process_button_count(0)
 
     def rename_file(self, source_path: str, renamed_source_path: str):
         """Renames a file
@@ -361,9 +393,17 @@ class ProcessViewModel(QtCore.QObject):
         else:
             return False
 
+    def email_files_handler(self):
+        selected_and_unprocessed_files = [file_data for file_data in self.active_files_data if file_data["checked"] and not file_data["processed"]]
+        if selected_and_unprocessed_files:
+            # Need to get basic info first and then we can email all together
+            self.unprocessed_email_handler()
+        else:
+            # If all processed then just email all together right away
+            self.email_files()
+
     def email_files(
         self,
-        email_items: List[QtWidgets.QListWidgetItem]
     ):
         """Emails the selected files
 
@@ -371,11 +411,10 @@ class ProcessViewModel(QtCore.QObject):
             email_items (List[QtWidgets.QListWidgetItem]): List of Email items from processed files list widget
         """
         emails = []
-        for email_item in email_items:
+        for file_data in self.get_selected_files():
             email_dict = {}
-            file_data = email_item.data(QtCore.Qt.UserRole)
             source_path = file_data["source"]
-            project_number = file_data.get("project_number")
+            project_number = file_data["metadata"]["project_number"]
             # Project specific email templates override report specific email templates
             email_template = (
                 self.main_view_model.fetch_email_profile_name_by_project_number(
@@ -891,22 +930,23 @@ class ProcessViewModel(QtCore.QObject):
 
         self.main_view_model.display_message_box(message_box)
 
-    def email_unprocessed_files(self):
-        """Emails the unprocessed files"""
+    def unprocessed_email_handler(self, unprocessed_files: List[Dict[str, any]]):
+        """Gets basic info to email the unprocessed files"""
 
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
-        for file_name in self._file_names:
+        for file_data in unprocessed_files:
+            file_name = file_data["source"]
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=file_name, email=True, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_result.connect(
-                self.email_file_type_complete
+                lambda results, data=file_data: self.email_file_type_complete(results, data)
             )
             self._thread_pool.start(self.analyze_worker)
 
-    def email_file_type_complete(self, analysis_data: list):
+    def email_file_type_complete(self, analysis_data: list, data: Dict[str, any]):
 
         if not analysis_data or analysis_data[0] == 0:  # No file type detected therefore new template
             self.main_view_model.add_console_text(
@@ -939,27 +979,32 @@ class ProcessViewModel(QtCore.QObject):
         
         file_data = {
             "source": file_name,
-            "project_data": "",
-            "project_number": project_number,
-            "profile_id": file_type,
+            "metadata": {
+                "project_data": "",
+                "project_number": project_number,
+                "profile_id": file_type,
+            },
         }
 
-        email_item = QtWidgets.QListWidgetItem(file_name)
-        email_item.setData(QtCore.Qt.UserRole, file_data)
+        existing_data = dict(data)
+        data.update(file_data)
+        
+        self.active_files_data[self.active_files_data.index(existing_data)] = data
 
-        self.email_tracker(email_item)
+        self.email_tracker(file_data)
 
-    def email_tracker(self, email_item: QtWidgets.QListWidgetItem):
+    def email_tracker(self, email_item: Dict[str, any]):
         """Tracks the email in the data handler
 
         Args:
             email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
         """
-        self._email_items.append(email_item)
-        # Once all files have been processed, email them
-        if len(self._email_items) == len(self._file_names):
+        self._unprocessed_email_items.append(email_item)
+        unprocessed_files = [file_data for file_data in self.active_files_data if file_data["checked"] and not file_data["processed"]]
+        # Once all files have been processed, email all selected items
+        if len(self._unprocessed_email_items) == len(unprocessed_files):
             try:
-                self.email_files(self._email_items)
+                self.email_files()
             except Exception as e:
                 self.main_view_model.add_console_text(
                     f"Email Error: {e}"
@@ -995,49 +1040,81 @@ class ProcessViewModel(QtCore.QObject):
         """
         self.main_view_model.toggle_batch_email(check_state)
 
-    def update_active_files(self, files: List[str]) -> None:
-        self._file_names = files
-        self.update_active_files_table_items(emit=False)
-
-    def update_active_files_table_items(self, emit: bool = True):
-        if not self._file_names:
-            return
+    def get_formatted_row_items(self, file_data: Dict[str, any]):
+        row_items = []
         
-        # Get list of files src paths in tablewidget
-        active_files_table_src_paths = []
-        for row in self.active_files_table_items:
-            active_files_table_src_paths.append(row[1].data(QtCore.Qt.UserRole)["source"])
+        checkbox_item = QtWidgets.QTableWidgetItem()
+        checkbox_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+        check_state = QtCore.Qt.Checked if file_data["checked"] else QtCore.Qt.Unchecked
+        checkbox_item.setCheckState(check_state)
+        checkbox_item.setTextAlignment(QtCore.Qt.AlignCenter)
+        row_items.append(checkbox_item)
 
-        for file_name in self._file_names:
-            # Check if file path is in tablewidget
-            if file_name in active_files_table_src_paths:
-                continue
+        file_name = file_data["source"]
+        active_files_table_item = QtWidgets.QTableWidgetItem(os.path.basename(file_name))
+        active_files_table_item.setToolTip(os.path.basename(file_name))
+        active_files_table_item.setData(QtCore.Qt.UserRole, file_data)
+        row_items.append(active_files_table_item)
 
-            row_items = []
-            file_data = {
-                "source": file_name,
-            }
-            
-            checkbox_item = QtWidgets.QTableWidgetItem()
-            checkbox_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-            checkbox_item.setCheckState(QtCore.Qt.Unchecked)
-            checkbox_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            row_items.append(checkbox_item)
+        processed_text = "Yes" if file_data["processed"] else "No"
+        processed_item = QtWidgets.QTableWidgetItem(processed_text)
+        processed_item.setTextAlignment(QtCore.Qt.AlignCenter)
+        row_items.append(processed_item)
 
-            active_files_table_item = QtWidgets.QTableWidgetItem(os.path.basename(file_name))
-            active_files_table_item.setToolTip(os.path.basename(file_name))
-            active_files_table_item.setData(QtCore.Qt.UserRole, file_data)
-            row_items.append(active_files_table_item)
+        emailed_text = "Yes" if file_data["emailed"] else "No"
+        emailed_item = QtWidgets.QTableWidgetItem(emailed_text)
+        emailed_item.setTextAlignment(QtCore.Qt.AlignCenter)
+        row_items.append(emailed_item)
 
-            processed_item = QtWidgets.QTableWidgetItem("No")
-            processed_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            row_items.append(processed_item)
+        return row_items
 
-            emailed_item = QtWidgets.QTableWidgetItem("No")
-            emailed_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            row_items.append(emailed_item)
+    def check_selection(self, check_state: bool) -> None:
+        """Checks or unchecks all active files
 
-            self.active_files_table_items.append(row_items)
+        Args:
+            check_state (bool): True if checked, False if unchecked
+        """
+        for file_data in self.active_files_data:
+            file_data["checked"] = check_state
+        self.active_files_update.emit()
+
+    def remove_selected_files(self) -> None:
+        """Removes selected files from active files list widget"""
+        for file_data in self.active_files_data:
+            if file_data["checked"]:
+                self.active_files_data.remove(file_data)
+        self.active_files_update.emit()
+
+    def table_state_handler(self, item: QtWidgets.QListWidgetItem, data: Dict[str, any]) -> None:
         
-        if emit:
-            self.active_files_update.emit()
+        if item.flags() and QtCore.Qt.ItemIsUserCheckable:
+            table_checked_state = item.checkState()
+            state_checked_state = QtCore.Qt.Checked if self.active_files_data[item.row()]["checked"] else QtCore.Qt.Unchecked
+            if table_checked_state != state_checked_state:
+                
+                self.active_files_data[self.active_files_data.index(data)]["checked"] = not self.active_files_data[self.active_files_data.index(data)]["checked"]
+                self.active_files_update.emit()
+
+    def get_selected_files(self) -> List[Dict[str, any]]:
+        """Gets the selected files from the active files list widget
+
+        Returns:
+            List[Dict[str, any]]: List of selected files
+        """
+        selected_files = []
+        for file_data in self.active_files_data:
+            if file_data["checked"]:
+                selected_files.append(file_data)
+        return selected_files
+    
+    def update_file_data_item(self, existing_data, new_data):
+        self.active_files_data[self.active_files_data.index(existing_data)] = new_data
+        self.active_files_update.emit()
+
+    def process_button_handler(self):
+        """Handles process button state"""
+
+        if len(self.get_selected_files()) > 0:
+            self.main_view_model.set_process_button_state(True)
+        else:
+            self.main_view_model.set_process_button_state(False)

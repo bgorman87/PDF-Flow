@@ -192,6 +192,7 @@ class ROIGroupBox(QtWidgets.QGroupBox):
 
         self.process_method_changed.emit()
 
+
 def LineEditDialog(parent, title: str, label: str, prefix: str = "", default_text: str = ""):
     dialog = QtWidgets.QDialog(parent)
     dialog.setWindowTitle(title)
@@ -223,3 +224,20 @@ def LineEditDialog(parent, title: str, label: str, prefix: str = "", default_tex
         return line_edit.text()
     else:
         return None
+
+
+class MyHeaderView(QtWidgets.QHeaderView):
+    def __init__(self, parent=None):
+        super().__init__(QtCore.Qt.Horizontal, parent)
+        self.setSectionsClickable(True)
+        self.columns_to_disable_sorting = {0}  # Set of column indexes to disable sorting
+
+    def mousePressEvent(self, event):
+        index = self.logicalIndexAt(event.pos())
+        if index not in self.columns_to_disable_sorting:
+            super().mousePressEvent(event)
+
+class MyTableWidget(QtWidgets.QTableWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setHorizontalHeader(MyHeaderView(self))

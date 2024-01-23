@@ -27,5 +27,5 @@ signatures/
 credentials.json
 
 manual_db_entry.py
-.gitignore
 
+sql connection.py
