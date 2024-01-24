@@ -266,5 +266,7 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
     except requests.exceptions.SSLError:
         response = requests.post(url, data=json_data, headers=headers, verify=False)
         print("Unverified")
+    except Exception:
+        response = None
 
     return response
