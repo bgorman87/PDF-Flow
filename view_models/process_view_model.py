@@ -49,6 +49,7 @@ class ProcessViewModel(QtCore.QObject):
         self._unprocessed_email_items = []
         self.active_files_data = {}
         self.selected_file_count_for_processing = 0
+        self._unprocessed_files_email_count = 0
 
     def get_files(self):
         """Opens a file dialog to select files for input"""
@@ -79,7 +80,7 @@ class ProcessViewModel(QtCore.QObject):
             self.active_files_data[file] = file_dict
         self.main_view_model.set_process_progress_bar_value(0)
         number_files = len(self.active_files_data)
-        self.main_view_model.set_loaded_files_count(number_files)
+        self.update_loaded_files_count()
         if number_files == 0:
             self.main_view_model.set_process_button_state(False)
             self.main_view_model.set_process_progress_bar_text(
@@ -110,6 +111,14 @@ class ProcessViewModel(QtCore.QObject):
         """Returns the number of selected files"""
         checked_files = [key for key, value in self.active_files_data.items() if value["checked"]]
         return len(checked_files)
+
+    def update_loaded_files_count(self):
+        """Updates loaded files count
+
+        Args:
+            val (int): Value to update loaded files count by
+        """
+        self.main_view_model.set_loaded_files_count(len(self.active_files_data))
 
     # For each selected file in list create a thread to process
     def process_files(self):
@@ -402,10 +411,11 @@ class ProcessViewModel(QtCore.QObject):
             return False
 
     def email_files_handler(self):
-        selected_and_unprocessed_files = [file_data for file_data in self.active_files_data.values() if file_data["checked"] and not file_data["processed"]]
+        selected_and_unprocessed_files = [key for key, value in self.active_files_data.items() if value["checked"] and not value["processed"]]
         if selected_and_unprocessed_files:
             # Need to get basic info first and then we can email all together
-            self.unprocessed_email_handler()
+            self._unprocessed_files_email_count = len(selected_and_unprocessed_files)
+            self.unprocessed_email_handler(selected_and_unprocessed_files)
         else:
             # If all processed then just email all together right away
             self.email_files()
@@ -419,10 +429,10 @@ class ProcessViewModel(QtCore.QObject):
             email_items (List[QtWidgets.QListWidgetItem]): List of Email items from processed files list widget
         """
         emails = []
-        for file_data in self.get_selected_files():
+        selected_files = self.get_selected_files()
+        for file_path in selected_files:
             email_dict = {}
-            source_path = file_data["source"]
-            project_number = file_data["metadata"]["project_number"]
+            project_number = self.active_files_data[file_path]["metadata"]["project_number"]
             # Project specific email templates override report specific email templates
             email_template = (
                 self.main_view_model.fetch_email_profile_name_by_project_number(
@@ -433,7 +443,7 @@ class ProcessViewModel(QtCore.QObject):
             if not email_template:
                 email_template = (
                     self.main_view_model.fetch_email_profile_name_by_profile_id(
-                        file_data["profile_id"]
+                        self.active_files_data[file_path]["metadata"]["profile_id"]
                     )
                 )
             body_content = ""
@@ -483,7 +493,7 @@ class ProcessViewModel(QtCore.QObject):
                     bcc_recipients += email_template_info[5].split(";")
 
             attachments = [
-                source_path,
+                file_path,
             ]
 
             email_dict["project_number"] = project_number
@@ -529,6 +539,11 @@ class ProcessViewModel(QtCore.QObject):
                 email["email_template"],
             )
             self.main_view_model.update_emailed_files_update_count(1)
+        
+        for file_path in selected_files:
+            self.active_files_data[file_path]["emailed"] = True
+        
+        self.active_files_update.emit()
 
     def send_email(
         self,
@@ -922,10 +937,10 @@ class ProcessViewModel(QtCore.QObject):
         message_box = general_utils.MessageBox()
         message_box.title = "Email Unprocessed Files"
         message_box.icon = QtWidgets.QMessageBox.Question
-        message_box.text = "Would you like to email the unprocessed files?"
+        message_box.text = "You have unprocessed files in your selection. Do you wish to include these in your email?"
         message_box.buttons = [
-            QtWidgets.QPushButton("Yes"),
-            QtWidgets.QPushButton("No"),
+            QtWidgets.QPushButton("Proceed"),
+            QtWidgets.QPushButton("Cancel"),
         ]
         message_box.button_roles = [
             QtWidgets.QMessageBox.YesRole,
@@ -938,19 +953,18 @@ class ProcessViewModel(QtCore.QObject):
 
         self.main_view_model.display_message_box(message_box)
 
-    def unprocessed_email_handler(self, unprocessed_files: List[Dict[str, any]]):
+    def unprocessed_email_handler(self, unprocessed_files: List[str]):
         """Gets basic info to email the unprocessed files"""
 
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
-        for file_data in unprocessed_files:
-            file_name = file_data["source"]
+        for file_name in unprocessed_files:
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=file_name, email=True, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_result.connect(
-                lambda results, data=file_data: self.email_file_type_complete(results, data)
+                lambda results, data=self.active_files_data[file_name]: self.email_file_type_complete(results, data)
             )
             self._thread_pool.start(self.analyze_worker)
 
@@ -994,8 +1008,6 @@ class ProcessViewModel(QtCore.QObject):
         }
 
         data.update(file_data)
-        
-        self.active_files_data[file_name] = data
 
         self.email_tracker(file_data)
 
@@ -1006,9 +1018,8 @@ class ProcessViewModel(QtCore.QObject):
             email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
         """
         self._unprocessed_email_items.append(email_item)
-        unprocessed_files = [file_data for file_data in self.active_files_data.values() if file_data["checked"] and not file_data["processed"]]
         # Once all files have been processed, email all selected items
-        if len(self._unprocessed_email_items) == len(unprocessed_files):
+        if len(self._unprocessed_email_items) == self._unprocessed_files_email_count:
             try:
                 self.email_files()
             except Exception as e:
@@ -1121,5 +1132,7 @@ class ProcessViewModel(QtCore.QObject):
 
         if len(self.get_selected_files()) > 0:
             self.main_view_model.set_process_button_state(True)
+            self.main_view_model.set_email_button_state(True)
         else:
             self.main_view_model.set_process_button_state(False)
+            self.main_view_model.set_email_button_state(False)

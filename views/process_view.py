@@ -132,6 +132,13 @@ class ProcessView(QtWidgets.QWidget):
         self.email_button.setIconSize(QtCore.QSize(24, 18))
         self.email_button.setCheckable(False)
         self.email_button.setEnabled(False)
+
+        self.view_model.main_view_model.email_button_state_update.connect(
+            lambda: self.email_button.setEnabled(
+                self.view_model.main_view_model.email_button_state
+            )
+        )
+
         self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
         self.input_tab_action_buttons.addWidget(self.email_button)
 
@@ -533,7 +540,7 @@ class ProcessView(QtWidgets.QWidget):
         if not selected_files:
             return
         
-        unprocessed_files = [file for file in selected_files if not file["processed"]]
+        unprocessed_files = [file for file in selected_files if not self.view_model.active_files_data[file]["processed"]]
         if unprocessed_files:
             self.view_model.unprocessed_email_check(self.get_email_provider)
             return
@@ -577,6 +584,7 @@ class ProcessView(QtWidgets.QWidget):
             self.update()
             self.table_widget_connect()
             self.view_model.process_button_handler()
+            self.view_model.update_loaded_files_count()
 
     def update_existing_entries(self):
         """Updates existing entries in the table with new data."""
@@ -640,6 +648,7 @@ class ProcessView(QtWidgets.QWidget):
                 if row == current_row:
                     self.files_table.setCurrentItem(None)
                     self.view_model.table_widget_handler()
+        self.update_table_data()
     
 
 
