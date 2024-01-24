@@ -45,7 +45,7 @@ class ProcessViewModel(QtCore.QObject):
         self.email_provider = None
         self.Dispatch = Dispatch
         self._unprocessed_email_items = []
-        self.active_files_data: List[Dict[str, any]] = []
+        self.active_files_data = {}
         self.selected_file_count_for_processing = 0
 
     def get_files(self):
@@ -57,7 +57,7 @@ class ProcessViewModel(QtCore.QObject):
         file_names, _ = QtWidgets.QFileDialog.getOpenFileNames(
             caption="Select Files to Process", filter="PDF (*.pdf)"
         )
-        source_set = set(item.get('source') for item in self.active_files_data)
+        source_set = set(item for item in self.active_files_data.keys())
         new_files = [file_name for file_name in file_names if file_name not in source_set]
 
         if not new_files:
@@ -66,7 +66,6 @@ class ProcessViewModel(QtCore.QObject):
         for file in new_files:
             file_dict = {
                 "checked": False,
-                "source": file,
                 "processed": False,
                 "emailed": False,
                 "metadata": {
@@ -75,7 +74,7 @@ class ProcessViewModel(QtCore.QObject):
                     "profile_id": None,
                 },
             }
-            self.active_files_data.append(file_dict)
+            self.active_files_data[file] = file_dict
         self.main_view_model.set_process_progress_bar_value(0)
         number_files = len(self.active_files_data)
         self.main_view_model.set_loaded_files_count(number_files)
@@ -107,14 +106,14 @@ class ProcessViewModel(QtCore.QObject):
     @property
     def selected_file_count(self):
         """Returns the number of selected files"""
-        checked_files = [item for item in self.active_files_data if item["checked"]]
+        checked_files = [key for key, value in self.active_files_data.items() if value["checked"]]
         return len(checked_files)
 
     # For each selected file in list create a thread to process
     def process_files(self):
         """Processes the selected files"""
 
-        selected_files = [file_data for file_data in self.active_files_data if file_data["checked"]]
+        selected_files = [key for key, value in self.active_files_data.items() if value["checked"]]
         if not selected_files:
             return
         
@@ -223,9 +222,7 @@ class ProcessViewModel(QtCore.QObject):
         project_number = results[4]
         profile_id = results[5]
         
-        existing_data = dict(data)
         new_file_data = {
-            "source": file_path,
             "metadata": {
                 "project_data": project_data_dir,
                 "project_number": project_number,
@@ -238,7 +235,7 @@ class ProcessViewModel(QtCore.QObject):
         data.update(new_file_data)
 
         self.main_view_model.add_console_text(print_string)
-        self.active_files_data[self.active_files_data.index(existing_data)] = data
+        self.active_files_data[file_path] = data
         self.active_files_update.emit()
 
         # processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
@@ -394,7 +391,7 @@ class ProcessViewModel(QtCore.QObject):
             return False
 
     def email_files_handler(self):
-        selected_and_unprocessed_files = [file_data for file_data in self.active_files_data if file_data["checked"] and not file_data["processed"]]
+        selected_and_unprocessed_files = [file_data for file_data in self.active_files_data.values() if file_data["checked"] and not file_data["processed"]]
         if selected_and_unprocessed_files:
             # Need to get basic info first and then we can email all together
             self.unprocessed_email_handler()
@@ -978,7 +975,6 @@ class ProcessViewModel(QtCore.QObject):
             project_number = match.group(1) if match else None
         
         file_data = {
-            "source": file_name,
             "metadata": {
                 "project_data": "",
                 "project_number": project_number,
@@ -986,10 +982,9 @@ class ProcessViewModel(QtCore.QObject):
             },
         }
 
-        existing_data = dict(data)
         data.update(file_data)
         
-        self.active_files_data[self.active_files_data.index(existing_data)] = data
+        self.active_files_data[file_name] = data
 
         self.email_tracker(file_data)
 
@@ -1000,7 +995,7 @@ class ProcessViewModel(QtCore.QObject):
             email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
         """
         self._unprocessed_email_items.append(email_item)
-        unprocessed_files = [file_data for file_data in self.active_files_data if file_data["checked"] and not file_data["processed"]]
+        unprocessed_files = [file_data for file_data in self.active_files_data.values() if file_data["checked"] and not file_data["processed"]]
         # Once all files have been processed, email all selected items
         if len(self._unprocessed_email_items) == len(unprocessed_files):
             try:
@@ -1074,25 +1069,27 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             check_state (bool): True if checked, False if unchecked
         """
-        for file_data in self.active_files_data:
+        for file_data in self.active_files_data.values():
             file_data["checked"] = check_state
         self.active_files_update.emit()
 
     def remove_selected_files(self) -> None:
         """Removes selected files from active files list widget"""
-        for file_data in self.active_files_data:
-            if file_data["checked"]:
-                self.active_files_data.remove(file_data)
+        keys_to_remove = [key for key, value in self.active_files_data.items() if value["checked"]]
+        for key in keys_to_remove:
+            del self.active_files_data[key]
         self.active_files_update.emit()
 
     def table_state_handler(self, item: QtWidgets.QListWidgetItem, data: Dict[str, any]) -> None:
         
         if item.flags() and QtCore.Qt.ItemIsUserCheckable:
-            table_checked_state = item.checkState()
-            state_checked_state = QtCore.Qt.Checked if self.active_files_data[item.row()]["checked"] else QtCore.Qt.Unchecked
-            if table_checked_state != state_checked_state:
-                
-                self.active_files_data[self.active_files_data.index(data)]["checked"] = not self.active_files_data[self.active_files_data.index(data)]["checked"]
+
+            # If the backend 'checked' and the table 'checked' are not the same, then swap the backend data
+            table_checked = item.checkState()
+            state_checked = QtCore.Qt.Checked if self.active_files_data[data["source"]]["checked"] else QtCore.Qt.Unchecked
+            
+            if table_checked != state_checked:
+                self.active_files_data[data["source"]]["checked"] = not self.active_files_data[data["source"]]["checked"] 
                 self.active_files_update.emit()
 
     def get_selected_files(self) -> List[Dict[str, any]]:
@@ -1101,14 +1098,11 @@ class ProcessViewModel(QtCore.QObject):
         Returns:
             List[Dict[str, any]]: List of selected files
         """
-        selected_files = []
-        for file_data in self.active_files_data:
-            if file_data["checked"]:
-                selected_files.append(file_data)
-        return selected_files
+        return [key for key, value in self.active_files_data.items() if value["checked"]]
     
-    def update_file_data_item(self, existing_data, new_data):
-        self.active_files_data[self.active_files_data.index(existing_data)] = new_data
+    def update_file_data_item(self, old_key, new_key, new_data):
+        del self.active_files_data[old_key]
+        self.active_files_data[new_key] = new_data
         self.active_files_update.emit()
 
     def process_button_handler(self):
