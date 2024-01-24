@@ -274,4 +274,4 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
         # Return None so we can hold value for later submission
         response = None
 
-    return None
+    return response
