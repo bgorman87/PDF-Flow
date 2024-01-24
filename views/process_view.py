@@ -173,7 +173,7 @@ class ProcessView(QtWidgets.QWidget):
         self.header_email.setText("Emailed")
         self.files_table.setHorizontalHeaderItem(3, self.header_email)
 
-        # self.files_table.setSortingEnabled(True)
+        self.files_table.setSortingEnabled(True)
         self.files_table.setSelectionMode(QtWidgets.QTableWidget.SingleSelection)
         self.files_table.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
         header = self.files_table.horizontalHeader()
@@ -382,11 +382,11 @@ class ProcessView(QtWidgets.QWidget):
         current_name = file_name_item.text()
         new_name = self.file_rename_line_edit.text()
 
+        # Do nothing if name not changed
         if new_name == current_name:
             return
 
         file_data = current_item.data(QtCore.Qt.UserRole)
-        existing_data = dict(file_data)
         source_path = str(file_data["source"])
         renamed_source_path = source_path.replace(current_name, new_name)
         renamed = self.view_model.rename_file(source_path, renamed_source_path)
@@ -405,7 +405,23 @@ class ProcessView(QtWidgets.QWidget):
 
             if renamed:
                 file_data["metadata"]["project_data"] = renamed_project_data_path
-        self.view_model.update_file_data_item(existing_data, file_data)
+        
+        self.update_table_item_source(source_path, renamed_source_path)
+        self.view_model.update_file_data_item(source_path, file_data)
+
+    def update_table_item_source(self, source_path: str, renamed_path: str):
+        """Updates table item data
+
+        Args:
+            source_path (str): Source path of file
+            file_data (dict): File data
+        """
+        for row in range(self.files_table.rowCount()):
+            item = self.files_table.item(row, 1)
+            existing_data = item.data(QtCore.Qt.UserRole)
+            if existing_data["source"] == source_path:
+                existing_data["source"] = renamed_path
+                item.setData(QtCore.Qt.UserRole, existing_data)
 
     def email_button_handler(self):
         """Enables email button if there are files selected, disables if not"""
@@ -534,35 +550,62 @@ class ProcessView(QtWidgets.QWidget):
         self.files_table.itemChanged.disconnect()
 
     def update_table_data(self):
-        """Updates table data"""
+        """Updates table data by finding rows with existing data and updating them, then adding new rows"""
         current_item_index = self.files_table.currentRow()
         self.table_widget_disconnect()
+        try:
+            # First try to update existing entries with new data. At this point the table items metadata has been updated
+            # But need to regenerate the table row itself to display the change to user
+            updated_files = []
+            for row in range(self.files_table.rowCount()):
+                item = self.files_table.item(row, 1)
+                try:
+                    item_data = dict(item.data(QtCore.Qt.UserRole))
+                except ValueError:
+                    continue
+                file_path = item_data.pop("source", None)
+                if file_path in self.view_model.active_files_data:
+                    updated_files.append(file_path)
+                    # if item_data != self.view_model.active_files_data[file_path]:
+                    data = self.view_model.active_files_data[file_path]
+                    data["source"] = file_path
+                    row_items = self.view_model.get_formatted_row_items(data)
+                    for col, col_item in enumerate(row_items):
+                        self.files_table.setItem(row, col, col_item)
 
-        self.files_table.setRowCount(0)
+            # self.files_table.setRowCount(0)
+                        
+            # Then add new rows for any files that werent already in the table, this should typically only occur when importing new files
+            for row, (file_name, file_data) in enumerate(self.view_model.active_files_data.items()):
+                
+                if file_name in updated_files:
+                    continue
+                
+                self.files_table.insertRow(self.files_table.rowCount())
+                data = dict(file_data)
+                data["source"] = file_name
+                row_items = self.view_model.get_formatted_row_items(data)
+                for col, col_item in enumerate(row_items):
+                    self.files_table.setItem(row, col, col_item)
 
-        for row, file_data in enumerate(self.view_model.active_files_data):
-            self.files_table.insertRow(row)
-            row_items = self.view_model.get_formatted_row_items(file_data)
-            for col, col_item in enumerate(row_items):
-                self.files_table.setItem(row, col, col_item)
+            for col in range(self.files_table.columnCount()):
+                self.files_table.resizeColumnToContents(col)
+            
+            self.files_table.verticalHeader().setVisible(False)
+            
+            self.update()
 
-        for col in range(self.files_table.columnCount()):
-            self.files_table.resizeColumnToContents(col)
-        
-        self.files_table.verticalHeader().setVisible(False)
-        
-        self.update()
+            if current_item_index >= 0:
+                self.files_table.setCurrentCell(current_item_index, 1)
 
-        if current_item_index >= 0:
-            self.files_table.setCurrentCell(current_item_index, 1)
-
-        if self.files_table.currentItem():
-            self.view_model.table_widget_handler(
-                self.files_table.item(self.files_table.currentRow(), 1)
-            )
-
-        self.table_widget_connect()
-        self.view_model.process_button_handler()
+            if self.files_table.currentItem():
+                self.view_model.table_widget_handler(
+                    self.files_table.item(self.files_table.currentRow(), 1)
+                )
+        finally:
+            self.update()
+            self.table_widget_connect()
+            self.view_model.process_button_handler()
 
     
 
