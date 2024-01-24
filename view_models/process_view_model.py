@@ -226,7 +226,7 @@ class ProcessViewModel(QtCore.QObject):
         )
         if int(self._progress / self.selected_file_count_for_processing) >= 100:
             self.main_view_model.set_process_progress_bar_text("Processing Complete.")
-            self.main_view_model.send_telemetry_data(self.selected_file_count)
+            self.main_view_model.send_telemetry_data(self.selected_file_count_for_processing)
 
     def evt_analyze_complete(self, results: List[str], data: Dict[str, any]):
         """Appends processed files list widget with new processed file data

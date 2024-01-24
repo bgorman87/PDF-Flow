@@ -261,12 +261,17 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
     }
 
     try:
+        # Try first with https
         response = requests.post(url, data=json_data, headers=headers)
-        print("Verified")
     except requests.exceptions.SSLError:
-        response = requests.post(url, data=json_data, headers=headers, verify=False)
-        print("Unverified")
+        try:
+            # If server doesnt support https cert, then try http
+            response = requests.post(url, data=json_data, headers=headers, verify=False)
+        except Exception:
+            # Return None so we can hold value for later submission
+            response = None
     except Exception:
+        # Return None so we can hold value for later submission
         response = None
 
-    return response
+    return None
