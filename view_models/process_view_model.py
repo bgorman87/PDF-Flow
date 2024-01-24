@@ -32,6 +32,8 @@ class ProcessViewModel(QtCore.QObject):
     display_pdf_preview = QtCore.Signal()
     display_file_name = QtCore.Signal()
     active_files_update = QtCore.Signal()
+    processed_file_rename = QtCore.Signal(str, str)
+    remove_selected_items = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel, Dispatch):
         super().__init__()
@@ -137,24 +139,32 @@ class ProcessViewModel(QtCore.QObject):
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
-        for i, file_data in enumerate(selected_files):
+        for i, file_name in enumerate(selected_files):
 
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
-                file_name=file_data["source"], main_view_model=self.main_view_model
+                file_name=file_name, main_view_model=self.main_view_model
             )
             self.analyze_worker.signals.analysis_progress.connect(
                 self.evt_analyze_progress
             )
             self.analyze_worker.signals.analysis_result.connect(
-                lambda results, data=dict(file_data) : self.evt_analyze_complete(results, data)
+                lambda results, data=self.active_files_data[file_name] : self.evt_analyze_complete(results, data)
             )
             self._thread_pool.start(self.analyze_worker)
 
             self.evt_analyze_progress(10)
         self.main_view_model.set_process_button_count(0)
 
-    def table_widget_handler(self, table_widget_item: QtWidgets.QTableWidgetItem):
+    def table_widget_handler(self, table_widget_item: QtWidgets.QTableWidgetItem = None):
 
+        if table_widget_item is None:
+            self._selected_file_dir = ""
+            self.display_pdf_preview.emit()
+
+            self._selected_file_name = ""
+            self.display_file_name.emit()
+            return
+        
         file_dirs = table_widget_item.data(QtCore.Qt.UserRole)
         source_dir = file_dirs["source"].replace("\\", "/")
 
@@ -233,10 +243,11 @@ class ProcessViewModel(QtCore.QObject):
         }
         
         data.update(new_file_data)
-
+        old_key = general_utils.get_key(self.active_files_data, data)
         self.main_view_model.add_console_text(print_string)
-        self.active_files_data[file_path] = data
-        self.active_files_update.emit()
+
+        self.processed_file_rename.emit(old_key, file_path)
+        self.update_file_data_item(old_key, file_path, dict(data))
 
         # processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
         # processed_files_list_item.setData(QtCore.Qt.UserRole, file_data)
@@ -1078,7 +1089,7 @@ class ProcessViewModel(QtCore.QObject):
         keys_to_remove = [key for key, value in self.active_files_data.items() if value["checked"]]
         for key in keys_to_remove:
             del self.active_files_data[key]
-        self.active_files_update.emit()
+        self.remove_selected_items.emit()
 
     def table_state_handler(self, item: QtWidgets.QListWidgetItem, data: Dict[str, any]) -> None:
         

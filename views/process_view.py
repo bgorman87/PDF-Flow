@@ -75,6 +75,7 @@ class ProcessView(QtWidgets.QWidget):
         self.delete.setCheckable(False)
         self.delete.clicked.connect(self.view_model.remove_selected_files)
         self.input_tab_action_buttons.addWidget(self.delete)
+        self.view_model.remove_selected_items.connect(self.remove_deleted_rows)
 
         self.input_tab_action_buttons.addStretch()
 
@@ -200,6 +201,8 @@ class ProcessView(QtWidgets.QWidget):
 
         self.main_layout.addWidget(self.files_table)
 
+        # Add splitter to separate analyzed files from file preview
+
         # # Widget to hold analyzed files
         # self.processed_files_list_widget = QtWidgets.QListWidget()
         # self.processed_files_list_widget.setSelectionMode(
@@ -257,17 +260,15 @@ class ProcessView(QtWidgets.QWidget):
         self.file_preview = QtWebEngineWidgets.QWebEngineView()
         _qtweb_settings = QtWebEngineCore.QWebEngineSettings
         self.file_preview.settings().setAttribute(_qtweb_settings.PluginsEnabled, True)
-        self.file_preview.settings().setAttribute(_qtweb_settings.WebGLEnabled, True)
+        # self.file_preview.settings().setAttribute(_qtweb_settings.WebGLEnabled, True)
         self.file_preview.settings().setAttribute(
             _qtweb_settings.PdfViewerEnabled, True
         )
         self.file_preview.settings().setAttribute(
             _qtweb_settings.SpatialNavigationEnabled, True
-        )
+        )       
 
-        initialized_pdf = ""
-        self.file_preview.load(QtCore.QUrl(initialized_pdf))
-        self.file_preview.setHtml("<body bgcolor='#4a4a4a'></body>")
+        self.clear_pdf_viewer()
         self.view_model.display_pdf_preview.connect(self.display_pdf_preview)
         self.main_layout.addWidget(self.file_preview)
         self.main_layout.setStretch(self.main_layout.indexOf(self.file_preview), 8)
@@ -290,6 +291,7 @@ class ProcessView(QtWidgets.QWidget):
                 self.view_model.main_view_model.process_progress_text
             )
         )
+        self.view_model.processed_file_rename.connect(self.update_table_item_source)
         self.main_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_layout)
 
@@ -301,6 +303,15 @@ class ProcessView(QtWidgets.QWidget):
         _translate = QtCore.QCoreApplication.translate
         self.file_rename_button.setText(_translate("ProcessView", "Rename"))
         self.file_preview_label.setText(_translate("ProcessView", "File Previewer"))
+
+    def clear_pdf_viewer(self):
+        initialized_pdf = ""
+        self.file_preview.load(QtCore.QUrl(initialized_pdf))
+        self.file_preview.setHtml("<body bgcolor='#4a4a4a'></body>")
+
+    def on_load_finished(self, ok):
+            if ok:
+                self.file_preview.page().runJavaScript("document.querySelector('pdf-sidebar').removeAttribute('opened');")
 
     def update_active_files(self):
         active_files = []
@@ -314,6 +325,10 @@ class ProcessView(QtWidgets.QWidget):
         """Displays PDF preview in webview"""
 
         pdf_dir = self.view_model.selected_file_dir
+        if not pdf_dir:
+            self.clear_pdf_viewer()
+            return
+        
         self.file_preview.load(QtCore.QUrl(f"file:{pdf_dir}"))
 
     def display_file_name(self):
@@ -554,59 +569,77 @@ class ProcessView(QtWidgets.QWidget):
         current_item_index = self.files_table.currentRow()
         self.table_widget_disconnect()
         try:
-            # First try to update existing entries with new data. At this point the table items metadata has been updated
-            # But need to regenerate the table row itself to display the change to user
-            updated_files = []
-            for row in range(self.files_table.rowCount()):
-                item = self.files_table.item(row, 1)
-                try:
-                    item_data = dict(item.data(QtCore.Qt.UserRole))
-                except ValueError:
-                    continue
-                file_path = item_data.pop("source", None)
-                if file_path in self.view_model.active_files_data:
-                    updated_files.append(file_path)
-                    # if item_data != self.view_model.active_files_data[file_path]:
-                    data = self.view_model.active_files_data[file_path]
-                    data["source"] = file_path
-                    row_items = self.view_model.get_formatted_row_items(data)
-                    for col, col_item in enumerate(row_items):
-                        self.files_table.setItem(row, col, col_item)
-
-            # self.files_table.setRowCount(0)
-                        
-            # Then add new rows for any files that werent already in the table, this should typically only occur when importing new files
-            for row, (file_name, file_data) in enumerate(self.view_model.active_files_data.items()):
-                
-                if file_name in updated_files:
-                    continue
-                
-                self.files_table.insertRow(self.files_table.rowCount())
-                data = dict(file_data)
-                data["source"] = file_name
-                row_items = self.view_model.get_formatted_row_items(data)
-                for col, col_item in enumerate(row_items):
-                    self.files_table.setItem(row, col, col_item)
-
-            for col in range(self.files_table.columnCount()):
-                self.files_table.resizeColumnToContents(col)
-            
-            self.files_table.verticalHeader().setVisible(False)
-            
-            self.update()
-
-            if current_item_index >= 0:
-                self.files_table.setCurrentCell(current_item_index, 1)
-
-            if self.files_table.currentItem():
-                self.view_model.table_widget_handler(
-                    self.files_table.item(self.files_table.currentRow(), 1)
-                )
+            self.update_existing_entries()
+            self.add_new_entries()
+            self.resize_columns()
+            self.update_current_item(current_item_index)
         finally:
             self.update()
             self.table_widget_connect()
             self.view_model.process_button_handler()
 
+    def update_existing_entries(self):
+        """Updates existing entries in the table with new data."""
+        self.updated_files = []
+        for row in range(self.files_table.rowCount()):
+            item = self.files_table.item(row, 1)
+            try:
+                item_data = dict(item.data(QtCore.Qt.UserRole))
+            except ValueError:
+                continue
+            file_path = item_data.pop("source", None)
+            if file_path in self.view_model.active_files_data:
+                self.updated_files.append(file_path)
+                data = self.view_model.active_files_data[file_path]
+                data["source"] = file_path
+                self.update_row_items(row, data)
+
+    def update_row_items(self, row, data):
+        """Updates the items in a row with new data."""
+        row_items = self.view_model.get_formatted_row_items(data)
+        for col, col_item in enumerate(row_items):
+            self.files_table.setItem(row, col, col_item)
+
+    def add_new_entries(self):
+        """Adds new entries to the table."""
+        for row, (file_name, file_data) in enumerate(self.view_model.active_files_data.items()):
+            if file_name in self.updated_files:
+                continue
+            self.files_table.insertRow(self.files_table.rowCount())
+            data = dict(file_data)
+            data["source"] = file_name
+            self.update_row_items(row, data)
+
+    def resize_columns(self):
+        """Resizes the columns to fit their contents."""
+        for col in range(self.files_table.columnCount()):
+            self.files_table.resizeColumnToContents(col)
+        self.files_table.verticalHeader().setVisible(False)
+
+    def update_current_item(self, current_item_index):
+        """Updates the current item in the table."""
+        if current_item_index >= 0:
+            self.files_table.setCurrentCell(current_item_index, 1)
+        if self.files_table.currentItem():
+            self.view_model.table_widget_handler(
+                self.files_table.item(self.files_table.currentRow(), 1)
+            )
+
+    def remove_deleted_rows(self):
+        """Removes rows from the table that correspond to files deleted from active_files_data."""
+        current_row = self.files_table.currentRow()
+        for row in reversed(range(self.files_table.rowCount())):
+            item = self.files_table.item(row, 1)
+            try:
+                item_data = dict(item.data(QtCore.Qt.UserRole))
+            except ValueError:
+                continue
+            file_path = item_data.get("source")
+            if file_path not in self.view_model.active_files_data:
+                self.files_table.removeRow(row)
+                if row == current_row:
+                    self.files_table.setCurrentItem(None)
+                    self.view_model.table_widget_handler()
     
 
 

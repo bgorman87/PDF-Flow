@@ -67,4 +67,12 @@ def set_config_data(config: dict) -> None:
     config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
     with open(config_file_path, "w") as f:
         json.dump(config, f, indent=4)
+
+def get_key(my_dict, value):
+    for key, val in my_dict.items():
+        if val == value:
+            return key
+    return None
+
+
     
