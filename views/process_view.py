@@ -651,8 +651,3 @@ class ProcessView(QtWidgets.QWidget):
                     self.files_table.setCurrentItem(None)
                     self.view_model.table_widget_handler()
         self.update_table_data()
-    
-
-
-        
-
