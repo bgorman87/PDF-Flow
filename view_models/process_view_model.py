@@ -959,6 +959,14 @@ class ProcessViewModel(QtCore.QObject):
         max_threads = int(os.cpu_count() * 0.5)
         self._thread_pool.setMaxThreadCount(max_threads)
 
+        if unprocessed_files:
+            # Create a progress dialog to show progress of unprocessed files
+            self.progress_dialog = QtWidgets.QProgressDialog()
+            self.progress_dialog.setWindowTitle("Pre-processing Unprocessed Files")
+            self.progress_dialog.setLabelText("Performing basic processing of unprocessed files...")
+            self.progress_dialog.setRange(0, len(unprocessed_files))
+            self.progress_dialog.show()
+
         for file_name in unprocessed_files:
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=file_name, email=True, main_view_model=self.main_view_model
@@ -1008,7 +1016,6 @@ class ProcessViewModel(QtCore.QObject):
         }
 
         data.update(file_data)
-
         self.email_tracker(file_data)
 
     def email_tracker(self, email_item: Dict[str, any]):
@@ -1018,8 +1025,11 @@ class ProcessViewModel(QtCore.QObject):
             email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
         """
         self._unprocessed_email_items.append(email_item)
+        self.progress_dialog.setValue(len(self._unprocessed_email_items))
+        QtWidgets.QApplication.processEvents()
         # Once all files have been processed, email all selected items
         if len(self._unprocessed_email_items) == self._unprocessed_files_email_count:
+            self.progress_dialog.close()
             try:
                 self.email_files()
             except Exception as e:
