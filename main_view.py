@@ -9,7 +9,7 @@ from models import main_model
 from view_models import main_view_model, message_box_view_model
 from views import message_box_view, navigation_view, stacked_view
 from version import VERSION
-from utils import path_utils, general_utils
+from utils import path_utils, general_utils, text_utils
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):

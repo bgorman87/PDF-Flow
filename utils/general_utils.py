@@ -5,6 +5,8 @@ import json
 import uuid
 from version import VERSION
 
+from utils import text_utils
+
 class MessageBox:
     def __init__(
         self,
@@ -48,6 +50,16 @@ def get_config_data(version: str = VERSION) -> dict:
         if not config["telemetry"].get("pending"):
             config["telemetry"]["pending"] = 0
             set_config_data(config)
+        else:
+            pending = config["telemetry"]["pending"]
+
+        if pending > 0:
+            identifier = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
+            response = text_utils.post_telemetry_data(pending, identifier, "Update from pending value")
+            if response is not None:
+                config["telemetry"]["pending"] = 0
+                set_config_data(config)
+        
     else:
         os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
         
