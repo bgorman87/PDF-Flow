@@ -55,6 +55,22 @@ class SettingsViewModel(QtCore.QObject):
             check_state (bool): True if checked, False if unchecked
         """
         self.main_view_model.toggle_batch_email(check_state)
+
+    def toggle_onedrive_check(self, check_state: bool) -> None:
+        """Toggles onedrive check in the data handler
+
+        Args:
+            check_state (bool): True if checked, False if unchecked
+        """
+        self.main_view_model.toggle_onedrive_check(check_state)
+
+    def get_onedrive_check_state(self) -> bool:
+        """Gets the onedrive check state from the data handler
+
+        Returns:
+            bool: True if checked, False if unchecked
+        """
+        return self.main_view_model.fetch_onedrive_check()
         
     def get_anonymous_state(self) -> bool:
         """Gets the anonymous usage state from the data handler
@@ -114,6 +130,4 @@ class SettingsViewModel(QtCore.QObject):
 
         self._chosen_templates = []
         self.selected_templates_update.emit(len(self._chosen_templates))
-        self.main_view_model.profile_update_list.emit()
-
-    
+        self.main_view_model.profile_update_list.emit()    

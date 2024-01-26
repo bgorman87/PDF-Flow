@@ -4,6 +4,7 @@ import os
 import json
 import uuid
 from version import VERSION
+import psutil
 
 from utils import text_utils
 
@@ -53,6 +54,10 @@ def get_config_data(version: str = VERSION) -> dict:
         else:
             pending = config["telemetry"]["pending"]
 
+        if not config.get("onedrive_check"):
+            config["onedrive_check"] = True
+            set_config_data(config)
+
         if pending > 0:
             identifier = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
             response = text_utils.post_telemetry_data(pending, identifier, "Update from pending value")
@@ -90,5 +95,15 @@ def get_key(my_dict, value):
             return key
     return None
 
+def is_onedrive_running() -> bool:
+    """Checks if OneDrive is currently running.
 
+    Returns:
+        bool: True if OneDrive is running, False otherwise.
+    """
+
+    for proc in psutil.process_iter():
+        if proc.name() == "OneDrive.exe":
+            return True
+    return False
     
