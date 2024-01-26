@@ -216,3 +216,16 @@ class FileNameViewModel(QtCore.QObject):
     @property
     def profile_id(self):
         return self._profile_id
+    
+    def display_tooltip(self, text: str) -> None:
+        """Displays a tooltip to the user."""
+
+        message_box = general_utils.MessageBox()
+        message_box.title = "Email Information"
+        message_box.icon = QtWidgets.QMessageBox.Information
+        message_box.text = f"{text}"
+        message_box.buttons = ["Close"]
+        message_box.button_roles = [QtWidgets.QMessageBox.YesRole]
+        message_box.callback = [None]
+
+        self.main_view_model.display_message_box(message_box=message_box)

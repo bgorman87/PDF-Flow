@@ -1,6 +1,7 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 from view_models import file_name_view_model
 from widgets import utility_widgets
+from utils import general_utils, path_utils
 
 
 class FileNameView(QtWidgets.QWidget):
@@ -109,23 +110,52 @@ class FileNameView(QtWidgets.QWidget):
         )
 
         self.main_layout.addLayout(self.settings_file_name_pattern_layout)
-
-        # Label for file rename example output
-        self.settings_profile_naming_scheme_example_label = QtWidgets.QLabel()
-        self.settings_profile_naming_scheme_example_label.setObjectName(
-            "settings_profile_naming_scheme_example_label"
-        )
-        self.main_layout.addWidget(
-            self.settings_profile_naming_scheme_example_label)
+        self.file_name_preview_layout = QtWidgets.QHBoxLayout()
+        # # Label for file rename example output
+        # self.settings_profile_naming_scheme_example_label = QtWidgets.QLabel()
+        # self.settings_profile_naming_scheme_example_label.setObjectName(
+        #     "settings_profile_naming_scheme_example_label"
+        # )
+        # self.file_name_preview_layout.addWidget(
+        #     self.settings_profile_naming_scheme_example_label)
 
         # Line edit to display an example of data shown
+
+        self.settings_profile_naming_scheme_example_helper = QtWidgets.QPushButton()
+        self.settings_profile_naming_scheme_example_helper.setMaximumSize(QtCore.QSize(22, 22))
+        icon = QtGui.QIcon()
+        icon.addFile(path_utils.resource_path(u"assets/icons/tooltip.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.settings_profile_naming_scheme_example_helper.setIcon(icon)
+        self.settings_profile_naming_scheme_example_helper.setProperty("class", "invert-icon")
+        self.settings_profile_naming_scheme_example_helper.setIconSize(QtCore.QSize(12, 12))
+
+        self.settings_profile_naming_scheme_example_helper.setObjectName(
+            "settings_profile_naming_scheme_example_helper"
+        )
+        self.settings_profile_naming_scheme_example_helper.setToolTip(
+            "Tip: Project specific email template will take precedence over profile email template."
+        )
+        self.settings_profile_naming_scheme_example_helper.clicked.connect(
+            self.display_tooltip
+        )
+        self.file_name_preview_layout.addWidget(self.settings_profile_naming_scheme_example_helper)
+
         self.settings_profile_naming_scheme_example_line_edit = QtWidgets.QLineEdit()
+        self.settings_profile_naming_scheme_example_line_edit.setReadOnly(True)
         self.settings_profile_naming_scheme_example_line_edit.setEnabled(False)
+
         self.settings_profile_naming_scheme_example_line_edit.setObjectName(
             "settings_profile_naming_scheme_example_line_edit"
         )
-        self.main_layout.addWidget(
+        self.settings_profile_naming_scheme_example_line_edit.setProperty(
+            "class", "line-edit-disabled small"
+        )
+        self.file_name_preview_layout.addWidget(
             self.settings_profile_naming_scheme_example_line_edit
+        )
+        
+        self.main_layout.addLayout(
+            self.file_name_preview_layout
         )
 
         self.profile_email_layout = QtWidgets.QHBoxLayout()
@@ -182,9 +212,9 @@ class FileNameView(QtWidgets.QWidget):
         self.settings_profile_naming_scheme_label.setText(
             _translate("FileNameView", "File Name Template:")
         )
-        self.settings_profile_naming_scheme_example_label.setText(
-            _translate("FileNameView", "File Name Preview:")
-        )
+        # self.settings_profile_naming_scheme_example_label.setText(
+        #     _translate("FileNameView", "Example:")
+        # )
         self.settings_profile_parameters_label.setText(
             _translate("FileNameView", "Available Profile Parameters:")
         )
@@ -235,11 +265,18 @@ class FileNameView(QtWidgets.QWidget):
     def update_file_name_example_line_edit(self, new_example_text: str) -> None:
         self.settings_profile_naming_scheme_example_line_edit.setText(
             new_example_text)
+
         
     def save_email(self):
         self.view_model.set_email_profile(
             self.profile_email_combo_box.currentText()
         )
+
+    def display_tooltip(self):
+        text = ("This example line provides a general preview of how the file name will appear for a specific template after processing, and does not reflect the data of any currently loaded file. "
+        "Specific parameters like {date} or {project_description} will be replaced with actual data during file processing.")
+
+        self.view_model.display_tooltip(text=text)
 
     def set_current_email_index_from_name(self, email_profile_name: str) -> None:
         index = self.profile_email_combo_box.findText(email_profile_name)
