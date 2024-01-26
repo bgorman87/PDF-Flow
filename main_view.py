@@ -63,7 +63,7 @@ class MainView(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(800, 950)
         self.main_view_model.window_size_update.connect(self.resize)
-        
+    
 
     def show_message_alert(self, message_box: general_utils.MessageBox):
         """Shows a message box alert to the user from given message box dict.
@@ -74,11 +74,15 @@ class MainView(QtWidgets.QMainWindow):
         self.message_box = message_box_view.MessageBoxView(
             message_box_view_model.MessageBoxViewModel(self.main_view_model, message_box)
         )
+        self.message_box.setWindowIcon(self.windowIcon())
         result_index = self.message_box.exec()
         # result = message_box_dict.get("button_roles")[result_index]
         self.main_view_model.message_box_handler(message_box.callback[result_index])
-        
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        QtCore.QTimer.singleShot(1000, self.main_view_model.onedrive_check)
+        
 
 def main(version: str):
 

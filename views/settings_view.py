@@ -81,6 +81,19 @@ class SettingsView(QtWidgets.QWidget):
         batch_email_layout.addStretch(1)
         self.config_list.addLayout(batch_email_layout)
 
+        onedrive_check_layout = QtWidgets.QHBoxLayout()
+        self.onedrive_check_label = QtWidgets.QLabel("Enable OneDrive checking on startup:")
+        self.onedrive_check_label.setContentsMargins(0, 5, 20, 5)
+        self.onedrive_check_checkbox = QtWidgets.QCheckBox()
+        self.onedrive_check_checkbox.setToolTip("Will display prompt on startup reminding you to pause OneDrive syncing if enabled.")
+        self.onedrive_check_checkbox.setChecked(self.view_model.get_onedrive_check_state())
+        self.onedrive_check_checkbox.clicked.connect(self.view_model.toggle_onedrive_check)
+        onedrive_check_layout.addWidget(self.onedrive_check_label)
+        onedrive_check_layout.addWidget(self.onedrive_check_checkbox)
+
+        onedrive_check_layout.addStretch(1)
+        self.config_list.addLayout(onedrive_check_layout) 
+
         anonymous_layout = QtWidgets.QHBoxLayout()
         self.anonymous_label = QtWidgets.QLabel("Enable anonymous usage statistics:")
         self.anonymous_label.setContentsMargins(0, 5, 20, 5)
@@ -109,8 +122,7 @@ class SettingsView(QtWidgets.QWidget):
         self.unique_id_textbox.setText(self.view_model.get_unique_id())
         self.unique_id_textbox.setReadOnly(True)
         unique_id_layout.addWidget(self.unique_id_textbox)
-        self.config_list.addLayout(unique_id_layout)
-        
+        self.config_list.addLayout(unique_id_layout) 
 
         anonymous_clarification_label = QtWidgets.QLabel()
         anonymous_clarification_label.setText("Note: A unique identifier is generated for each user and is used to track usage statistics. This identifier does not contain any personal information.")

@@ -1,10 +1,10 @@
 import os
 import typing
 
-from PySide6 import QtCore
+from PySide6 import QtCore, QtWidgets
 import threading
 from models import main_model
-from utils.general_utils import MessageBox, set_config_data
+from utils.general_utils import MessageBox, set_config_data, is_onedrive_running
 from utils.text_utils import post_telemetry_data
 
 
@@ -440,6 +440,14 @@ class MainViewModel(QtCore.QObject):
         
         return
     
+    def toggle_onedrive_check(self, check_state: bool) -> None:
+        self.config["onedrive_check"] = check_state
+        set_config_data(self.config)
+        return
+    
+    def fetch_onedrive_check(self) -> bool:
+        return self.config["onedrive_check"]
+    
     def fetch_anonymous_usage(self) -> bool:
         return self.config['telemetry']['annonymous']
     
@@ -456,3 +464,25 @@ class MainViewModel(QtCore.QObject):
         set_config_data(self.config)
         self.batch_email_update.emit(check_state)
         return
+    
+    def onedrive_check(self):
+        """Checks if OneDrive is currently running. If so it prompts the user to Pause syncing to avoid any file conflicts.
+        """
+
+        if self.config.get("onedrive_check") and is_onedrive_running():
+            message_box = MessageBox(
+                title="OneDrive Syncing",
+                text="OneDrive is currently running. Please pause syncing to avoid any file conflicts.",
+                button_roles=["Close",],
+                callback=[None,],
+            )
+            message_box = MessageBox()
+            message_box.title = "OneDrive Syncing"
+            message_box.icon = QtWidgets.QMessageBox.Warning
+            message_box.text = "OneDrive detected as running. If possible pause syncing while using PDF Flow to speed up processing and avoid any file conflicts."
+            message_box.buttons = ["Close",]
+            message_box.button_roles = [
+                QtWidgets.QMessageBox.RejectRole,
+            ]
+            message_box.callback = [None,]
+            self.message_box_alert.emit(message_box)
