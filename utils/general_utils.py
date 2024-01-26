@@ -48,7 +48,7 @@ def get_config_data(version: str = VERSION) -> dict:
             set_config_data(config)
 
         if not config["telemetry"].get("pending"):
-            config["telemetry"]["pending"] = 0
+            pending = config["telemetry"]["pending"] = 0
             set_config_data(config)
         else:
             pending = config["telemetry"]["pending"]
