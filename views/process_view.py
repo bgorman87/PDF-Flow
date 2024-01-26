@@ -476,6 +476,7 @@ class ProcessView(QtWidgets.QWidget):
 
         popup = QtWidgets.QDialog()
         popup.setWindowTitle("Choose Email Provider")
+        popup.setWindowIcon(self.windowIcon())
 
         popup_layout = QtWidgets.QVBoxLayout()
         popup.setLayout(popup_layout)
