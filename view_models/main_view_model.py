@@ -413,6 +413,7 @@ class MainViewModel(QtCore.QObject):
             if response is None:
                 self.config["telemetry"]["pending"] = self.config["telemetry"]["pending"] + quantity
                 set_config_data(self.config)
+                
         telemetry_thread = threading.Thread(target=telemetry_thread)
         telemetry_thread.start()
 
