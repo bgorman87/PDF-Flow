@@ -1,7 +1,7 @@
 import os
 import typing
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 import threading
 from models import main_model
 from utils.general_utils import MessageBox, set_config_data, is_onedrive_running
@@ -47,6 +47,7 @@ class MainViewModel(QtCore.QObject):
         self.version = config["version"]
         self._telemetry_id = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
         self.config = config
+        self.window_icon = QtGui.QIcon()
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text

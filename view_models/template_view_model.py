@@ -625,6 +625,8 @@ class TemplateViewModel(QtCore.QObject):
             QtWidgets.QInputDialog.TextInput)
         self.rename_template_profile_dialog.setWindowTitle(
             "Rename Template Profile")
+        self.rename_template_profile_dialog.setWindowIcon(
+            self.main_view_model.window_icon)
         self.rename_template_profile_dialog.setLabelText(
             "Enter a new name for this profile:")
         self.rename_template_profile_dialog.setTextValue(

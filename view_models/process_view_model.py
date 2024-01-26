@@ -280,6 +280,7 @@ class ProcessViewModel(QtCore.QObject):
             # If not renamed, then try again a few times, but notify user as progress occurs
             progress_dialog = QtWidgets.QProgressDialog()
             progress_dialog.setWindowTitle("File Rename Error")
+            progress_dialog.setWindowIcon(self.main_view_model.window_icon)
             progress_dialog.setLabelText("File renaming failed, trying again...")
             progress_dialog.setRange(0, 10)
             progress_dialog.show()
@@ -963,6 +964,7 @@ class ProcessViewModel(QtCore.QObject):
             # Create a progress dialog to show progress of unprocessed files
             self.progress_dialog = QtWidgets.QProgressDialog()
             self.progress_dialog.setWindowTitle("Pre-processing Unprocessed Files")
+            self.progress_dialog.setWindowIcon(self.main_view_model.window_icon)
             self.progress_dialog.setLabelText("Performing basic processing of unprocessed files...")
             self.progress_dialog.setRange(0, len(unprocessed_files))
             self.progress_dialog.show()
