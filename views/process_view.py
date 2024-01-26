@@ -34,6 +34,8 @@ class ProcessView(QtWidgets.QWidget):
         self.import_files.clicked.connect(self.get_files)
         self.input_tab_action_buttons.addWidget(self.import_files)
 
+        self.input_tab_action_buttons.addSpacing(10)
+
         # Action button to select all files
         self.select_all = QtWidgets.QPushButton()
         self.select_all.setMaximumSize(QtCore.QSize(28, 28))
