@@ -44,7 +44,7 @@ def get_config_data(version: str = VERSION) -> dict:
             config = json.load(f)
         
         if config['version'] != version:
-            # Can display update data here
+            # TODO: Can create popup maybe to display update data here
             config['version'] = version
             set_config_data(config)
 
@@ -61,7 +61,7 @@ def get_config_data(version: str = VERSION) -> dict:
                 set_config_data(config)
         
     else:
-        os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
+        os.makedirs(os.path.join(os.getenv("APPDATA"), "PDF Flow"), exist_ok=True)
         
         config = {
             "version": VERSION,
@@ -80,7 +80,7 @@ def set_config_data(config: dict) -> None:
     Args:
         config (dict): The configuration data.
     """
-    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    config_file_path = os.path.join(os.getenv("APPDATA"), "PDF Flow", "config.json")
     with open(config_file_path, "w") as f:
         json.dump(config, f, indent=4)
 

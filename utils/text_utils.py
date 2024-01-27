@@ -148,15 +148,16 @@ def process_list(list_data, list_type, advanced_option):
     return result
 
 
-def detect_englobe_project_number(text):
-    # Regex expressions for job numbers
-    # B numbers: ^(B[\.-\s]\d+[\.-\s]+\d{1})
-    # P numbers: ^(P[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
-    # 1900: ^(1\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d+[\.-\s]+\d{3})
-    # 0200: ^([0-2]\d+[\.-\s]+\d+[\.-\s]\d+[\.-\s]+\d{4})
-    # r = StringIO(text)
-    # text = text.replace(" ", "")
-    # test = re.search(r"(B[\.-\s]\d+[\.-\s]+\d{1})", text, re.M)
+def detect_regex_project_number(text):
+    """Detects project number from text using regex. 
+    
+    Args:
+        text (str): Text to search for project number
+
+    Returns:
+        str: Project number if found, "NA" otherwise
+    """
+    
     expressions = [
         r"(B[.\-\s]\d+[.\-\s]+\d{1})",
         r"(P[.\-\s]+\d+[.\-\s]+\d+[.\-\s]+\d+[.\-\s]+\d{3})",
@@ -234,7 +235,7 @@ def embed_images_as_base64(html_content: str) -> str:
     return html.tostring(root, encoding="unicode")
 
 def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "") -> requests.Response:
-    """Sends telemetry data to the API Gateway endpoint
+    """Sends telemetry data to track useage of the application. No personal information is sent, only a randomly generated identifier, and quantity of files processed.
 
     Args:
         data (dict): Telemetry data
