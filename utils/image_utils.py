@@ -52,13 +52,6 @@ def detect_package_number(file_path: str, project_file_path: str = None) -> str:
     return package_number_highest_str
 
 
-# hard coded tesseract and poppler path from current working directory
-tesseract_path = resource_path(os.path.join("Tesseract", "tesseract.exe"))
-poppler_path = resource_path(os.path.join("poppler", "bin"))
-# poppler_path = str(os.path.abspath(os.path.join(os.getcwd(), r"poppler/bin")))
-# poppler_path = f"{os.path.abspath('/usr/bin')}"
-
-
 class AnalysisSignals(QtCore.QObject):
     analysis_result = QtCore.Signal(list)
     analysis_progress = QtCore.Signal(int)
@@ -79,7 +72,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         # Each pdf page is stored as image info in an array called images_jpg
 
         images_jpeg = convert_from_path(
-            self.file, fmt="jpeg", poppler_path=poppler_path, single_file=True
+            self.file, fmt="jpeg", single_file=True
         )
         image = images_jpeg[0]
         img_byte_arr = io.BytesIO()
