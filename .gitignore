@@ -30,3 +30,4 @@ credentials.json
 manual_db_entry.py
 
 sql connection.py
+setup.py

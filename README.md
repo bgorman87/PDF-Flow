@@ -4,7 +4,7 @@
 </div>
 
 
-This program was created to efficiently analyze scanned PDF files to use document specific information to rename the files, save to project specific directories, and e-mail files to project specific distribution lists.
+This program was created to dynamically analyze scanned PDF files using user defined templates to grab in-document information to use for renaming the files, save to project specific directories, and e-mail files to project specific distribution lists.
 
 ## Install Process
 
@@ -50,7 +50,7 @@ If you prefer to build from source you can follow these steps:
     pip install -r requirements.txt
     ```
 
-4. **Note:** On Windows, you may notice brief command windows appearing and disappearing during file processing. This is due to the way the pdf2image package dependency runs Poppler.
+4. **Note:** On Windows, during processing you may notice brief command windows appearing and disappearing. This is due to the way the `pdf2image` package dependency runs Poppler.
 
    If you prefer not to see these windows, follow these general steps:
 
