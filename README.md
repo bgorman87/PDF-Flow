@@ -1,8 +1,4 @@
-<div style="display: flex;">
-  <img src="assets/icons/icon.png" alt="PDF Flow Image" width="40" height="40" style="padding-right: 10px; padding-top: 5px;">
-  <h1>PDF Flow</h1>
-</div>
-
+![PDF Flow Banner](assets/icons/repo%20banner.png)
 
 This program was created to dynamically analyze scanned PDF files using user defined templates to grab in-document information to use for renaming the files, save to project specific directories, and e-mail files to project specific distribution lists.
 
@@ -50,13 +46,13 @@ If you prefer to build from source you can follow these steps:
     pip install -r requirements.txt
     ```
 
-4. **Note:** On Windows, during processing you may notice brief command windows appearing and disappearing. This is due to the way the `pdf2image` package dependency runs Poppler.
+4. **Note:** On Windows, during processing you may notice brief command windows appearing and disappearing. This is due to the way the `pdf2image` package dependency runs Poppler which I cannot programmatically change.
 
    If you prefer not to see these windows, follow these general steps:
 
    1. Open `pdf2image.py` in your editor of choice.
    2. Look for any lines that uses `Popen` to execute a command.
-   3. Add the following flag at the end of that line: `creationflags=0x08000000`.
+   3. Add the following flag to the respective `Popen` calls: `creationflags=0x08000000`.
 
    * Here's an example of what the modified line could look like:
      ```python
@@ -83,7 +79,7 @@ For usage information/guides please see information located here: [PDF Flow Usag
 
 ## Contact/Bugs
 
-For any questions/comments/bugs please reachout through e-mail at [brandon@godevservices.com](mailto:brandon@godevservices.com) or directly through github.
+For any questions/comments/bugs please reach out through e-mail at [brandon@godevservices.com](mailto:brandon@godevservices.com) or directly through github.
 
 ## Contribution
 
@@ -113,5 +109,5 @@ Being a new/solo developer I happily welcome any contributions to PDF Flow! Ther
 
 7. **Submit a Pull Request**: Open a pull request from your fork to this repository's `main` branch. Provide a clear and detailed description of your changes.
 
-8. **Review and Collaborate**: Participate in the discussion and make any necessary adjustments based on feedback from maintainers.
+8. **Review and Collaborate**: Participate in the discussion and make any necessary adjustments based on feedback.
 
