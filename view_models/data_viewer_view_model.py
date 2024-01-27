@@ -132,6 +132,7 @@ class DataViewerViewModel(QtCore.QObject):
             import_error_dialog = QtWidgets.QMessageBox()
             import_error_dialog.setIcon(QtWidgets.QMessageBox.Warning)
             import_error_dialog.setWindowTitle("Project Data Import Error")
+            import_error_dialog.setWindowIcon(self.windowIcon())
             import_error_dialog.setText(
                 f"Error when trying to import values into database.\n\n \
                 {results[0]}"

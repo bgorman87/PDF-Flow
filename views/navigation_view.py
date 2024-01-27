@@ -18,9 +18,6 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.company_logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/englobe_logo.svg"))
         self.company_logo.setProperty("class", "company-logo")
         self.company_logo.setFixedSize(100, 100)
-        # self.company_logo.setPixmap(
-        #     QtGui.QPixmap("assets/icons/englobe_logo.png").scaledToWidth(75)
-        # )
 
         self.company_logo_layout.addWidget(self.company_logo)
 

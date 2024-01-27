@@ -47,6 +47,17 @@ QLineEdit {
     padding: 3px;
 }
 
+.line-edit-disabled {
+    background-color: #4a4a4a;
+    color: white;
+    border: 1px solid #5a5a5a;
+    padding: 3px;
+}
+
+.small {
+    font-size: 11px;
+}
+
 QLineEdit:focus {
     border: 1px solid #2a2a2a;
 }
