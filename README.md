@@ -87,7 +87,7 @@ For any questions/comments/bugs please reachout through e-mail at [brandon@godev
 
 ## Contribution
 
-Being a new/solo developer I happily welcome any contributions to PDF Flow! Here's how you can contribute:
+Being a new/solo developer I happily welcome any contributions to PDF Flow! There is a ton that can be improved or added I am sure so here's how you can contribute:
 
 1. **Fork the Repository**: Click the "Fork" button at the top-right of this repository to create your own copy.
 
