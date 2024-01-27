@@ -3,6 +3,8 @@ from PySide6 import QtCore, QtGui, QtWidgets, QtSvgWidgets
 from view_models import main_view_model, navigation_view_model
 from utils import path_utils
 
+import os
+
 class NavigationView(QtWidgets.QVBoxLayout):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -11,15 +13,17 @@ class NavigationView(QtWidgets.QVBoxLayout):
             self.main_view_model
         )
 
-        self.company_logo_layout = QtWidgets.QHBoxLayout()
-        self.company_logo_layout.setContentsMargins(0, 0, 0, 0)
-        self.company_logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
+        logo_exists = os.path.exists(path_utils.resource_path("assets/icons/logo.svg"))
+        if logo_exists:
+            self.logo_layout = QtWidgets.QHBoxLayout()
+            self.logo_layout.setContentsMargins(0, 0, 0, 0)
+            self.logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
 
-        self.company_logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/englobe_logo.svg"))
-        self.company_logo.setProperty("class", "company-logo")
-        self.company_logo.setFixedSize(100, 100)
+            self.logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/logo.svg"))
+            self.logo.setProperty("class", "company-logo")
+            self.logo.setFixedSize(100, 100)
 
-        self.company_logo_layout.addWidget(self.company_logo)
+            self.logo_layout.addWidget(self.logo)
 
         self.navigation_title = QtWidgets.QLabel()
         self.navigation_title.setText("Navigation")
@@ -75,8 +79,10 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.setSpacing(5)
         self.setContentsMargins(0, 0, 0, 0)
 
-        self.addSpacing(25)
-        self.addLayout(self.company_logo_layout)
+        if logo_exists:
+            self.addSpacing(25)
+            self.addLayout(self.logo_layout)
+
         self.addSpacing(25)
 
         self.layout_index_count = self.count()
@@ -201,5 +207,5 @@ class NavigationView(QtWidgets.QVBoxLayout):
         """Opens the documentation link in the default browser."""
 
         QtGui.QDesktopServices.openUrl(
-            QtCore.QUrl("https://pdfflow.godevservices.com/englobe/")
+            QtCore.QUrl("https://pdfflow.godevservices.com/")
         )
