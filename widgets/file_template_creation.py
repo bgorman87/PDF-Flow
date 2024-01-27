@@ -4,8 +4,6 @@ import pytesseract
 from PySide6 import QtCore, QtGui, QtWidgets
 from utils.path_utils import resource_path
 
-tesseract_path = resource_path(os.path.join("Tesseract","tesseract.exe"))
-
 
 class TemplateWidget(QtWidgets.QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
@@ -350,7 +348,6 @@ class TemplateWidget(QtWidgets.QWidget):
         if self.image_area_too_small:
             self.found_text = "Image Area Too Small"
             return
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"

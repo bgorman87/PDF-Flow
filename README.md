@@ -8,12 +8,12 @@ This program was created to dynamically analyze scanned PDF files using user def
 
 ### Dependencies
 
-Before getting started, make sure you have the following dependencies installed on your system and are available via PATH:
+Before getting started, make sure you have the following dependencies installed on your system and are available via PATH. On Windows, neither one of these dependencies automatically add themselves to PATH so you will have to do it manually for both:
 
-- [Poppler](https://pdf2image.readthedocs.io/en/latest/installation.html) - Used for transforming PDFs to images.
+- [Poppler](https://pdf2image.readthedocs.io/en/latest/installation.html#installing-poppler) - Used for transforming PDFs to images.
 - [Tesseract OCR](https://tesseract-ocr.github.io/tessdoc/Installation.html) - The OCR engine for text extraction.
 
-
+**Note:** If adding to PATH after starting PDF Flow or from an already open cmd prompt, you will have to restart them for PATH to be updated.
 ## Installation
 
 ### Option 1: Installation via .msi File (Windows)
