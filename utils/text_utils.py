@@ -246,7 +246,7 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
         requests.Response: Response from the API Gateway endpoint
     """
 
-    url = "https://telemetry.englobe-pdf-flow.brandongorman.me/telemetry"
+    url = "https://telemetry.pdf-flow.brandongorman.me/telemetry"
 
     data = {
         "device": identifier,
