@@ -19,6 +19,7 @@ database/
 
 # Test PDF Files
 test_files/
+test_utils/
 
 # Database exported file
 **.csv
