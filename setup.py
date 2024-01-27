@@ -11,7 +11,7 @@ from version import VERSION
 build_exe_options = {
     "bin_excludes": ["libqpdf.so", "libqpdf.dylib"],
     "excludes": [],
-    "include_files": [("style/styles.qss", "style/styles.qss"), ("assets/", "assets/"), ("Tesseract/", "Tesseract/"), ("poppler/", "poppler/")],
+    "include_files": [("style/styles.qss", "style/styles.qss"), ("assets/", "assets/")],
     "zip_include_packages": ["PySide6", "shiboken6", "pysocks"],
 }
 

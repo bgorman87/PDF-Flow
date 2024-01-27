@@ -144,7 +144,6 @@ class TemplateViewModel(QtCore.QObject):
         self._image_jpeg = pdf2image.convert_from_path(
             self._file_profile_path,
             fmt="jpeg",
-            poppler_path=image_utils.poppler_path,
             single_file=True,
         )
         self._img_byte_arr = io.BytesIO()
