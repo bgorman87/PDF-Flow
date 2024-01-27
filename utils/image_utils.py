@@ -419,6 +419,5 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path) -> str:
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()
