@@ -63,6 +63,8 @@ class MainView(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.primaryScreen().size()
         self.resize(800, 950)
         self.main_view_model.window_size_update.connect(self.resize)
+
+        self.main_view_model.window_icon = self.windowIcon()
     
 
     def show_message_alert(self, message_box: general_utils.MessageBox):

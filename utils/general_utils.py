@@ -1,5 +1,5 @@
 from typing import List, Optional, Callable
-from PySide6.QtWidgets import QMessageBox, QPushButton
+from PySide6.QtWidgets import QMessageBox, QPushButton, QLayout, QSpacerItem, QSizePolicy
 import os
 import json
 import uuid
@@ -44,19 +44,14 @@ def get_config_data(version: str = VERSION) -> dict:
             config = json.load(f)
         
         if config['version'] != version:
-            # Can display update data here
+            # TODO: Can create popup maybe to display update data here
             config['version'] = version
             set_config_data(config)
 
-        if not config["telemetry"].get("pending"):
-            pending = config["telemetry"]["pending"] = 0
-            set_config_data(config)
-        else:
-            pending = config["telemetry"]["pending"]
+        pending = config["telemetry"].setdefault("pending", 0)
+        config.setdefault("onedrive_check", True)
 
-        if not config.get("onedrive_check"):
-            config["onedrive_check"] = True
-            set_config_data(config)
+        set_config_data(config)
 
         if pending > 0:
             identifier = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
@@ -66,7 +61,7 @@ def get_config_data(version: str = VERSION) -> dict:
                 set_config_data(config)
         
     else:
-        os.makedirs(os.getenv("APPDATA") + "\\PDF Flow\\", exist_ok=True)
+        os.makedirs(os.path.join(os.getenv("APPDATA"), "PDF Flow"), exist_ok=True)
         
         config = {
             "version": VERSION,
@@ -85,7 +80,7 @@ def set_config_data(config: dict) -> None:
     Args:
         config (dict): The configuration data.
     """
-    config_file_path = os.getenv("APPDATA") + "\\PDF Flow\\config.json"
+    config_file_path = os.path.join(os.getenv("APPDATA"), "PDF Flow", "config.json")
     with open(config_file_path, "w") as f:
         json.dump(config, f, indent=4)
 
@@ -107,3 +102,19 @@ def is_onedrive_running() -> bool:
             return True
     return False
     
+
+def change_visibility_of_widgets_in_layout(layout: QLayout, visible: bool):
+    """Changes the visibility of all widgets in a layout and maintains layout spacing.
+    
+    Args:
+        layout (QLayout): The layout to change the visibility of.
+        visible (bool): True if the widgets should be visible, False otherwise.
+    """
+
+    for i in range(layout.count()):
+        item = layout.itemAt(i)
+        if item.widget():
+            widget = item.widget()
+            widget.setVisible(visible)
+
+    layout.update()

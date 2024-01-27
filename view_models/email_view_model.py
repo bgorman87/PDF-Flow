@@ -63,6 +63,7 @@ class EmailViewModel(QtCore.QObject):
         while True:
             dialog = QtWidgets.QInputDialog()
             dialog.setLabelText("Enter a name for the new profile")
+            dialog.setWindowIcon(self.main_view_model.window_icon)
             dialog.setOkButtonText("Save")
             dialog.setCancelButtonText("Cancel")
 

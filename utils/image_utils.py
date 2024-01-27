@@ -352,7 +352,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                 
                 project_number_found = False
                 if "project_number" in file_profile_parameter:
-                    result = text_utils.detect_englobe_project_number(result)
+                    result = text_utils.detect_regex_project_number(result)
                     # check if project number is in database
                     project_data = self.main_view_model.fetch_project_data_by_project_number(
                         project_number=result
