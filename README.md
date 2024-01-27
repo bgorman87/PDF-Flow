@@ -1,17 +1,117 @@
-# PDF Flow
-### PDF Report Processor
-This program has multi-threaded functionality to:
-- Analyze PDF document contents
-  - Uses Poppler to transform PDF to Image
-  - Image is then pre-processed using OpenCv
-  - Processed image is then fed into the Tesseract OCR Engine
-  - Returned text is processed. Main info its looking for is project number
-  - Project Number is used to determine what file is named, where it is saved, and who it gets emailed to
-  - Use other OCR results to format other report specific data into filename
-- Save document onto server location dependant upon OCR project info results
-- View analyzed files in the output tab
-  - Allows editing the filename while viewing file contents
-    - Manual review is advised due to OCR un-reliability at times
-- If project number not found due to bad OCR results, manual project number entry can be done which will also return project data and format filename accordingly
-- Email reports to project client list
-  - Draft email will be created with To and CC list autofilled with project specific email lists, as well as subject, body, and signature already in place, with the newly analyzed document already attached
+<div style="display: flex;">
+  <img src="assets/icons/icon.png" alt="PDF Flow Image" width="40" height="40" style="padding-right: 10px; padding-top: 5px;">
+  <h1>PDF Flow</h1>
+</div>
+
+
+This program was created to efficiently analyze scanned PDF files to use document specific information to rename the files, save to project specific directories, and e-mail files to project specific distribution lists.
+
+## Install Process
+
+**Note:** PDF Flow is currently only compatible with Windows due to hardcoded configuration storage settings. Updating this for use on Linux will be completed soon in a future update.
+
+### Dependencies
+
+Before getting started, make sure you have the following dependencies installed on your system and are available via PATH:
+
+- [Poppler](https://pdf2image.readthedocs.io/en/latest/installation.html) - Used for transforming PDFs to images.
+- [Tesseract OCR](https://tesseract-ocr.github.io/tessdoc/Installation.html) - The OCR engine for text extraction.
+
+
+## Installation
+
+### Option 1: Installation via .msi File (Windows)
+
+1. Visit the [PDF Flow website](https://pdfflow.godevservices.com) to download the latest .msi installer for Windows.
+2. Run the downloaded .msi file and follow the on-screen instructions to install the program.
+3. Once installed, you can launch the program from the Start Menu or desktop shortcut.
+
+### Option 2: Building from Source
+
+If you prefer to build from source you can follow these steps:
+
+1. Clone the GitHub repository:
+
+    ```bash
+    git clone https://github.com/bgorman87/PDF-Flow.git
+    cd pdf-flow
+    ```
+
+2. Create and activate a virtual environment (recommended):
+
+    ```bash
+    python -m venv venv
+    venv\Scripts\activate
+    ```
+
+3. Install the required Python packages:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4. **Note:** On Windows, you may notice brief command windows appearing and disappearing during file processing. This is due to the way the pdf2image package dependency runs Poppler.
+
+   If you prefer not to see these windows, follow these general steps:
+
+   1. Open `pdf2image.py` in your editor of choice.
+   2. Look for any lines that uses `Popen` to execute a command.
+   3. Add the following flag at the end of that line: `creationflags=0x08000000`.
+
+   * Here's an example of what the modified line could look like:
+     ```python
+     proc = Popen(command, env=env, stdout=PIPE, stderr=PIPE, creationflags=0x08000000)
+     ```
+
+
+5. Run PDF Flow:
+
+    ```bash
+    python PDF-Flow.py
+    ```
+
+## Usage
+
+For usage information/guides please see information located here: [PDF Flow Usage](https://pdfflow.godevservices.com/usage)
+
+## FAQ
+
+<details>
+  <summary>Will this be available for Linux</summary>
+      A: Currently have updating for cross compatability on my list of things to do. Majority of this was created in Linux so not much to change. Should be available soon. 
+</details>
+
+## Contact/Bugs
+
+For any questions/comments/bugs please reachout through e-mail at [brandon@godevservices.com](mailto:brandon@godevservices.com) or directly through github.
+
+## Contribution
+
+Being a new/solo developer I happily welcome any contributions to PDF Flow! Here's how you can contribute:
+
+1. **Fork the Repository**: Click the "Fork" button at the top-right of this repository to create your own copy.
+
+2. **Clone the Repository**: Clone your forked repository to your local machine:
+
+    `git clone https://github.com/your-username/PDF-Flow.git`
+
+    `cd PDF-Flow`
+
+3. **Create a Branch**: Create a new descriptively named branch for your changes:
+
+    `git checkout -b your-descriptive-branch-name`
+
+4. **Make Changes**: Make your desired changes to the codebase.
+
+5. **Commit Changes**: Commit your changes with a descriptive commit message:
+
+    `git commit -m "Add feature XYZ"`
+
+6. **Push to Your Fork**: Push your changes to your fork on GitHub:
+
+    `git push origin your-descriptive-branch-name`
+
+7. **Submit a Pull Request**: Open a pull request from your fork to this repository's `main` branch. Provide a clear and detailed description of your changes.
+
+8. **Review and Collaborate**: Participate in the discussion and make any necessary adjustments based on feedback from maintainers.
+
