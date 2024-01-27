@@ -8,7 +8,6 @@ import json
 import requests
 import uuid
 
-
 def valid_date(date_string):
     try:
         datetime.datetime.strptime(date_string, "%d %b %Y")
@@ -251,7 +250,7 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
     data = {
         "device": identifier,
         "data": usage_count,
-        "info": info if info else None
+        "info": "Generic Version " + info
     }
 
     json_data = json.dumps(data)
