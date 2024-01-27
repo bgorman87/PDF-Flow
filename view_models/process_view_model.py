@@ -937,7 +937,7 @@ class ProcessViewModel(QtCore.QObject):
         message_box = general_utils.MessageBox()
         message_box.title = "Email Unprocessed Files"
         message_box.icon = QtWidgets.QMessageBox.Question
-        message_box.text = "You have unprocessed files in your selection. Do you wish to include these in your email?"
+        message_box.text = "You have unprocessed files in your selection. Do you wish to include these in your email? \n\nThis will require a bit of extra time as the files will need to have basic processing done on them first."
         message_box.buttons = [
             QtWidgets.QPushButton("Proceed"),
             QtWidgets.QPushButton("Cancel"),
