@@ -4,7 +4,7 @@ This program was created to dynamically analyze scanned PDF files using user def
 
 ## Install Process
 
-**Note:** PDF Flow is currently only compatible with Windows due to hardcoded configuration storage settings. Updating this for use on Linux will be completed soon in a future update.
+**Note:** PDF Flow is currently only compatible with Windows due to hardcoded configuration storage settings. Updating this to allow cross compatibility with Linux will be completed soon in a future update.
 
 ### Dependencies
 
@@ -74,12 +74,14 @@ For usage information/guides please see information located here: [PDF Flow Usag
 
 <details>
   <summary>Will this be available for Linux</summary>
-      A: Currently have updating for cross compatability on my list of things to do. Majority of this was created in Linux so not much to change. Should be available soon. 
+      A: Currently have updating for cross compatibility on my list of things to do. Majority of this was created in Linux so not much to change. Should be available soon. 
 </details>
 
 ## Contact/Bugs
 
-For any questions/comments/bugs please reach out through e-mail at [brandon@godevservices.com](mailto:brandon@godevservices.com) or directly through github.
+For any bugs please [check for relevant issues](https://github.com/bgorman87/PDF-Flow/issues) and if none apply then please [open a new issue](https://github.com/bgorman87/PDF-Flow/issues/new).
+
+For general comments/questions you can reach out directly through github or through e-mail at [brandon@godevservices.com](mailto:brandon@godevservices.com).
 
 ## Contribution
 
