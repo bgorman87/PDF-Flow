@@ -85,7 +85,7 @@ For general comments/questions you can reach out directly through github or thro
 
 ## Contribution
 
-Being a new/solo developer I happily welcome any contributions to PDF Flow! There is a ton that can be improved or added I am sure so here's how you can contribute:
+Being a new/solo developer without a CS degree or any industry experience, I very much welcome any contributions to PDF Flow! I know there is a ton that can be improved or added so if you would like to contribute, please follow these steps:
 
 1. **Fork the Repository**: Click the "Fork" button at the top-right of this repository to create your own copy.
 
