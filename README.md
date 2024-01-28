@@ -46,7 +46,7 @@ If you prefer to build from source you can follow these steps:
     pip install -r requirements.txt
     ```
 
-4. **Note:** On Windows, during file processing you may notice brief command prompt windows appearing and disappearing. This is due to how the `pdf2image` package dependency runs Poppler through these prompts, which I cannot programmatically change.
+4. **Note:** On Windows if you plan to compile an executable yourself, then during file processing you may notice brief command prompt windows appearing and disappearing. If running directly from source, you may not see this occurring depending on your environment. This is due though to how the `pdf2image` package dependency runs Poppler through these prompts, which I cannot programmatically change.
 
    If you prefer not to see these windows appear/disappear, follow these general steps to prevent `pdf2image` from creating/showing the cmd prompts:
 
