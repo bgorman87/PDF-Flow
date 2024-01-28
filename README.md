@@ -46,12 +46,12 @@ If you prefer to build from source you can follow these steps:
     pip install -r requirements.txt
     ```
 
-4. **Note:** On Windows, during processing you may notice brief command windows appearing and disappearing. This is due to the way the `pdf2image` package dependency runs Poppler which I cannot programmatically change.
+4. **Note:** On Windows, during file processing you may notice brief command prompt windows appearing and disappearing. This is due to how the `pdf2image` package dependency runs Poppler through these prompts, which I cannot programmatically change.
 
-   If you prefer not to see these windows, follow these general steps:
+   If you prefer not to see these windows appear/disappear, follow these general steps to prevent `pdf2image` from creating the cmd prompts:
 
-   1. Open `pdf2image.py` in your editor of choice.
-   2. Look for any lines that uses `Popen` to execute a command.
+   1. Open `pdf2image.py` in your editor of choice. This file should be located at `venv\Lib\site-packages\pdf2image\pdf2image.py`
+   2. Look for any lines that use `Popen` to execute a command.
    3. Add the following flag to the respective `Popen` calls: `creationflags=0x08000000`.
 
    * Here's an example of what the modified line could look like:
