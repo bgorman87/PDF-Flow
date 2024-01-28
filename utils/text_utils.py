@@ -214,6 +214,10 @@ def embed_images_as_base64(html_content: str) -> str:
     Returns:
         str: html with images embedded as base64
     """
+
+    if not html_content:
+        return html_content
+
     root = html.fromstring(html_content)
 
     for img_tag in root.xpath("//img"):
