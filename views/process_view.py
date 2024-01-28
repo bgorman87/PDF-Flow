@@ -490,14 +490,14 @@ class ProcessView(QtWidgets.QWidget):
         outlook_button.clicked.connect(popup.accept)
         popup_layout.addWidget(outlook_button)
 
-        gmail_button = QtWidgets.QPushButton()
-        gmail_button.setIcon(QtGui.QIcon(resource_path("assets/icons/gmail.png")))
-        gmail_button.setIconSize(QtCore.QSize(215, 46))
-        gmail_button.clicked.connect(
-            lambda: self.email_provider_handler(EmailProvider.GMAIL)
-        )
-        gmail_button.clicked.connect(popup.accept)
-        popup_layout.addWidget(gmail_button)
+        # gmail_button = QtWidgets.QPushButton()
+        # gmail_button.setIcon(QtGui.QIcon(resource_path("assets/icons/gmail.png")))
+        # gmail_button.setIconSize(QtCore.QSize(215, 46))
+        # gmail_button.clicked.connect(
+        #     lambda: self.email_provider_handler(EmailProvider.GMAIL)
+        # )
+        # gmail_button.clicked.connect(popup.accept)
+        # popup_layout.addWidget(gmail_button)
 
         local_button = QtWidgets.QPushButton()
         local_button.setIcon(
