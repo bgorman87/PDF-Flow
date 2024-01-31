@@ -140,7 +140,7 @@ QPushButton.nav-button {
 }
 
 
-.company-logo {
+.nav-logo {
     background-color: #5a5a5a;
     border: 0px;
 

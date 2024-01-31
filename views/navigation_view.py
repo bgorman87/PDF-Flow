@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets, QtSvgWidgets
 
 from view_models import main_view_model, navigation_view_model
 from utils import path_utils
-
+from config import LOGO_PATH, DOWNLOAD_LINK
 import os
 
 class NavigationView(QtWidgets.QVBoxLayout):
@@ -13,14 +13,14 @@ class NavigationView(QtWidgets.QVBoxLayout):
             self.main_view_model
         )
 
-        logo_exists = os.path.exists(path_utils.resource_path("assets/icons/logo.svg"))
-        if logo_exists:
+        logo = path_utils.resource_path(LOGO_PATH) if LOGO_PATH else ""
+        if logo and os.path.exists(logo):
             self.logo_layout = QtWidgets.QHBoxLayout()
             self.logo_layout.setContentsMargins(0, 0, 0, 0)
             self.logo_layout.setAlignment(QtCore.Qt.AlignHCenter)  # type: ignore
 
-            self.logo = QtSvgWidgets.QSvgWidget(path_utils.resource_path("assets/icons/logo.svg"))
-            self.logo.setProperty("class", "company-logo")
+            self.logo = QtSvgWidgets.QSvgWidget(logo)
+            self.logo.setProperty("class", "nav-logo")
             self.logo.setFixedSize(100, 100)
 
             self.logo_layout.addWidget(self.logo)
@@ -207,5 +207,5 @@ class NavigationView(QtWidgets.QVBoxLayout):
         """Opens the documentation link in the default browser."""
 
         QtGui.QDesktopServices.openUrl(
-            QtCore.QUrl("https://pdfflow.godevservices.com/")
+            QtCore.QUrl(DOWNLOAD_LINK)
         )

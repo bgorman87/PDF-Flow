@@ -9,6 +9,17 @@ import pytesseract
 from view_models import main_view_model
 import regex as re
 from utils import text_utils
+from config import TESSERACT_PATH, POPPLER_PATH
+
+if TESSERACT_PATH:
+    tesseract_path = resource_path(TESSERACT_PATH)
+else:
+    tesseract_path = os.getenv("PATH")
+
+if POPPLER_PATH:
+    poppler_path = resource_path(POPPLER_PATH)
+else:
+    poppler_path = os.getenv("PATH")
 
 
 def detect_package_number(file_path: str, project_file_path: str = None) -> str:
@@ -72,7 +83,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         # Each pdf page is stored as image info in an array called images_jpg
 
         images_jpeg = convert_from_path(
-            self.file, fmt="jpeg", single_file=True
+            self.file, fmt="jpeg", single_file=True, poppler_path=poppler_path
         )
         image = images_jpeg[0]
         img_byte_arr = io.BytesIO()
@@ -419,5 +430,6 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
     def analyze_image(self, img_path) -> str:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
         return pytesseract.image_to_string(img_path, config=config_str).strip()

@@ -7,6 +7,7 @@ import base64
 import json
 import requests
 import uuid
+from config import TELEMETRY_URL
 
 def valid_date(date_string):
     try:
@@ -249,7 +250,7 @@ def post_telemetry_data(usage_count: int, identifier: uuid.UUID, info: str = "")
         requests.Response: Response from the API Gateway endpoint
     """
 
-    url = "https://telemetry.pdf-flow.brandongorman.me/telemetry"
+    url = TELEMETRY_URL
 
     data = {
         "device": identifier,
