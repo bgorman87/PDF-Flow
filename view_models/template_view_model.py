@@ -141,13 +141,17 @@ class TemplateViewModel(QtCore.QObject):
 
     def update_template_pixmap(self):
         """Displays PDF file to be used for updating/creating a file_profile"""
-
-        self._image_jpeg = pdf2image.convert_from_path(
-            self._file_profile_path,
-            fmt="jpeg",
-            poppler_path=poppler_path,
-            single_file=True,
-        )
+        if poppler_path:
+            self._image_jpeg = pdf2image.convert_from_path(
+                self._file_profile_path,
+                fmt="jpeg",
+                poppler_path=poppler_path,
+                single_file=True,
+            )
+        else:
+            self._image_jpeg = pdf2image.convert_from_path(
+                self._file_profile_path, fmt="jpeg", single_file=True
+            )
         self._img_byte_arr = io.BytesIO()
         self._image_jpeg[0].save(self._img_byte_arr, format="jpeg")
         self._img_byte_arr = self._img_byte_arr.getvalue()
