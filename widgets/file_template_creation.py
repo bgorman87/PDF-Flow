@@ -348,7 +348,9 @@ class TemplateWidget(QtWidgets.QWidget):
         if self.image_area_too_small:
             self.found_text = "Image Area Too Small"
             return
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        
+        if tesseract_path:
+            pytesseract.pytesseract.tesseract_cmd = tesseract_path
         
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"

@@ -79,7 +79,7 @@ class NavigationView(QtWidgets.QVBoxLayout):
         self.setSpacing(5)
         self.setContentsMargins(0, 0, 0, 0)
 
-        if logo_exists:
+        if logo and os.path.exists(logo):
             self.addSpacing(25)
             self.addLayout(self.logo_layout)
 
