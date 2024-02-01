@@ -162,9 +162,7 @@ class ProcessView(QtWidgets.QWidget):
             header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
 
         self.files_table.currentItemChanged.connect(
-            lambda: self.view_model.table_widget_handler(
-                self.files_table.item(self.files_table.currentRow(), 1)
-            )
+            self.table_widget_handler
         )
 
         self.files_table.itemChanged.connect(self.table_state_handler)
@@ -305,7 +303,9 @@ class ProcessView(QtWidgets.QWidget):
         Args:
             item (QtWidgets.QTableWidgetItem): Item that was changed
         """
-
+        if item.row() == self.files_table.currentRow():
+            return
+        
         if item.column() == 0:
             data = self.files_table.item(item.row(), 1).data(QtCore.Qt.UserRole)
             self.view_model.table_state_handler(item, data)
@@ -498,9 +498,7 @@ class ProcessView(QtWidgets.QWidget):
         """Connects table widget to view model"""
 
         self.files_table.currentItemChanged.connect(
-            lambda: self.view_model.table_widget_handler(
-                self.files_table.item(self.files_table.currentRow(), 1)
-            )
+            self.table_widget_handler
         )
         self.files_table.itemChanged.connect(self.table_state_handler)
 
@@ -590,3 +588,12 @@ class ProcessView(QtWidgets.QWidget):
                     self.files_table.setCurrentItem(None)
                     self.view_model.table_widget_handler()
         self.update_table_data()
+
+    def table_widget_handler(self, item: QtWidgets.QTableWidgetItem):
+        
+        if item.row() == self.files_table.currentRow():
+            return
+        
+        self.view_model.table_widget_handler(
+                self.files_table.item(self.files_table.currentRow(), 1)
+            )
