@@ -624,11 +624,11 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_viewer_table.clear()
         self.clear_project_data_fields()
         self.display_data_as_table(project_data=project_data, headers=headers)
+        self.database_viewer_table.sortItems(0, QtCore.Qt.AscendingOrder)
+        self.update()
         self.database_viewer_table.currentItemChanged.connect(
             self.project_data_discard_check
         )
-        self.database_viewer_table.sortItems(0, QtCore.Qt.AscendingOrder)
-        self.update()
 
     def display_data_as_table(self, project_data: list[str], headers: list[str]):
         self.database_viewer_table.setSortingEnabled(False)
@@ -753,24 +753,41 @@ class DataViewerView(QtWidgets.QWidget):
             return
         self.save_button_reset_change_entry()
         self.database_viewer_table.currentItemChanged.disconnect()
-        self.database_viewer_table.setCurrentIndex(self._current_index)
+        self.set_focus_select_and_highlight_cell(
+            self._current_index.row(), self._current_index.column()
+        )
         self.database_viewer_table.currentItemChanged.connect(
             self.project_data_discard_check
         )
 
     def set_focus_select_and_highlight_cell(self, row: int, column: int):
+        # TODO: This doesn't work. Find a way to programmatically set the "selected" attribute for use in the qss file
         self.database_viewer_table.setFocus()
+        self.database_viewer_table.clearSelection()
         try:
             found_items = self.database_viewer_table.findItems(
-                self.database_viewer_table.item(row, 0).text(), QtCore.Qt.MatchExactly
+                self.database_viewer_table.item(row, column).text(), QtCore.Qt.MatchExactly
             )
             index = self.database_viewer_table.indexFromItem(found_items[0])
             self.database_viewer_table.setCurrentIndex(index)
+            self.database_viewer_table.setCurrentItem(found_items[0])
+            self.database_viewer_table.selectionModel().select(
+                index, QtCore.QItemSelectionModel.Select | QtCore.QItemSelectionModel.Current
+            )
+            self.database_viewer_table.repaint()
+            return
         except IndexError:
             pass
 
-        self.database_viewer_table.setCurrentIndex(self.database_viewer_table.model().index(row, column))
-        # TODO: Find way to programmatically highlight the cell with proper formatting
+        index = self.database_viewer_table.model().index(row, column)
+        self.database_viewer_table.setCurrentIndex(index)
+        self.database_viewer_table.selectionModel().select(
+                index, QtCore.QItemSelectionModel.Select | QtCore.QItemSelectionModel.Current
+            )
+        self.database_viewer_table.repaint()
+
+        self.repaint()
+        self.update()       
 
 
     def handle_project_data_update(self):
@@ -909,6 +926,7 @@ class DataViewerView(QtWidgets.QWidget):
             self.save_button_reset_change_entry()
             self.database_discard_edited_project_data_button.setEnabled(False)
             self.database_save_edited_project_data_button.setEnabled(False)
+            self._project_data_changed = False
             return
 
     def discard_project_data_changes(self):
