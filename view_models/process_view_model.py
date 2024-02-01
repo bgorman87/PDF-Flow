@@ -248,13 +248,14 @@ class ProcessViewModel(QtCore.QObject):
                 "profile_id": profile_id,
             },
             "checked": False,
-            "processed": True,
+            "processed": True if profile_id else False,
         }
         
         data.update(new_file_data)
         old_key = general_utils.get_key(self.active_files_data, data)
         self.main_view_model.add_console_text(print_string)
-
+        self.main_view_model.add_console_alerts(1)
+        
         # Need to update the file name in the list widget
         # First we need to update the source data file name
         # Then we can update the backend dictionary which will
