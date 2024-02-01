@@ -431,8 +431,11 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             email_items (List[QtWidgets.QListWidgetItem]): List of Email items from processed files list widget
         """
-        emails = []
         selected_files = self.get_selected_files()
+        if not selected_files:
+            return
+        
+        emails = []
         for file_path in selected_files:
             email_dict = {}
             project_number = self.active_files_data[file_path]["metadata"]["project_number"]
@@ -984,8 +987,12 @@ class ProcessViewModel(QtCore.QObject):
 
         if not analysis_data or analysis_data[0] == 0:  # No file type detected therefore new template
             self.main_view_model.add_console_text(
-                f"Unprocessed Email Error: Could not determine file type for file: {os.path.basename(file_type[1])}"
+                f"Unprocessed Email Error: Could not determine file type for file: {os.path.basename(analysis_data[1])}"
             )
+            self.main_view_model.add_console_alerts(1)
+            data.update({"checked": False})
+            self.update_file_data_item(analysis_data[1], analysis_data[1], dict(data))
+            self.email_tracker(data)
             return
         
         file_type, file_name = analysis_data
@@ -1028,7 +1035,12 @@ class ProcessViewModel(QtCore.QObject):
         Args:
             email_item (QtWidgets.QListWidgetItem): Email item from processed files list widget
         """
-        self._unprocessed_email_items.append(email_item)
+
+        if not email_item["metadata"]["profile_id"]:
+            self._unprocessed_files_email_count -= 1
+        else:
+            self._unprocessed_email_items.append(email_item)
+
         self.progress_dialog.setValue(len(self._unprocessed_email_items))
         QtWidgets.QApplication.processEvents()
         # Once all files have been processed, email all selected items
