@@ -303,8 +303,6 @@ class ProcessView(QtWidgets.QWidget):
         Args:
             item (QtWidgets.QTableWidgetItem): Item that was changed
         """
-        if item.row() == self.files_table.currentRow():
-            return
         
         if item.column() == 0:
             data = self.files_table.item(item.row(), 1).data(QtCore.Qt.UserRole)
@@ -590,9 +588,6 @@ class ProcessView(QtWidgets.QWidget):
         self.update_table_data()
 
     def table_widget_handler(self, item: QtWidgets.QTableWidgetItem):
-        
-        if item.row() == self.files_table.currentRow():
-            return
         
         self.view_model.table_widget_handler(
                 self.files_table.item(self.files_table.currentRow(), 1)
