@@ -117,7 +117,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             return
 
         if file_type == 0:
-            file_title = self.file.replace(self.file_dir_path, "").replace(".pdf", "")
+            file_title = os.path.splitext(os.path.basename(self.file))[0]
             print_string = f"No profile found for: {file_title}.pdf"
             returns = [print_string, file_title, self.file, None, None, file_type]
             self.signals.analysis_progress.emit(90)
