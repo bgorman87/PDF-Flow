@@ -255,12 +255,13 @@ class ProcessViewModel(QtCore.QObject):
         old_key = general_utils.get_key(self.active_files_data, data)
         self.main_view_model.add_console_text(print_string)
 
+        # Need to update the file name in the list widget
+        # First we need to update the source data file name
+        # Then we can update the backend dictionary which will
+        # link the new key (source) to the source in the list widget
         self.processed_file_rename.emit(old_key, file_path)
         self.update_file_data_item(old_key, file_path, dict(data))
-
-        # processed_files_list_item = QtWidgets.QListWidgetItem(file_name)
-        # processed_files_list_item.setData(QtCore.Qt.UserRole, file_data)
-        # self.processed_files_list_widget_update.emit(processed_files_list_item)
+        
         self.main_view_model.update_processed_files_count(1)
 
     def rename_file(self, source_path: str, renamed_source_path: str):

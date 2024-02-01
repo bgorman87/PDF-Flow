@@ -73,7 +73,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
     def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False, email: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
-        self.file_dir_path = self.file.replace(self.file.split("/").pop(), "")
+        self.file_dir_path = os.path.dirname(self.file)
         self.template = template
         self.email = email
         self.main_view_model = main_view_model
