@@ -98,29 +98,7 @@ class ProcessView(QtWidgets.QWidget):
                 self.view_model.main_view_model.process_button_state
             )
         )
-        # self.view_model.main_view_model.process_button_count_update.connect(
-        #     lambda: self.process_button_text_update(
-        #         self.view_model.main_view_model.process_button_count
-        #     )
-        # )
         self.input_tab_action_buttons.addWidget(self.process_button)
-
-        # # Action button to start file analysis
-        # self.process_button = QtWidgets.QPushButton()
-        # self.process_button.clicked.connect(self.view_model.process_files)
-        # self.process_button.setObjectName("analyze_button")
-        # self.process_button.setEnabled(False)
-        # self.view_model.main_view_model.process_button_state_update.connect(
-        #     lambda: self.process_button.setEnabled(
-        #         self.view_model.main_view_model.process_button_state
-        #     )
-        # )
-        # self.view_model.main_view_model.process_button_count_update.connect(
-        #     lambda: self.process_button_text_update(
-        #         self.view_model.main_view_model.process_button_count
-        #     )
-        # )
-        # self.input_tab_action_buttons.addWidget(self.process_button)
 
         # Action button to start email process
         self.email_button = QtWidgets.QPushButton()
@@ -144,21 +122,6 @@ class ProcessView(QtWidgets.QWidget):
         self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
         self.input_tab_action_buttons.addWidget(self.email_button)
 
-        # self.email_button = QtWidgets.QPushButton()
-        # self.email_button.clicked.connect(self.email_unprocessed_processed_handler)
-        # self.email_button.setObjectName("email_button")
-        # self.email_button.setEnabled(False)
-        # self.input_tab_action_buttons.addWidget(self.email_button)
-
-        # # Drop list box to choose analysis type (Live/Test)
-        # # Live uses real client info, test uses dummy/local info
-        # self.test_box = QtWidgets.QComboBox()
-        # self.test_box.setObjectName("test_box")
-        # self.test_box.setEditable(True)
-        # self.test_box.lineEdit().setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        # self.test_box.addItems(["Test", "Live"])
-        # self.test_box.setEditable(False)
-        # self.input_tab_action_buttons.addWidget(self.test_box)
 
         self.main_layout.addLayout(self.input_tab_action_buttons)
 
@@ -210,33 +173,6 @@ class ProcessView(QtWidgets.QWidget):
 
         self.main_layout.addWidget(self.files_table)
 
-        # Add splitter to separate analyzed files from file preview
-
-        # # Widget to hold analyzed files
-        # self.processed_files_list_widget = QtWidgets.QListWidget()
-        # self.processed_files_list_widget.setSelectionMode(
-        #     QtWidgets.QAbstractItemView.SingleSelection
-        # )
-        # self.processed_files_list_widget.setGeometry(QtCore.QRect(10, 30, 320, 100))
-        # self.processed_files_list_widget.setObjectName("processed_files_list_widget")
-        # self.main_layout.addWidget(self.processed_files_list_widget)
-        # self.main_layout.setStretch(
-        #     self.main_layout.indexOf(self.processed_files_list_widget), 2
-        # )
-        # self.view_model.processed_files_list_widget_update.connect(
-        #     self.add_processed_list_widget_item
-        # )
-
-        # # Lines within the analyzed files widget above
-        # self.processed_files_list_item = QtWidgets.QListWidgetItem()
-        # self.processed_files_list_widget.itemClicked.connect(
-        #     lambda: self.view_model.list_widget_handler(
-        #         self.processed_files_list_widget.currentItem()
-        #     )
-        # )
-        # self.processed_files_list_widget.itemDoubleClicked.connect(
-        #     self.rename_file_handler
-        # )
 
         self.file_rename_layout = QtWidgets.QHBoxLayout()
         # Text editor line to edit file names
@@ -431,7 +367,7 @@ class ProcessView(QtWidgets.QWidget):
                 file_data["metadata"]["project_data"] = renamed_project_data_path
         
         self.update_table_item_source(source_path, renamed_source_path)
-        self.view_model.update_file_data_item(source_path, file_data)
+        self.view_model.update_file_data_item(source_path, renamed_source_path, file_data)
 
     def update_table_item_source(self, source_path: str, renamed_path: str):
         """Updates table item data
@@ -440,7 +376,7 @@ class ProcessView(QtWidgets.QWidget):
             source_path (str): Source path of file
             file_data (dict): File data
         """
-        for row in range(self.files_table.rowCount()):
+        for row in range(len(self.view_model.active_files_data)):
             item = self.files_table.item(row, 1)
             existing_data = item.data(QtCore.Qt.UserRole)
             if existing_data["source"] == source_path:
@@ -585,9 +521,9 @@ class ProcessView(QtWidgets.QWidget):
             self.update_current_item(current_item_index)
         finally:
             self.update()
-            self.table_widget_connect()
             self.view_model.process_button_handler()
             self.view_model.update_loaded_files_count()
+            self.table_widget_connect()
 
     def update_existing_entries(self):
         """Updates existing entries in the table with new data."""
@@ -616,6 +552,8 @@ class ProcessView(QtWidgets.QWidget):
         for row, (file_name, file_data) in enumerate(self.view_model.active_files_data.items()):
             if file_name in self.updated_files:
                 continue
+
+            # If blank rows appear, likely due to item data and backend data not matching
             self.files_table.insertRow(self.files_table.rowCount())
             data = dict(file_data)
             data["source"] = file_name
