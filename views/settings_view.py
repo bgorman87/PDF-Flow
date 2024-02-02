@@ -1,7 +1,9 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
+from regex import P
 from view_models import settings_view_model
 from widgets.utility_widgets import HorizontalLine
 from functools import partial
+from utils import path_utils
 
 
 class SettingsView(QtWidgets.QWidget):
@@ -131,9 +133,143 @@ class SettingsView(QtWidgets.QWidget):
         anonymous_clarification_label.setProperty("class", "anonymous-clarification-label")
         self.config_list.addWidget(anonymous_clarification_label)
         self.main_layout.addLayout(self.config_list)
+        
+        self.poppler_directory_layout = QtWidgets.QHBoxLayout()
+
+        # Label for poppler line edit
+        self.poppler_directory_label = QtWidgets.QLabel("Poppler Path: ")
+        self.poppler_directory_label.setObjectName("poppler_directory_label")
+        self.poppler_directory_layout.addWidget(self.poppler_directory_label)
+
+        # Poppler directory line edit
+        self.poppler_directory_line_edit = QtWidgets.QLineEdit()
+        poppler_path = self.view_model.get_poppler_path()
+        if poppler_path:
+            self.poppler_directory_line_edit.setText(poppler_path)
+        else:
+            self.poppler_directory_line_edit.setPlaceholderText("Leave blank to use system PATH")
+        self.poppler_directory_line_edit.setObjectName(
+            "poppler_directory_line_edit"
+        )
+        self.poppler_directory_layout.addWidget(
+            self.poppler_directory_line_edit
+        )
+
+        # Action button to open file dialog
+        self.poppler_directory_button = QtWidgets.QPushButton("Browse")
+        self.poppler_directory_button.clicked.connect(
+            self.set_poppler_path
+        )
+        self.poppler_directory_button.setObjectName(
+            "poppler_directory_button"
+        )
+        self.poppler_directory_layout.addWidget(
+            self.poppler_directory_button
+        )
+
+        # Action button to remove poppler path
+        self.poppler_remove_button = QtWidgets.QPushButton()
+        self.poppler_remove_button.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(path_utils.resource_path(u"assets/icons/delete.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.poppler_remove_button.setIcon(icon)
+        self.poppler_remove_button.setProperty("class", "delete-button")
+        self.poppler_remove_button.clicked.connect(
+            self.view_model.remove_poppler_path
+        )
+        self.poppler_remove_button.setObjectName(
+            "poppler_remove_button"
+        )
+        self.poppler_directory_layout.addWidget(
+            self.poppler_remove_button
+        )
+
+        # Action button to test poppler path
+        self.poppler_test_button = QtWidgets.QPushButton("Test")
+        self.poppler_test_button.clicked.connect(
+            self.view_model.test_poppler_path
+        )
+        self.poppler_test_button.setObjectName(
+            "poppler_test_button"
+        )
+        self.poppler_directory_layout.addWidget(
+            self.poppler_test_button
+        )
+
+        self.poppler_directory_layout.setStretch(0, 1)
+        self.poppler_directory_layout.setStretch(1, 10)
+        self.poppler_directory_layout.setStretch(2, 2)
+        self.main_layout.addLayout(self.poppler_directory_layout)
+
+        self.tesseract_executable_layout = QtWidgets.QHBoxLayout()
+
+        # Label for tesseract line edit
+        self.tesseract_executable_label = QtWidgets.QLabel("Tesseract Executable: ")
+        self.tesseract_executable_label.setObjectName("tesseract_executable_label")
+        self.tesseract_executable_layout.addWidget(self.tesseract_executable_label)
+
+        # Tesseract executable line edit
+        self.tesseract_executable_line_edit = QtWidgets.QLineEdit()
+        tesseract_path = self.view_model.get_tesseract_path()
+        if tesseract_path:
+            self.tesseract_executable_line_edit.setText(tesseract_path)
+        else:
+            self.tesseract_executable_line_edit.setPlaceholderText("Leave blank to use system PATH")
+        self.tesseract_executable_line_edit.setObjectName(
+            "tesseract_executable_line_edit"
+        )
+        self.tesseract_executable_layout.addWidget(
+            self.tesseract_executable_line_edit
+        )
+        
+        # Action button to open file dialog
+        self.tesseract_executable_button = QtWidgets.QPushButton("Browse")
+        self.tesseract_executable_button.clicked.connect(
+            self.set_tesseract_path
+        )
+        self.tesseract_executable_button.setObjectName(
+            "tesseract_executable_button"
+        )
+        self.tesseract_executable_layout.addWidget(
+            self.tesseract_executable_button
+        )
+
+        # Action button to remove tesseract path
+        self.tesseract_remove_button = QtWidgets.QPushButton()
+        self.tesseract_remove_button.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(path_utils.resource_path(u"assets/icons/delete.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.tesseract_remove_button.setIcon(icon)
+        self.tesseract_remove_button.setProperty("class", "delete-button")
+        self.tesseract_remove_button.clicked.connect(
+            self.view_model.remove_tesseract_path
+        )
+        self.tesseract_remove_button.setObjectName(
+            "tesseract_remove_button"
+        )
+        self.tesseract_executable_layout.addWidget(
+            self.tesseract_remove_button
+        )
+
+        # Action button to test tesseract path
+        self.tesseract_test_button = QtWidgets.QPushButton("Test")
+        self.tesseract_test_button.clicked.connect(
+            self.view_model.test_tesseract_path
+        )
+        self.tesseract_test_button.setObjectName(
+            "tesseract_test_button"
+        )
+        self.tesseract_executable_layout.addWidget(
+            self.tesseract_test_button
+        )
+
+        self.tesseract_executable_layout.setStretch(0, 1)
+        self.tesseract_executable_layout.setStretch(1, 10)
+        self.tesseract_executable_layout.setStretch(2, 2)
+        self.main_layout.addLayout(self.tesseract_executable_layout)
 
         self.main_layout.addStretch(2)
-        
+
         self.setLayout(self.main_layout)
 
         self.view_model.anonymous_usage_update.connect(self.update_anonymous_config_options)
@@ -143,6 +279,13 @@ class SettingsView(QtWidgets.QWidget):
         )
         self.view_model.batch_email_update.connect(
             self.update_batch_email
+        )
+
+        self.view_model.poppler_path_removed.connect(
+            self.clear_poppler_path
+        )
+        self.view_model.tesseract_path_removed.connect(
+            self.clear_tesseract_path
         )
 
 
@@ -195,3 +338,19 @@ class SettingsView(QtWidgets.QWidget):
             self.template_list.addWidget(template_checkbox)
 
         self.template_list.update()
+
+    def clear_poppler_path(self):
+        self.poppler_directory_line_edit.clear()
+        self.poppler_directory_line_edit.setPlaceholderText("Leave blank to use system PATH")
+
+    def clear_tesseract_path(self):
+        self.tesseract_executable_line_edit.clear()
+        self.tesseract_executable_line_edit.setPlaceholderText("Leave blank to use system PATH")
+
+    def set_poppler_path(self):
+        poppler_path = self.view_model.set_poppler_path()
+        self.poppler_directory_line_edit.setText(poppler_path)
+
+    def set_tesseract_path(self):
+        tesseract_path = self.view_model.set_tesseract_path()
+        self.tesseract_executable_line_edit.setText(tesseract_path)

@@ -135,7 +135,7 @@ class TemplateView(QtWidgets.QWidget):
         )
 
         # Custom template display widget
-        self.template_display = file_template_creation.TemplateWidget()
+        self.template_display = file_template_creation.TemplateWidget(tesseract_path=self.view_model.get_tesseract_path())
         
         self.main_layout.addWidget(self.template_display)
         self.view_model.template_pixmap_update.connect(lambda: self.update_template_pixmap(
