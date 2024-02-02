@@ -132,6 +132,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Project number line edit
         self.database_project_number_line_edit = QtWidgets.QLineEdit()
+        self.database_project_number_line_edit.setProperty("edited", False)
         self.database_project_number_line_edit.setObjectName(
             "database_project_number_line_edit"
         )
@@ -155,6 +156,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Project directory line edit
         self.database_project_directory_line_edit = QtWidgets.QLineEdit()
+        self.database_project_directory_line_edit.setProperty("edited", False)
         self.database_project_directory_line_edit.setObjectName(
             "database_project_directory_line_edit"
         )
@@ -193,6 +195,7 @@ class DataViewerView(QtWidgets.QWidget):
             self.project_data_description_label
         )
         self.project_data_description_line_edit = QtWidgets.QLineEdit()
+        self.project_data_description_line_edit.setProperty("edited", False)
         self.project_data_description_line_edit.setObjectName(
             "project_data_description_line_edit"
         )
@@ -218,6 +221,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Project email subject line edit
         self.database_project_email_subject_line_edit = QtWidgets.QLineEdit()
+        self.database_project_email_subject_line_edit.setProperty("edited", False)
         self.database_project_email_subject_line_edit.setObjectName(
             "database_project_email_subject_line_edit"
         )
@@ -241,6 +245,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Dropdown menu containing e-mail profiles
         self.profile_email_combo_box = QtWidgets.QComboBox()
+        self.profile_email_combo_box.setProperty("edited", False)
         self.profile_email_combo_box.setObjectName(
             "profile_email_combo_box"
         )
@@ -289,6 +294,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Email to list widget
         self.database_email_to_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_to_list_widget.setProperty("edited", False)
         self.database_email_to_list_widget.setProperty("email_type", "email_to")
         # Enable dragging and dropping of items within the list widget
         self.database_email_to_list_widget.setDragDropMode(
@@ -350,11 +356,12 @@ class DataViewerView(QtWidgets.QWidget):
         self.project_data_email_cc_layout = QtWidgets.QVBoxLayout()
         # Label for email cc list widget
         self.database_email_cc_label = QtWidgets.QLabel()
-        self.database_email_cc_label.setObjectName("database_email_tcc_label")
+        self.database_email_cc_label.setObjectName("database_email_cc_label")
         self.project_data_email_cc_layout.addWidget(self.database_email_cc_label)
 
         # Email cc list widget
         self.database_email_cc_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_cc_list_widget.setProperty("edited", False)
         self.database_email_cc_list_widget.setProperty("email_type", "email_cc")
         # Enable dragging and dropping of items within the list widget
         self.database_email_cc_list_widget.setDragDropMode(
@@ -416,6 +423,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         # Email bcc list widget
         self.database_email_bcc_list_widget = email_list_widget.EmailListWidget()
+        self.database_email_bcc_list_widget.setProperty("edited", False)
         self.database_email_bcc_list_widget.setProperty("email_type", "email_bcc")
         # Enable dragging and dropping of items within the list widget
         self.database_email_bcc_list_widget.setDragDropMode(
@@ -483,7 +491,7 @@ class DataViewerView(QtWidgets.QWidget):
         # Action button to save manual changes
         self.database_save_edited_project_data_button = QtWidgets.QPushButton()
         self.database_save_edited_project_data_button.clicked.connect(
-            self.save_project_data_changes
+            self.save_project_data
         )
         self.database_save_edited_project_data_button.setObjectName(
             "database_save_edited_project_data_button"
@@ -521,7 +529,11 @@ class DataViewerView(QtWidgets.QWidget):
             self.database_delete_project_data_button
         )
         self.view_model.project_data_entry_deleted.connect(
-            self.project_data_entry_deleted_slot
+            self.project_data_deleted_slot
+        )
+
+        self.view_model.all_project_data_deleted.connect(
+            self.project_data_deleted_slot
         )
 
         self.main_layout.addLayout(self.project_data_bottom_cta_layout)
@@ -529,6 +541,17 @@ class DataViewerView(QtWidgets.QWidget):
         self.view_model.main_view_model.fetch_all_project_data()
 
         self.setLayout(self.main_layout)
+
+        self._project_data_editable_widgets_list = [
+            self.database_project_number_line_edit,
+            self.database_project_directory_line_edit,
+            self.project_data_description_line_edit,
+            self.database_project_email_subject_line_edit,
+            self.profile_email_combo_box,
+            self.database_email_to_list_widget,
+            self.database_email_cc_list_widget,
+            self.database_email_bcc_list_widget,
+        ]
 
         self.translate_ui()
         self.view_model.update_data_table()
@@ -567,7 +590,7 @@ class DataViewerView(QtWidgets.QWidget):
             _translate("MainWindow", "Discard Changes")
         )
         self.database_save_edited_project_data_button.setText(
-            _translate("MainWindow", "Save Changes")
+            _translate("MainWindow", "Save")
         )
         self.database_delete_project_data_button.setText(
             _translate("MainWindow", "Delete Entry")
@@ -615,14 +638,14 @@ class DataViewerView(QtWidgets.QWidget):
             self.database_viewer_table.setColumnCount(0)
             self.export_project_data_button.setEnabled(False)
             self.delete_all_project_data_button.setEnabled(False)
-            self.save_button_reset_new_entry()
             return
         
         self.export_project_data_button.setEnabled(True)
         self.delete_all_project_data_button.setEnabled(True)
         self.database_viewer_table.currentItemChanged.disconnect()
         self.database_viewer_table.clear()
-        self.clear_project_data_fields()
+        # self.clear_project_data_fields()
+        # TODO: Set current table index to the one just saved
         self.display_data_as_table(project_data=project_data, headers=headers)
         self.database_viewer_table.sortItems(0, QtCore.Qt.AscendingOrder)
         self.update()
@@ -682,16 +705,17 @@ class DataViewerView(QtWidgets.QWidget):
                     pass
 
         # if theres data in filtered results, and a row is chosen, enable the delete button
-        if row_count > 0 and self._current_index is not None:
-            self.database_delete_project_data_button.setEnabled(True)
-        else:
-            self.database_delete_project_data_button.setEnabled(False)
+        # if row_count > 0 and self._current_index is not None:
+        #     self.database_delete_project_data_button.setEnabled(True)
+        # else:
+        #     self.database_delete_project_data_button.setEnabled(False)
     
 
     def set_data_viewer_index(self, index: int):
         self.database_viewer_table.setCurrentIndex(index)
 
     def clear_project_data_fields(self):
+        self.disconnect_widget_signals()
         self.database_project_number_line_edit.setText("")
         self.database_project_directory_line_edit.setText("")
         self.project_data_description_line_edit.setText("")
@@ -700,35 +724,18 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_email_cc_list_widget.clear()
         self.database_email_bcc_list_widget.clear()
         self.profile_email_combo_box.setCurrentIndex(0)
-
-    def save_button_reset_change_entry(self):
-        self._adding_new_entry = False
-        self.database_save_edited_project_data_button.setText("Save Changes")
-        self.database_save_edited_project_data_button.clicked.disconnect()
-        self.database_save_edited_project_data_button.clicked.connect(
-            self.save_project_data_changes
-        )
-
-    def save_button_reset_new_entry(self):
-        self._adding_new_entry = True
-        self.database_save_edited_project_data_button.setText("Save New")
-        self.database_save_edited_project_data_button.clicked.disconnect()
-        self.database_save_edited_project_data_button.clicked.connect(
-            self.save_new_project_data_entry
-        )
+        self.connect_widget_signals()
 
     def project_data_discard_check(self):
         # If user presses new entry, but then selects an existing entry, and the new entry fields are blank
         # then user is not adding a new entry, and just wants the selected entry to display
         if self._adding_new_entry:
-            has_non_empty_fields = any(widget.text() != "" for widget in [
-                self.database_project_number_line_edit,
-                self.database_project_directory_line_edit,
-                self.project_data_description_line_edit,
-                self.database_project_email_subject_line_edit,
-            ])
-            if not has_non_empty_fields:
-                self._adding_new_entry = False
+            for widget in self._project_data_editable_widgets_list:
+                if widget.property("edited"):
+                    self._adding_new_entry = True
+                    break
+                else:
+                    self._adding_new_entry = False
 
         if self._project_data_changed or self._adding_new_entry:
             # Create a popup asking if user wants to discard changes
@@ -749,19 +756,22 @@ class DataViewerView(QtWidgets.QWidget):
 
     def reset_database_current_active_id(self):
         if self._adding_new_entry:
-            self.clear_project_data_fields()
+            # No id to change to, keep current data and return
             return
-        self.save_button_reset_change_entry()
-        self.database_viewer_table.currentItemChanged.disconnect()
-        self.set_focus_select_and_highlight_cell(
-            self._current_index.row(), self._current_index.column()
-        )
-        self.database_viewer_table.currentItemChanged.connect(
-            self.project_data_discard_check
-        )
+        
+        # If user discards and then presses cancel
+        # Try to set the current index to the last selected index
+        if self._current_index:
+            self.database_viewer_table.currentItemChanged.disconnect()
+            self.set_focus_select_and_highlight_cell(
+                self._current_index.row(), self._current_index.column()
+            )
+            self.database_viewer_table.currentItemChanged.connect(
+                self.project_data_discard_check
+            )
 
     def set_focus_select_and_highlight_cell(self, row: int, column: int):
-        # TODO: This doesn't work. Find a way to programmatically set the "selected" attribute for use in the qss file
+        # TODO: This doesn't work. Find a way to programmatically set the "selected" attribute for use in the QSS style file
         self.database_viewer_table.setFocus()
         self.database_viewer_table.clearSelection()
         try:
@@ -786,6 +796,8 @@ class DataViewerView(QtWidgets.QWidget):
             )
         self.database_viewer_table.repaint()
 
+        self._current_index = self.database_viewer_table.selectionModel().currentIndex()
+
         self.repaint()
         self.update()       
 
@@ -793,46 +805,44 @@ class DataViewerView(QtWidgets.QWidget):
     def handle_project_data_update(self):
 
         # If adding a new entry, this function is only called from discarding changes dialog. So just clear fields and return
-        if self._adding_new_entry:
-            self._adding_new_entry = False
-            self._project_data_changed = False
-            self.clear_project_data_fields()
-            self.database_discard_edited_project_data_button.setEnabled(False)
-            self.database_save_edited_project_data_button.setEnabled(False)
+        self._adding_new_entry = False
+        self._project_data_changed = False
+        
+        # Otherwise called when user clicks a new entry, or discards changes
+        self.disable_buttons()
+        self.clear_project_data_fields()
+
+        # If user discards changes and theres no data in table
+        # reconnect the signal and return
+        if self.database_viewer_table.rowCount() == 0:
+            self._project_data_loaded_data = None
+            self.database_delete_project_data_button.setEnabled(False)
             return
         
-        # First get view model to ask user if they want to discard changes
-        # Discard button only enabled if changes are made so no need to double check
-        self.database_viewer_table.currentItemChanged.disconnect()
-        self.save_button_reset_change_entry()
-        self.database_discard_edited_project_data_button.setEnabled(False)
-        self.database_save_edited_project_data_button.setEnabled(False)
-        self.clear_project_data_fields()
-        if self.database_viewer_table.rowCount() == 0:
-            return
         current_row = self.database_viewer_table.currentRow()
-        if current_row == -1:
+        if current_row:
+            self._current_index = self.database_viewer_table.selectionModel().currentIndex()
+        
+        self.database_viewer_table.currentItemChanged.disconnect()
+        if current_row == -1 and self._current_index:
             temp_row = self.view_model.get_next_visible_row_index(self._current_index.row(), self.database_viewer_table)
             if temp_row != -1:
                 current_row = temp_row
                 self.set_focus_select_and_highlight_cell(current_row, 1)
 
-        self._current_index = self.database_viewer_table.selectionModel().currentIndex()
+        # If there is no next visible data in table, return
         if current_row == -1:
             self._project_data_loaded_data = None
             self.database_delete_project_data_button.setEnabled(False)
+            self.database_viewer_table.currentItemChanged.connect(
+                self.project_data_discard_check
+            )
             return None
-        self._project_data_loaded_data = {
-            "project_number": self.database_viewer_table.item(current_row, 0).text(),
-            "directory": self.database_viewer_table.item(current_row, 1).text(),
-            "description": self.database_viewer_table.item(current_row, 2).text(),
-            "email_to": self.database_viewer_table.item(current_row, 3).text(),
-            "email_cc": self.database_viewer_table.item(current_row, 4).text(),
-            "email_bcc": self.database_viewer_table.item(current_row, 5).text(),
-            "email_subject": self.database_viewer_table.item(current_row, 6).text(),
-            "email_profile_name": self.database_viewer_table.item(current_row, 7).text(),
-        }
+        
+        self._project_data_loaded_data = self.project_data_from_row(current_row)
+        self.update_list_widget_edited_properties(False)
         self.database_populate_project_edit_fields()
+        
         self.database_viewer_table.currentItemChanged.connect(
             self.project_data_discard_check
         )
@@ -840,6 +850,9 @@ class DataViewerView(QtWidgets.QWidget):
         self.database_delete_project_data_button.setEnabled(True)
 
     def database_populate_project_edit_fields(self):
+
+        self.disconnect_widget_signals()
+        
         self._project_data_changed = False
         self.database_project_number_line_edit.setText(
             self._project_data_loaded_data["project_number"]
@@ -876,62 +889,112 @@ class DataViewerView(QtWidgets.QWidget):
         else:
             self.profile_email_combo_box.setCurrentIndex(0)
 
-    def project_data_change_check(self, widget, project_data_type):
-        # Multiple widgets need to be checked so if the passed widget is a QtLineEdit then just get the text
-        # If it is a QtListWidget then it is the e-mail field, so join each list item together into a string
-        # to compare to the database/table result
+        self.connect_widget_signals()
+
+    def project_data_change_check(self, widget: QtWidgets.QWidget, project_data_type: str):
+        new_text = None
+
         if isinstance(widget, QtWidgets.QLineEdit):
             new_text = widget.text()
         elif isinstance(widget, QtWidgets.QListWidget):
-            item_texts = []
-            for i in range(widget.count()):
-                if widget.item(i).text():
-                    item_texts.append(widget.item(i).text())
+            item_texts = [widget.item(i).text() for i in range(widget.count()) if widget.item(i).text()]
             new_text = "; ".join(item_texts)
         elif isinstance(widget, QtWidgets.QComboBox):
             new_text = widget.currentText()
 
-        # If there is no data loaded yet, a user hasn't selected a cell yet. So if theres new text, they are adding a new entry
-        if not self._project_data_loaded_data and new_text:
-            self._adding_new_entry = True
-            self.save_button_reset_new_entry()
-            self.database_discard_edited_project_data_button.setEnabled(True)
-            self.database_save_edited_project_data_button.setEnabled(True)
-            return
+        if self._project_data_loaded_data is None:
+            if new_text:
+                self._adding_new_entry = True
+                widget.setProperty("edited", True)
+            else:
+                widget.setProperty("edited", False)
+            
+        if self._project_data_loaded_data is not None:
+            if new_text != self._project_data_loaded_data[project_data_type]:
+                self._project_data_changed = True
+                widget.setProperty("edited", True)
+            else:
+                widget.setProperty("edited", False)
+
+        self.project_data_save_button_check()
+
+
+    def project_data_save_button_check(self):
+
+        # Check if any widget has their "edited" property set to True
+        for widget in self._project_data_editable_widgets_list:
+            if widget.property("edited"):
+                self.enable_buttons()
+                return None
         
-        # If user is adding new entry and there is text, then enable save/discard buttons
-        elif self._adding_new_entry and new_text:
-            self.save_button_reset_new_entry()
-            self.database_discard_edited_project_data_button.setEnabled(True)
-            self.database_save_edited_project_data_button.setEnabled(True)
-            return
+        self._project_data_changed = False
+        self.disable_buttons()
 
-        # If user presses new entry, loaded data gets changed to None,   
-        elif new_text and self._project_data_loaded_data.get(project_data_type) is None:
-            self.save_button_reset_new_entry()
-            self.database_discard_edited_project_data_button.setEnabled(True)
-            self.database_save_edited_project_data_button.setEnabled(True)
-            return
+    def disconnect_widget_signals(self):
+        for widget in self._project_data_editable_widgets_list:
+            if isinstance(widget, QtWidgets.QLineEdit):
+                widget.editingFinished.disconnect()
+            elif isinstance(widget, QtWidgets.QListWidget):
+                widget.itemChanged.disconnect()
+            elif isinstance(widget, QtWidgets.QComboBox):
+                widget.currentIndexChanged.disconnect()
 
-        # If there is data loaded, and the data in the field being checked is different than the loaded data, then
-        # user is changing the data. 
-        elif new_text is not None and self._project_data_loaded_data is not None and self._project_data_loaded_data.get(project_data_type) != new_text:
-            self._project_data_changed = True
-            self.save_button_reset_change_entry()
-            self.database_discard_edited_project_data_button.setEnabled(True)
-            self.database_save_edited_project_data_button.setEnabled(True)
-            return
+    def connect_widget_signals(self):
+        self.database_project_number_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_number_line_edit, "project_number"
+            )
+        )
+        self.database_project_directory_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_directory_line_edit, "directory"
+            )
+        )
+        self.project_data_description_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.project_data_description_line_edit, "description"
+            )
+        )
+        self.database_project_email_subject_line_edit.editingFinished.connect(
+            lambda: self.project_data_change_check(
+                self.database_project_email_subject_line_edit, "email_subject"
+            )
+        )
+        self.profile_email_combo_box.currentIndexChanged.connect(
+            lambda: self.project_data_change_check(
+                self.profile_email_combo_box, "email_profile_name"
+            )
+        )
+        self.database_email_to_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_to_list_widget, "email_to"
+            )
+        )
+        self.database_email_cc_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_cc_list_widget, "email_cc"
+            )
+        )
+        self.database_email_bcc_list_widget.itemChanged.connect(
+            lambda: self.project_data_change_check(
+                self.database_email_bcc_list_widget, "email_bcc"
+            )
+        )
 
-        else:
-            self.save_button_reset_change_entry()
-            self.database_discard_edited_project_data_button.setEnabled(False)
-            self.database_save_edited_project_data_button.setEnabled(False)
-            self._project_data_changed = False
-            return
+    def update_list_widget_edited_properties(self, edited: bool):
+        for widget in self._project_data_editable_widgets_list:
+            widget.setProperty("edited", edited)
 
-    def discard_project_data_changes(self):
+    def enable_buttons(self):
+        self.database_discard_edited_project_data_button.setEnabled(True)
+        self.database_save_edited_project_data_button.setEnabled(True)
+
+    def disable_buttons(self):
         self.database_discard_edited_project_data_button.setEnabled(False)
         self.database_save_edited_project_data_button.setEnabled(False)
+
+    def discard_project_data_changes(self):
+        self.disable_buttons()
         self.clear_project_data_fields()
         self.handle_project_data_update()
 
@@ -940,8 +1003,12 @@ class DataViewerView(QtWidgets.QWidget):
             return None
         self.view_model.delete_project_data_entry_verification(self._project_data_loaded_data)
 
-    def project_data_entry_deleted_slot(self):
+    def project_data_deleted_slot(self):
         self._project_data_changed = False
+        self.clear_project_data_fields()
+        self.disable_buttons()
+        self._project_data_loaded_data = None
+        self.database_delete_project_data_button.setEnabled(False)
 
     def get_new_project_data(self):
         new_project_data = {}
@@ -965,7 +1032,7 @@ class DataViewerView(QtWidgets.QWidget):
         ] = self.database_project_number_line_edit.text()
         new_project_data[
             "directory"
-        ] = os.path.abspath(self.database_project_directory_line_edit.text())
+        ] = self.database_project_directory_line_edit.text()
         new_project_data[
             "description"
         ] = self.project_data_description_line_edit.text()
@@ -978,56 +1045,64 @@ class DataViewerView(QtWidgets.QWidget):
         
         return new_project_data
 
-    def save_project_data_changes(self):
+    def save_project_data(self):
         
         new_project_data = self.get_new_project_data()
-        
         if not new_project_data["project_number"]:
             self.view_model.display_warning_message(message="Project Number cannot be blank")
             return None
+        
+        self.disable_buttons()
+
+        if self._adding_new_entry:
+            self.view_model.database_save_new_project_data(new_project_data)
+            self._project_data_loaded_data = self.project_data_from_dict(new_project_data)
+        elif self._project_data_changed:
+            self.view_model.database_save_edited_project_data(self._project_data_loaded_data, new_project_data)
+            self._project_data_loaded_data = self.project_data_from_dict(new_project_data)
+
         self._project_data_changed = False
-        self.database_discard_edited_project_data_button.setEnabled(False)
-        self.database_save_edited_project_data_button.setEnabled(False)
-        self.view_model.database_save_edited_project_data(self._project_data_loaded_data, new_project_data)
-        self.view_model.update_data_table()
+        self._adding_new_entry = False
+
+        self.update_list_widget_edited_properties(False)
+
+    def project_data_from_row(self, row: int) -> dict:
+
+        return {
+            "project_number": self.database_viewer_table.item(row, 0).text(),
+            "directory": self.database_viewer_table.item(row, 1).text(),
+            "description": self.database_viewer_table.item(row, 2).text(),
+            "email_to": self.database_viewer_table.item(row, 3).text(),
+            "email_cc": self.database_viewer_table.item(row, 4).text(),
+            "email_bcc": self.database_viewer_table.item(row, 5).text(),
+            "email_subject": self.database_viewer_table.item(row, 6).text(),
+            "email_profile_name": self.database_viewer_table.item(row, 7).text(),
+        }
+
+    def project_data_from_dict(self, project_data: dict) -> dict:
+
+        return {
+            "project_number": project_data["project_number"],
+            "directory": project_data["directory"],
+            "description": project_data["description"],
+            "email_to": project_data["email_to"],
+            "email_cc": project_data["email_cc"],
+            "email_bcc": project_data["email_bcc"],
+            "email_subject": project_data["email_subject"],
+            "email_profile_name": project_data["email_profile_name"],
+        }
 
     def project_data_add_new(self) -> None:
 
-        self._project_data_loaded_data = {
-            "project_number": None,
-            "directory": None,
-            "description": None,
-            "email_to": None,
-            "email_cc": None,
-            "email_bcc": None,
-            "email_subject": None,
-            "email_profile_name": None,
-        }
+        self._project_data_loaded_data = None
+
         self._adding_new_entry = True
         self._project_data_changed = False
         self.clear_project_data_fields()
         self.database_delete_project_data_button.setEnabled(False)
-        self.database_discard_edited_project_data_button.setEnabled(False)
-        self.database_save_edited_project_data_button.setEnabled(False)
-        self.database_save_edited_project_data_button.setText("Save New")
-        self.database_save_edited_project_data_button.clicked.disconnect()
-        self.database_save_edited_project_data_button.clicked.connect(
-            self.save_new_project_data_entry
-        )
+        self.disable_buttons()
         
         return None
-    
-    def save_new_project_data_entry(self):
-        new_project_data = self.get_new_project_data()
-        if not new_project_data["project_number"]:
-            self.view_model.display_warning_message(message="Project Number cannot be blank")
-            return None
-        self._project_data_changed = False
-        self._adding_new_entry = False
-        self.database_discard_edited_project_data_button.setEnabled(False)
-        self.database_save_edited_project_data_button.setEnabled(False)
-        self.view_model.database_save_new_project_data(new_project_data)
-        self.view_model.update_data_table()
 
     def handle_email_profile_list_update(self):
         email_list = self.view_model.email_profile_list
@@ -1053,7 +1128,7 @@ class DataViewerView(QtWidgets.QWidget):
 
         title = "Bulk Edit Email Addresses"
         email_type = str(email_widget.property("email_type")).replace('email_','').upper()
-        label = f"Email Addresses (separate with ';')"
+        label = "Email Addresses (separate with ';')"
         default_text = "; ".join(emails)
 
         line_edit_text = utility_widgets.LineEditDialog(self, title=title, label=label, prefix=email_type, default_text=default_text)
@@ -1062,5 +1137,5 @@ class DataViewerView(QtWidgets.QWidget):
             new_emails = [email.strip() for email in new_emails]
             email_widget.set_items(new_emails)
 
-            self.project_data_change_check(email_widget, email_type)
+        self.project_data_change_check(email_widget, email_widget.property("email_type"))
 
