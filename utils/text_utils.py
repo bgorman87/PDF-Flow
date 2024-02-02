@@ -9,7 +9,7 @@ import requests
 import uuid
 from config import TELEMETRY_URL
 
-def valid_date(date_string):
+def valid_date(date_string: str) -> bool:
     try:
         datetime.datetime.strptime(date_string, "%d %b %Y")
         return True
