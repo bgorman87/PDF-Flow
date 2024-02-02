@@ -2,14 +2,13 @@ import os
 
 import pytesseract
 from PySide6 import QtCore, QtGui, QtWidgets
-from utils.image_utils import tesseract_path
 
 
 class TemplateWidget(QtWidgets.QWidget):
     """Widget used to display the file_profile template PDF, draw new bounding box for information, and to draw existing parameters bounding boxes"""
     secondary_rect_complete_signal = QtCore.Signal(str)
 
-    def __init__(self, image_data=None, pil_image=None):
+    def __init__(self, image_data=None, pil_image=None, tesseract_path: str = None):
         super(TemplateWidget, self).__init__()
         self.pix = QtGui.QPixmap()
         self.pil_image = pil_image
@@ -21,6 +20,7 @@ class TemplateWidget(QtWidgets.QWidget):
         self._image_data = image_data
         if self._image_data is not None:
             self.initialize_pdf()
+        self.tesseract_path = tesseract_path
         
 
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
@@ -349,8 +349,8 @@ class TemplateWidget(QtWidgets.QWidget):
             self.found_text = "Image Area Too Small"
             return
         
-        if tesseract_path:
-            pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        if self.tesseract_path:
+            pytesseract.pytesseract.tesseract_cmd = self.tesseract_path
         
         config_str = f"--psm {6}"
         # Page segmentation modes for config_str "--psm {mode}"

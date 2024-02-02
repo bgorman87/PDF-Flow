@@ -6,7 +6,7 @@ import pdf2image
 from PySide6 import QtCore, QtWidgets
 
 from utils import image_utils, general_utils
-from utils.image_utils import poppler_path
+
 from view_models import main_view_model
 from widgets import apply_data_type_dialog, file_template_creation, loading_widget
 
@@ -82,7 +82,9 @@ class TemplateViewModel(QtCore.QObject):
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
                 file_name=self._file_profile_path,
                 template=True,
-                main_view_model=self.main_view_model
+                main_view_model=self.main_view_model,
+                tesseract_path=self.main_view_model.fetch_tesseract_path(),
+                poppler_path=self.main_view_model.fetch_poppler_path(),
             )
             self.analyze_worker.signals.analysis_progress.connect(
                 self.evt_loading_widget_progress
@@ -141,6 +143,7 @@ class TemplateViewModel(QtCore.QObject):
 
     def update_template_pixmap(self):
         """Displays PDF file to be used for updating/creating a file_profile"""
+        poppler_path = self.main_view_model.fetch_poppler_path()
         if poppler_path:
             self._image_jpeg = pdf2image.convert_from_path(
                 self._file_profile_path,
@@ -682,3 +685,11 @@ class TemplateViewModel(QtCore.QObject):
         self.main_view_model.delete_template_profile(profile_id=self._current_file_profile)
         self.reset_template_view_state()
         self.main_view_model.profile_update_list.emit()
+
+    def get_tesseract_path(self) -> str:
+        """Gets the tesseract path from the data handler
+
+        Returns:
+            str: tesseract path
+        """
+        return self.main_view_model.fetch_tesseract_path()

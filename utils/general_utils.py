@@ -49,7 +49,10 @@ def get_config_data(version: str = VERSION) -> dict:
             set_config_data(config)
 
         pending = config["telemetry"].setdefault("pending", 0)
+        
         config.setdefault("onedrive_check", True)
+        config.setdefault("poppler_path", "")
+        config.setdefault("tesseract_path", "")
 
         set_config_data(config)
 
@@ -70,6 +73,9 @@ def get_config_data(version: str = VERSION) -> dict:
                 "identifier": str(uuid.uuid4()),
             },
             "batch-email": False,
+            "onedrive_check": True,
+            "poppler_path": "",
+            "tesseract_path": "",
         }
         set_config_data(config)
     return config

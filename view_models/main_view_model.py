@@ -1,8 +1,10 @@
+from cgi import test
 import os
 import typing
 
 from PySide6 import QtCore, QtWidgets, QtGui
 import threading
+import subprocess
 from models import main_model
 from utils.general_utils import MessageBox, set_config_data, is_onedrive_running
 from utils.text_utils import post_telemetry_data
@@ -465,6 +467,51 @@ class MainViewModel(QtCore.QObject):
         set_config_data(self.config)
         self.batch_email_update.emit(check_state)
         return
+    
+    def set_poppler_path(self, path: str) -> None:
+        self.config["poppler_path"] = path
+        set_config_data(self.config)
+        return
+    
+    def fetch_poppler_path(self) -> str:
+        return self.config["poppler_path"]
+    
+    def set_tesseract_path(self, path: str) -> None:
+        self.config["tesseract_path"] = path
+        set_config_data(self.config)
+        return
+    
+    def fetch_tesseract_path(self) -> str:
+        return self.config["tesseract_path"]
+    
+    def test_tesseract_path(self) -> bool:
+        try:
+            # Run 'tesseract --version' command
+            tesseract_path = self.fetch_tesseract_path()
+            
+            # Get tess parent dir
+            parent_dir = os.path.dirname(tesseract_path)
+
+            result = subprocess.run([os.path.join(parent_dir, 'tesseract'), "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=0x08000000)
+            
+            # If the command was successful, 'tesseract v...' should be in the output
+            return 'tesseract v' in result.stderr.decode('utf-8') or 'tesseract v' in result.stdout.decode('utf-8')
+        except Exception as e:
+            print(f"An error occurred while testing Tesseract path: {e}")
+            return False
+        
+    def test_poppler_path(self) -> bool:
+        try:
+            # Run 'pdfinfo' command
+            poppler_path = self.fetch_poppler_path()
+
+            result = subprocess.run([os.path.join(poppler_path, "pdfinfo"), "-v"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=0x08000000)
+            
+            # If the command was successful, 'pdfinfo' should be in the output
+            return 'pdfinfo' in result.stderr.decode('utf-8') or 'pdfinfo' in result.stdout.decode('utf-8')
+        except Exception as e:
+            print(f"An error occurred while testing Poppler path: {e}")
+            return False
     
     def onedrive_check(self):
         """Checks if OneDrive is currently running. If so it prompts the user to Pause syncing to avoid any file conflicts.
