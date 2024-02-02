@@ -151,7 +151,9 @@ class ProcessViewModel(QtCore.QObject):
         for i, file_name in enumerate(selected_files):
 
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
-                file_name=file_name, main_view_model=self.main_view_model
+                file_name=file_name, main_view_model=self.main_view_model, 
+                tesseract_path=self.main_view_model.fetch_tesseract_path(), 
+                poppler_path=self.main_view_model.fetch_poppler_path()
             )
             self.analyze_worker.signals.analysis_progress.connect(
                 self.evt_analyze_progress
@@ -976,7 +978,9 @@ class ProcessViewModel(QtCore.QObject):
 
         for file_name in unprocessed_files:
             self.analyze_worker = image_utils.WorkerAnalyzeThread(
-                file_name=file_name, email=True, main_view_model=self.main_view_model
+                file_name=file_name, email=True, main_view_model=self.main_view_model,
+                tesseract_path=self.main_view_model.fetch_tesseract_path(),
+                poppler_path=self.main_view_model.fetch_poppler_path(),
             )
             self.analyze_worker.signals.analysis_result.connect(
                 lambda results, data=self.active_files_data[file_name]: self.email_file_type_complete(results, data)

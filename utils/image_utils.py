@@ -9,18 +9,6 @@ import pytesseract
 from view_models import main_view_model
 import regex as re
 from utils import text_utils
-from config import TESSERACT_PATH, POPPLER_PATH
-
-if TESSERACT_PATH:
-    tesseract_path = resource_path(TESSERACT_PATH)
-else:
-    tesseract_path = ""
-
-if POPPLER_PATH:
-    poppler_path = resource_path(POPPLER_PATH)
-else:
-    poppler_path = ""
-
 
 
 def detect_package_number(file_path: str, project_file_path: str = None) -> str:
@@ -70,7 +58,7 @@ class AnalysisSignals(QtCore.QObject):
 
 
 class WorkerAnalyzeThread(QtCore.QRunnable):
-    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , template: bool = False, email: bool = False):
+    def __init__(self, file_name: str, main_view_model: main_view_model.MainViewModel , tesseract_path: str, poppler_path: str, template: bool = False, email: bool = False):
         super(WorkerAnalyzeThread, self).__init__()
         self.file = file_name
         self.file_dir_path = os.path.dirname(self.file)
@@ -78,14 +66,16 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         self.email = email
         self.main_view_model = main_view_model
         self.signals = AnalysisSignals()
+        self.tesseract_path = tesseract_path
+        self.poppler_path = poppler_path
 
     @QtCore.Slot()
     def run(self):
         # Each pdf page is stored as image info in an array called images_jpg
 
-        if poppler_path:
+        if self.poppler_path:
             images_jpeg = convert_from_path(
-                self.file, fmt="jpeg", single_file=True, poppler_path=poppler_path
+                self.file, fmt="jpeg", single_file=True, poppler_path=self.poppler_path
             )
         else:
             images_jpeg = convert_from_path(self.file, fmt="jpeg", single_file=True)
@@ -308,7 +298,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
             )
 
             # Using tesseract on cropped image, check if its equal to the unique_text
-            text = self.analyze_image(cropped_pdf_image)
+            text = self.analyze_image(cropped_pdf_image, self.tesseract_path)
             if (self.compare_strings(file_identifier_text, text.replace("\n", " "))):
                 file_type = file_profile[0]
                 return file_type
@@ -356,7 +346,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                     (scaled_x_1, scaled_y_1, scaled_x_2, scaled_y_2)
                 )
 
-                result = self.analyze_image(cropped_image)
+                result = self.analyze_image(cropped_image, self.tesseract_path)
                 
                 project_number_found = False
                 if "project_number" in file_profile_parameter:
@@ -388,7 +378,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
                         )
                         secondary_advanced_option = secondary_parameter_data[4]
                         comparison_type = secondary_parameter_data[5]
-                        secondary_result = self.analyze_image(secondary_cropped_image)
+                        secondary_result = self.analyze_image(secondary_cropped_image, self.tesseract_path)
                     
                     potential_list = result.split("\n")
 
@@ -433,7 +423,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         scaled_y_2 = int(y_2 * scale)
         return scaled_x_1, scaled_x_2, scaled_y_1, scaled_y_2
 
-    def analyze_image(self, img_path) -> str:
+    def analyze_image(self, img_path: str, tesseract_path: str) -> str:
         if tesseract_path:
             pytesseract.pytesseract.tesseract_cmd = tesseract_path
         config_str = "--psm " + str(6)
