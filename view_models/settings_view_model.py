@@ -1,3 +1,6 @@
+from email import message
+from os import remove
+from pyexpat.errors import messages
 from PySide6 import QtCore, QtWidgets
 from view_models import main_view_model
 from utils import general_utils
@@ -8,6 +11,8 @@ class SettingsViewModel(QtCore.QObject):
     batch_email_update = QtCore.Signal(bool)
     selected_templates_update = QtCore.Signal(int)
     profile_list_update = QtCore.Signal()
+    poppler_path_removed = QtCore.Signal()
+    tesseract_path_removed = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -130,4 +135,113 @@ class SettingsViewModel(QtCore.QObject):
 
         self._chosen_templates = []
         self.selected_templates_update.emit(len(self._chosen_templates))
-        self.main_view_model.profile_update_list.emit()    
+        self.main_view_model.profile_update_list.emit()
+
+    def get_poppler_path(self) -> str:
+        """Gets the poppler path from the data handler
+
+        Returns:
+            str: poppler path
+        """
+        return self.main_view_model.fetch_poppler_path()
+
+    def set_poppler_path(self) -> str:
+        """Gets the poppler directory from file dialog
+
+        Returns:
+            str: poppler path
+        """
+        poppler_dir = QtWidgets.QFileDialog.getExistingDirectory(
+            None, "Select Poppler 'bin' Directory", ""
+        )
+
+        self.main_view_model.set_poppler_path(poppler_dir)
+
+        return poppler_dir
+    
+    def remove_poppler_path(self) -> None:
+        """Removes the poppler path from the data handler
+        """
+        self.main_view_model.set_poppler_path("")
+        self.poppler_path_removed.emit()
+
+    def remove_tesseract_path(self) -> None:
+        """Removes the tesseract path from the data handler
+        """
+        self.main_view_model.set_tesseract_path("")
+        self.tesseract_path_removed.emit()
+
+    def set_tesseract_path(self) -> str:
+        """Gets the tesseract executable from file dialog
+
+        Returns:
+            str: tesseract path
+        """
+
+        tesseract_path = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Select Tesseract Executable", "", "Tesseract Executable (*.exe)"
+        )[0]
+
+        self.main_view_model.set_tesseract_path(tesseract_path)
+
+        return tesseract_path
+    
+    def get_tesseract_path(self) -> str:
+        """Gets the tesseract path from the data handler
+
+        Returns:
+            str: tesseract path
+        """
+        return self.main_view_model.fetch_tesseract_path()
+    
+    def test_tesseract_path(self) -> None:
+        """Tests the tesseract path
+        """
+        
+        test_result = self.main_view_model.test_tesseract_path()
+
+        tesseract_path = self.main_view_model.fetch_tesseract_path()
+        messages = {}
+
+        if tesseract_path:
+            messages["success"] = f"Tesseract path is valid: {tesseract_path}"
+            messages["failure"] = f"Tesseract path is invalid: {tesseract_path}"
+        else:
+            messages["success"] = "Tesseract found in system PATH. You are good to go!"
+            messages["failure"] = "Tesseract path is invalid"
+
+        message_box = general_utils.MessageBox()
+        message_box.title = "Tesseract Test"
+        message_box.icon = QtWidgets.QMessageBox.Information if test_result else QtWidgets.QMessageBox.Warning
+        message_box.text = messages["success"] if test_result else messages["failure"]
+        message_box.buttons = [QtWidgets.QPushButton("OK")]
+        message_box.button_roles = [QtWidgets.QMessageBox.AcceptRole]
+        message_box.callback = [None]
+
+        self.main_view_model.display_message_box(message_box=message_box)
+
+    def test_poppler_path(self) -> None:
+        """Tests the poppler path
+        """
+        test_result = self.main_view_model.test_poppler_path()
+        poppler_path = self.main_view_model.fetch_poppler_path()
+        messages = {}
+
+        if poppler_path:
+            messages["success"] = f"Poppler path is valid: {poppler_path}"
+            messages["failure"] = f"Poppler path is invalid: {poppler_path}"
+        else:
+            messages["success"] = "Poppler found in system PATH. You are good to go!"
+            messages["failure"] = "Poppler path is invalid"
+
+        message_box = general_utils.MessageBox()
+        message_box.title = "Poppler Test"
+        message_box.icon = QtWidgets.QMessageBox.Information if test_result else QtWidgets.QMessageBox.Warning
+        message_box.text = messages["success"] if test_result else messages["failure"]
+        message_box.buttons = [QtWidgets.QPushButton("OK")]
+        message_box.button_roles = [QtWidgets.QMessageBox.AcceptRole]
+        message_box.callback = [None]
+
+        self.main_view_model.display_message_box(message_box=message_box)
+
+    
