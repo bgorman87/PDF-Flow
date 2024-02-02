@@ -12,6 +12,7 @@ class DataViewerViewModel(QtCore.QObject):
     data_table_update = QtCore.Signal()
     project_data_entry_deleted = QtCore.Signal()
     email_profile_list_update = QtCore.Signal()
+    all_project_data_deleted = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
@@ -207,6 +208,7 @@ class DataViewerViewModel(QtCore.QObject):
                 f"Deletion of all project data complete."
             )
             self.update_data_table()
+            self.all_project_data_deleted.emit()
             return
         self.main_view_model.add_console_text(f"Delete {error_message}")
 
