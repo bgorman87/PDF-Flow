@@ -646,7 +646,7 @@ class TemplateViewModel(QtCore.QObject):
             self.rename_template_profile(self.rename_template_profile_dialog.textValue())
 
     def rename_template_profile(self, new_name: str):
-        new_name = self.main_view_model.scrub(new_name)
+        new_name = self.main_view_model.scrub(new_name.lower())
         result = self.main_view_model.rename_template_profile(profile_id=self._current_file_profile, new_name=new_name)
         if result is not None:
             self.rename_template_profile_dialog = general_utils.MessageBox()
