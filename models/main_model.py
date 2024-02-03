@@ -54,7 +54,7 @@ class MainModel(QtCore.QObject):
             str: Initial string with only alpha-numeric, "_", "-", and "." characters remaining
         """
         try:
-            string_item = string_item.strip().lower()
+            string_item = string_item.strip()
             string_item = string_item.replace("\n", "").replace(" ", "_")
 
             # Because spaces are replaced with hyphens or underscores, to make it more visually appealing

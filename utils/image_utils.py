@@ -308,7 +308,7 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
     def compare_strings(self, string_1: str, string_2: str) -> bool:
         if string_1 == string_2:
             return True
-        if self.main_view_model.scrub(string_1) in self.main_view_model.scrub(string_2):
+        if self.main_view_model.scrub(string_1.lower()) in self.main_view_model.scrub(string_2.lower()):
             return True
         else:
             return False
@@ -321,7 +321,9 @@ class WorkerAnalyzeThread(QtCore.QRunnable):
         )
         # Iterate through each location of each parameter
         data = {}
-        for file_profile_parameter in file_profile_parameters[2:]:
+        for file_profile_parameter in file_profile_parameters[1:]:
+            if file_profile_parameter == "project_description":
+                continue
             [
                 x_1,
                 x_2,
