@@ -324,10 +324,13 @@ class MainModel(QtCore.QObject):
                     .execute(active_params_query, (profile_id,))
                     .fetchall()
                 )
-                return [
-                    "doc_num",
-                    "project_description",
-                ] + [parameter[0] for parameter in active_params if parameter]
+                active_params = [param[0] for param in active_params]
+                if "project_number" in active_params:
+                    active_params = ["doc_num", "project_description"] + active_params
+                else:
+                    active_params = ["doc_num"] + active_params
+
+                return active_params
             except (TypeError, sqlite3.DatabaseError) as e:
                 return []
         

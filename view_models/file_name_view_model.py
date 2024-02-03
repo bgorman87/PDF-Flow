@@ -69,20 +69,24 @@ class FileNameViewModel(QtCore.QObject):
         doc_num_list_item = QtWidgets.QListWidgetItem("doc_num")
         self._active_parameter_list_items.append(doc_num_list_item)
 
-        if "project_number" in self._active_parameters:
-            project_description_list_item = QtWidgets.QListWidgetItem("project_description")
-            project_description_example = self.main_view_model.fetch_project_description_example()
-            if not project_description_example:
-                project_description_example = "ProjectDescription"
-            self._active_parameters_examples.append(project_description_example)
-            self._active_parameter_list_items.append(project_description_list_item)
-
         # Add active parameters to active parameters list
-        for parameter in self._active_parameters[2:]:
-            self._active_parameters_examples.append(
-                self.main_view_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=self._profile_id, parameter=parameter))
-            active_param_list_item = QtWidgets.QListWidgetItem(parameter)
-            self._active_parameter_list_items.append(active_param_list_item)
+        for parameter in self._active_parameters[1:]:
+            # If parameter is project_description, add it to the list with the example text.
+            # If example text cannot be found, use "ProjectDescription" for clarity
+            # since this parameter is fetched from project table, not from the initial Template
+            if parameter == "project_description":
+                project_description_list_item = QtWidgets.QListWidgetItem("project_description")
+                project_description_example = self.main_view_model.fetch_project_description_example()
+                if not project_description_example:
+                    project_description_example = "ProjectDescription"
+                self._active_parameters_examples.append(project_description_example)
+                self._active_parameter_list_items.append(project_description_list_item)
+            else:
+                self._active_parameters_examples.append(
+                    self.main_view_model.fetch_parameter_example_text_by_name_and_profile_id(profile_id=self._profile_id, parameter=parameter))
+                active_param_list_item = QtWidgets.QListWidgetItem(parameter)
+                self._active_parameter_list_items.append(active_param_list_item)
+                
         self._active_file_naming_scheme = self.main_view_model.fetch_profile_file_name_pattern_by_profile_id(
             self._profile_id)
         self._email_profile_name = self.main_view_model.fetch_email_profile_name_by_profile_id(self._profile_id)
