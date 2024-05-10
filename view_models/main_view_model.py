@@ -369,7 +369,7 @@ class MainViewModel(QtCore.QObject):
     
     def get_outlook_email_directory(self) -> str | os.PathLike:
         appdata_path = os.getenv("APPDATA")
-        signatures_path = os.path.join(appdata_path, "Microsoft", "Signatures")
+        signatures_path = os.path.abspath(os.path.join(appdata_path, "Microsoft", "Signatures"))
         if os.path.exists(signatures_path):
             return signatures_path
         else:
