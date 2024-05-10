@@ -1,3 +1,4 @@
+from multiprocessing.reduction import duplicate
 import os
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -64,6 +65,15 @@ class DataViewerView(QtWidgets.QWidget):
         self.main_layout.addLayout(self.project_data_line_below_cta_layout)
 
         self.database_search_layout = QtWidgets.QHBoxLayout()
+        
+        self.duplicate_button = QtWidgets.QPushButton("Duplicate")
+        self.duplicate_button.clicked.connect(self.duplicate_project_data)
+        self.duplicate_button.setEnabled(False)
+        self.database_search_layout.addWidget(self.duplicate_button)
+        self.database_search_layout.setStretch(
+            self.database_search_layout.indexOf(self.duplicate_button), 1
+        )
+
         self.database_search_layout.addStretch(2)
 
         self.database_search_icon = QtWidgets.QLabel()
@@ -840,6 +850,7 @@ class DataViewerView(QtWidgets.QWidget):
             return None
         
         self._project_data_loaded_data = self.project_data_from_row(current_row)
+        self.duplicate_button.setEnabled(True)
         self.update_list_widget_edited_properties(False)
         self.database_populate_project_edit_fields()
         
@@ -1091,6 +1102,23 @@ class DataViewerView(QtWidgets.QWidget):
             "email_subject": project_data["email_subject"],
             "email_profile_name": project_data["email_profile_name"],
         }
+    
+    def duplicate_project_data(self):
+        if self._current_index is None or not self._project_data_loaded_data:
+            return None
+
+        new_project_data = self._project_data_loaded_data.copy()
+
+        self.project_data_add_new()
+
+        new_project_data["project_number"] = ""
+        self._project_data_loaded_data = new_project_data
+        self.database_populate_project_edit_fields()
+        self._project_data_changed = True
+        self.enable_buttons()
+        self.database_delete_project_data_button.setEnabled(False)
+        self.duplicate_button.setEnabled(False)
+        self.database_project_number_line_edit.setFocus()
 
     def project_data_add_new(self) -> None:
 
