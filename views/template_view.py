@@ -200,7 +200,7 @@ class TemplateView(QtWidgets.QWidget):
     def update_template_pixmap(self, img_byte_arr, image):
         self.template_display.deleteLater()
         self.template_display = file_template_creation.TemplateWidget(
-            img_byte_arr, image)
+            img_byte_arr, image, tesseract_path=self.view_model.get_tesseract_path())
         self.template_display.secondary_rect_complete_signal.connect(self.secondary_rect_complete)
         self.main_layout.addWidget(self.template_display)
         self.template_display.style().polish(self.template_display)
