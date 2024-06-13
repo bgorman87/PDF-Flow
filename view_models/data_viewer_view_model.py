@@ -22,6 +22,8 @@ class DataViewerViewModel(QtCore.QObject):
         self._project_data_loaded_id = None
         self._email_profiles_list = None
         self.main_view_model.email_profiles_updated.connect(self.set_email_profile_list)
+        self.main_view_model.backup_data.connect(self.export_project_data)
+        self.main_view_model.project_data_update.connect(self.update_data_table)
 
     def update_data_table(self) -> None:
         """Updates the data table with the latest project data."""

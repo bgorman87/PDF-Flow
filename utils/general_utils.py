@@ -53,6 +53,8 @@ def get_config_data(version: str = VERSION) -> dict:
         config.setdefault("onedrive_check", True)
         config.setdefault("poppler_path", "")
         config.setdefault("tesseract_path", "")
+        config.setdefault("backup_directory", "")
+        config.setdefault("default_email", "")
 
         set_config_data(config)
 
@@ -76,6 +78,8 @@ def get_config_data(version: str = VERSION) -> dict:
             "onedrive_check": True,
             "poppler_path": "",
             "tesseract_path": "",
+            "backup_directory": "",
+            "default_email": ""
         }
         set_config_data(config)
     return config

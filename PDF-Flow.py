@@ -9,7 +9,7 @@ from models import main_model
 from view_models import main_view_model, message_box_view_model
 from views import message_box_view, navigation_view, stacked_view
 from version import VERSION
-from utils import path_utils, general_utils, text_utils
+from utils import path_utils, general_utils
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, main_view_model: main_view_model.MainViewModel):
@@ -80,6 +80,14 @@ class MainView(QtWidgets.QMainWindow):
         result_index = self.message_box.exec()
         # result = message_box_dict.get("button_roles")[result_index]
         self.main_view_model.message_box_handler(message_box.callback[result_index])
+
+    def closeEvent(self, event):
+        try:
+            self.main_view_model.on_close()
+        except:
+            pass
+        finally:
+            event.accept()
 
     def showEvent(self, event):
         super().showEvent(event)

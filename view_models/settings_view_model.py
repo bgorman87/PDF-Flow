@@ -13,16 +13,20 @@ class SettingsViewModel(QtCore.QObject):
     profile_list_update = QtCore.Signal()
     poppler_path_removed = QtCore.Signal()
     tesseract_path_removed = QtCore.Signal()
+    backup_directory_removed = QtCore.Signal()
+    email_profile_list_update = QtCore.Signal()
 
     def __init__(self, main_view_model: main_view_model.MainViewModel):
         super().__init__()
         self.main_view_model = main_view_model
         self.active_profiles = None
         self._chosen_templates = []
+        self._email_profile_list = self.main_view_model.email_profiles
 
         self.main_view_model.anonymous_usage_update.connect(self.anonymous_usage_update.emit)
         self.main_view_model.profile_update_list.connect(self.profile_list_update.emit)
         self.main_view_model.batch_email_update.connect(self.batch_email_update.emit)
+        self.main_view_model.email_profiles_updated.connect(self.set_email_profile_list)
 
     def format_file_profile_list(self) -> list[str]:
         """Transforms profiles into a list with profile name and identifier text. profiles list comes from fetch_file_profiles from data_handler.
@@ -137,6 +141,34 @@ class SettingsViewModel(QtCore.QObject):
         self.selected_templates_update.emit(len(self._chosen_templates))
         self.main_view_model.profile_update_list.emit()
 
+    def get_backup_directory(self) -> str:
+        """Gets the backup directory from the data handler
+
+        Returns:
+            str: backup directory
+        """
+        return self.main_view_model.fetch_backup_directory()
+    
+    def set_backup_directory(self) -> str:
+        """Gets the backup directory from file dialog
+
+        Returns:
+            str: backup directory
+        """
+        backup_dir = QtWidgets.QFileDialog.getExistingDirectory(
+            None, "Select Backup Directory", ""
+        )
+
+        self.main_view_model.set_backup_directory(backup_dir)
+
+        return backup_dir
+    
+    def remove_backup_directory(self) -> None:
+        """Removes the backup directory from the data handler
+        """
+        self.main_view_model.set_backup_directory("")
+        self.backup_directory_removed.emit()
+
     def get_poppler_path(self) -> str:
         """Gets the poppler path from the data handler
 
@@ -194,6 +226,14 @@ class SettingsViewModel(QtCore.QObject):
         """
         return self.main_view_model.fetch_tesseract_path()
     
+    def get_default_email(self) -> str:
+        """Gets the default email from the data handler
+
+        Returns:
+            str: default email
+        """
+        return self.main_view_model.fetch_default_email()
+    
     def test_tesseract_path(self) -> None:
         """Tests the tesseract path
         """
@@ -244,4 +284,52 @@ class SettingsViewModel(QtCore.QObject):
 
         self.main_view_model.display_message_box(message_box=message_box)
 
+    def import_database_handler(self):
+        """Imports the database from file dialog
+        """
+
+        message = (
+            "WARNING: This import process will store all existing data into an 'archived' file and use the data "
+            "from the imported file to populate the program. This includes templates, filenames, and project data.\n\n"
+            "Are you sure you want to proceed with the import?"
+        )
+        self.database_import_dialog = general_utils.MessageBox()
+        self.database_import_dialog.title = "Import Database"
+        self.database_import_dialog.icon = QtWidgets.QMessageBox.Information
+        self.database_import_dialog.text = message
+        self.database_import_dialog.buttons = [QtWidgets.QPushButton("Yes"), QtWidgets.QPushButton("No")]
+        self.database_import_dialog.button_roles = [QtWidgets.QMessageBox.YesRole, QtWidgets.QMessageBox.RejectRole]
+        self.database_import_dialog.callback = [self.import_database, None]
+
+        self.main_view_model.display_message_box(message_box=self.database_import_dialog)
+
+    def import_database(self):
+        """Imports the database from file dialog
+        """
+        database_path = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Select Database File", "", "Database File (*.sqlite3)"
+        )[0]
+        if not database_path:
+            return
+        
+        self.main_view_model.import_database(database_path)
+
+    def update_default_email(self, email: str) -> None:
+        """Updates the default email in the data handler
+
+        Args:
+            email (str): email address
+        """
+        self.main_view_model.set_default_email(email)
+
+    def set_email_profile_list(self, email_profiles: list[str]) -> None:
+        """Sets the email profile list"""
+
+        self._email_profile_list = email_profiles
+        self.email_profile_list_update.emit()
     
+    @property
+    def email_profile_list(self) -> list[str]:
+        """list[str]: Returns the email profile list"""
+
+        return self._email_profile_list    

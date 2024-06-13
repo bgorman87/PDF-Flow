@@ -8,6 +8,8 @@ import subprocess
 from models import main_model
 from utils.general_utils import MessageBox, set_config_data, is_onedrive_running
 from utils.text_utils import post_telemetry_data
+from shutil import copyfile, move
+from datetime import datetime
 
 
 class MainViewModel(QtCore.QObject):
@@ -29,6 +31,8 @@ class MainViewModel(QtCore.QObject):
     email_profiles_updated = QtCore.Signal(list)
     anonymous_usage_update = QtCore.Signal(bool)
     batch_email_update = QtCore.Signal(bool)
+    backup_data = QtCore.Signal(str)
+    project_data_update = QtCore.Signal()
 
     def __init__(self, main_model: main_model.MainModel, config: dict = None):
         super().__init__()
@@ -50,6 +54,15 @@ class MainViewModel(QtCore.QObject):
         self._telemetry_id = config["telemetry"]["identifier"] if not config["telemetry"]["annonymous"] else None
         self.config = config
         self.window_icon = QtGui.QIcon()
+        self._email_profiles = None
+
+    def on_close(self):
+        backup_location = self.fetch_backup_directory()
+        project_data_backup_location = os.path.abspath(os.path.join(backup_location, "project_data.csv"))
+        database_backup_location = os.path.abspath(os.path.join(backup_location, "db.sqlite3"))
+        database_current_location = os.path.abspath(os.path.join(os.getcwd(), 'database', 'db.sqlite3'))
+        copyfile(database_current_location, database_backup_location)
+        self.backup_data.emit(project_data_backup_location)
 
     def add_console_text(self, new_text: str) -> None:
         self.console_text = new_text
@@ -358,8 +371,13 @@ class MainViewModel(QtCore.QObject):
         return self.main_model.add_new_project_data(new_data=project_data)
 
     def update_email_profile_names(self, email_profile_names: list[str]) -> None:
+        self._email_profiles = email_profile_names
         self.email_profiles_updated.emit(email_profile_names)
         return
+    
+    @property
+    def email_profiles(self) -> list[str]:
+        return self._email_profiles
 
     def get_local_email_directory(self) -> str | os.PathLike:
         relative_directory = "signatures"
@@ -468,6 +486,19 @@ class MainViewModel(QtCore.QObject):
         self.batch_email_update.emit(check_state)
         return
     
+    def fetch_backup_directory(self) -> str:
+        try:
+            return self.config['backup_directory']
+        except KeyError:
+            self.config['backup_directory'] = ""
+            set_config_data(self.config)
+            return self.config['backup_directory']
+        
+    def set_backup_directory(self, directory: str) -> None:
+        self.config['backup_directory'] = directory
+        set_config_data(self.config)
+        return
+    
     def set_poppler_path(self, path: str) -> None:
         self.config["poppler_path"] = path
         set_config_data(self.config)
@@ -483,6 +514,14 @@ class MainViewModel(QtCore.QObject):
     
     def fetch_tesseract_path(self) -> str:
         return self.config["tesseract_path"]
+    
+    def set_default_email(self, profile_name: str):
+        self.config["default_email"] = profile_name
+        set_config_data(self.config)
+        return
+    
+    def fetch_default_email(self) -> str:
+        return self.config["default_email"]
     
     def test_tesseract_path(self) -> bool:
         try:
@@ -534,3 +573,22 @@ class MainViewModel(QtCore.QObject):
             ]
             message_box.callback = [None,]
             self.message_box_alert.emit(message_box)
+    
+    def import_database(self, database_path: str):
+        current_database = os.path.abspath(os.path.join(os.getcwd(), "database", "db.sqlite3"))
+        new_directory = os.path.join("database", "old")
+
+        os.makedirs(new_directory, exist_ok=True)
+        
+        date_time_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename, extension = os.path.splitext(os.path.basename(current_database))
+        
+        new_filename = f"{filename}_{date_time_str}{extension}"
+        new_path = os.path.join(new_directory, new_filename)
+        
+        move(current_database, new_path)
+        copyfile(database_path, current_database)
+
+        self.profile_update_list.emit()
+        self.parameter_update_list.emit()
+        self.project_data_update.emit()
