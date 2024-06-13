@@ -425,6 +425,34 @@ class ProcessViewModel(QtCore.QObject):
             # If all processed then just email all together right away
             self.email_files()
 
+    def get_email_body_content(self, email_profile_name: str) -> str:
+        if " - Outlook" in email_profile_name:
+            profile_base_name = email_profile_name.replace(" - Outlook", "")
+            outlook_directory = (
+                self.main_view_model.get_outlook_email_directory()
+            )
+
+            signature_name = ""
+            for filename in os.listdir(outlook_directory):
+                if (
+                    filename.endswith(".htm") or filename.endswith(".html")
+                ) and (profile_base_name in filename):
+                    signature_name = filename
+                    break
+
+            email_template_path = os.path.join(
+                outlook_directory, signature_name
+            )
+
+        else:
+            email_template_path = os.path.join(
+                self.main_view_model.get_local_email_directory(),
+                email_profile_name,
+                "email.html",
+            )
+
+        return email_template_path
+
     def email_files(
         self,
     ):
@@ -454,32 +482,12 @@ class ProcessViewModel(QtCore.QObject):
                         self.active_files_data[file_path]["metadata"]["profile_id"]
                     )
                 )
+            if not email_template:
+                email_template = self.main_view_model.fetch_default_email()
             body_content = ""
             if email_template:
-                if " - Outlook" in email_template:
-                    profile_base_name = email_template.replace(" - Outlook", "")
-                    outlook_directory = (
-                        self.main_view_model.get_outlook_email_directory()
-                    )
-
-                    signature_name = ""
-                    for filename in os.listdir(outlook_directory):
-                        if (
-                            filename.endswith(".htm") or filename.endswith(".html")
-                        ) and (profile_base_name in filename):
-                            signature_name = filename
-                            break
-
-                    email_template_path = os.path.join(
-                        outlook_directory, signature_name
-                    )
-
-                else:
-                    email_template_path = os.path.join(
-                        self.main_view_model.get_local_email_directory(),
-                        email_template,
-                        "email.html",
-                    )
+                
+                email_template_path = self.get_email_body_content(email_template)
 
                 with open(email_template_path) as email_file:
                     body_content = email_file.read()

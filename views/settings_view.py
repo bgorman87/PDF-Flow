@@ -268,7 +268,96 @@ class SettingsView(QtWidgets.QWidget):
         self.tesseract_executable_layout.setStretch(2, 2)
         self.main_layout.addLayout(self.tesseract_executable_layout)
 
+        self.backup_directory_layout = QtWidgets.QHBoxLayout()
+        self.backup_directory_label = QtWidgets.QLabel("Backup Directory: ")
+        self.backup_directory_label.setObjectName("backup_directory_label")
+        self.backup_directory_layout.addWidget(self.backup_directory_label)
+
+        self.backup_directory_line_edit = QtWidgets.QLineEdit()
+        backup_path = self.view_model.get_backup_directory()
+        if backup_path:
+            self.backup_directory_line_edit.setText(backup_path)
+        else:
+            self.backup_directory_line_edit.setPlaceholderText("Enter a backup location")
+        self.backup_directory_line_edit.setReadOnly(True)
+        self.backup_directory_line_edit.setObjectName(
+            "backup_directory_line_edit"
+        )
+        self.backup_directory_layout.addWidget(
+            self.backup_directory_line_edit
+        )
+
+        self.backup_directory_button = QtWidgets.QPushButton("Browse")
+        self.backup_directory_button.clicked.connect(
+            self.set_backup_directory
+        )
+        self.backup_directory_button.setObjectName(
+            "backup_directory_button"
+        )
+        self.backup_directory_layout.addWidget(
+            self.backup_directory_button
+        )
+
+        self.backup_directory_delete_button = QtWidgets.QPushButton()
+        self.backup_directory_delete_button.setMaximumSize(QtCore.QSize(28, 28))
+        icon = QtGui.QIcon()
+        icon.addFile(path_utils.resource_path(u"assets/icons/delete.svg"), QtCore.QSize(), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.backup_directory_delete_button.setIcon(icon)
+        self.backup_directory_delete_button.setProperty("class", "delete-button")
+        self.backup_directory_delete_button.clicked.connect(
+            self.view_model.remove_backup_directory
+        )
+        self.backup_directory_delete_button.setObjectName(
+            "backup_directory_delete_button"
+        )
+        self.backup_directory_layout.addWidget(
+            self.backup_directory_delete_button
+        )
+
+        self.backup_directory_layout.setStretch(0, 1)
+        self.backup_directory_layout.setStretch(1, 10)
+        self.backup_directory_layout.setStretch(2, 2)
+        self.main_layout.addLayout(self.backup_directory_layout)
+
+        self.profile_email_layout = QtWidgets.QHBoxLayout()
+        # Label for dropdown menu
+        self.profile_email_label = QtWidgets.QLabel("Project Email Profile:")
+        self.profile_email_label.setObjectName(
+            "profile_email_label"
+        )
+        self.profile_email_layout.addWidget(self.profile_email_label)
+
+        # Dropdown menu containing e-mail profiles
+        self.profile_email_combo_box = QtWidgets.QComboBox()
+        self.profile_email_combo_box.setProperty("edited", False)
+        self.profile_email_combo_box.setObjectName(
+            "profile_email_combo_box"
+        )
+        self.view_model.email_profile_list_update.connect(
+            self.handle_email_profile_list_update
+        )
+        self.profile_email_combo_box.currentTextChanged.connect(
+            self.view_model.update_default_email
+        )
+        self.profile_email_layout.addWidget(self.profile_email_combo_box)
+
+        self.profile_email_layout.setStretch(1, 1)
+        self.profile_email_layout.setStretch(2, 1)
+
+        self.initialize_email_list()
+
+        self.main_layout.addLayout(self.profile_email_layout)
+
         self.main_layout.addStretch(2)
+
+        self.import_database_layout = QtWidgets.QHBoxLayout()
+        
+        self.import_database_button = QtWidgets.QPushButton("Import Database")
+        self.import_database_button.clicked.connect(self.view_model.import_database_handler)
+
+        self.import_database_layout.addWidget(self.import_database_button)
+        self.import_database_layout.addStretch(1)
+        self.main_layout.addLayout(self.import_database_layout)
 
         self.setLayout(self.main_layout)
 
@@ -287,7 +376,9 @@ class SettingsView(QtWidgets.QWidget):
         self.view_model.tesseract_path_removed.connect(
             self.clear_tesseract_path
         )
-
+        self.view_model.backup_directory_removed.connect(
+                self.clear_backup_directory
+            )
 
     def translate_ui(self):
         _translate = QtCore.QCoreApplication.translate
@@ -338,6 +429,23 @@ class SettingsView(QtWidgets.QWidget):
             self.template_list.addWidget(template_checkbox)
 
         self.template_list.update()
+        self.scroll_widget.update()
+
+    def handle_email_profile_list_update(self):
+        email_list = self.view_model.email_profile_list
+        current_email_name = self.profile_email_combo_box.currentText()
+        self.profile_email_combo_box.clear()
+        self.profile_email_combo_box.addItems(email_list)
+        
+        self.profile_email_combo_box.setCurrentIndex(
+            self.profile_email_combo_box.findText(current_email_name)
+        )
+
+    def initialize_email_list(self):
+        self.profile_email_combo_box.addItems(self.view_model.email_profile_list)
+        self.profile_email_combo_box.setCurrentIndex(
+            self.profile_email_combo_box.findText(self.view_model.get_default_email())
+        )
 
     def clear_poppler_path(self):
         self.poppler_directory_line_edit.clear()
@@ -346,6 +454,10 @@ class SettingsView(QtWidgets.QWidget):
     def clear_tesseract_path(self):
         self.tesseract_executable_line_edit.clear()
         self.tesseract_executable_line_edit.setPlaceholderText("Leave blank to use system PATH")
+    
+    def clear_backup_directory(self):
+        self.backup_directory_line_edit.clear()
+        self.backup_directory_line_edit.setPlaceholderText("Enter a backup location")
 
     def set_poppler_path(self):
         poppler_path = self.view_model.set_poppler_path()
@@ -354,3 +466,7 @@ class SettingsView(QtWidgets.QWidget):
     def set_tesseract_path(self):
         tesseract_path = self.view_model.set_tesseract_path()
         self.tesseract_executable_line_edit.setText(tesseract_path)
+
+    def set_backup_directory(self):
+        backup_directory = self.view_model.set_backup_directory()
+        self.backup_directory_line_edit.setText(backup_directory)
