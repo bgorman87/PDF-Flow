@@ -58,6 +58,8 @@ class MainViewModel(QtCore.QObject):
 
     def on_close(self):
         backup_location = self.fetch_backup_directory()
+        if not backup_location: 
+            return
         project_data_backup_location = os.path.abspath(os.path.join(backup_location, "project_data.csv"))
         database_backup_location = os.path.abspath(os.path.join(backup_location, "db.sqlite3"))
         database_current_location = os.path.abspath(os.path.join(os.getcwd(), 'database', 'db.sqlite3'))
