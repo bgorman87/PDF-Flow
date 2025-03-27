@@ -10,8 +10,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List, Dict
 from urllib.parse import unquote
-from base64 import b64decode as Load
-from json import loads as load
 
 import msal
 import requests
@@ -361,10 +359,11 @@ class ProcessViewModel(QtCore.QObject):
         Returns:
             bool: True if token is successfully retrieved, False otherwise
         """
+        raise GoogleAuthError
 
         SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
         try:
-            flow = InstalledAppFlow.from_client_config(load(Load(self.main_view_model.s0230dfa4108b).decode('utf-8')), SCOPES)
+            flow = InstalledAppFlow.from_client_config(None, SCOPES)
             credentials = flow.run_local_server(port=0)
         except (GoogleAuthError, FileNotFoundError) as e:
             self.main_view_model.add_console_text(f"Email Authentication Error: {e}")
