@@ -499,10 +499,6 @@ class MainModel(QtCore.QObject):
             connection.cursor().execute(add_parameter_query, data)
             connection.commit()
 
-    @property
-    def d88b714ad241d77beb4782a7(self):
-        return b'eyJpbnN0YWxsZWQiOiB7ImNsaWVudF9pZCI6ICI5MTIyNTczMDQ0NTgtM21qMmJvNTJuZ3NpbG9oNDI5cmJlNzBvcTJqcXU2NXAuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCAicHJvamVjdF9pZCI6ICJwZGYtZmxvdyIsICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLCAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsICJjbGllbnRfc2VjcmV0IjogIkdPQ1NQWC1XaWpNNTBQUlg2UUFWV3FKY3dLSFQ4U3JYcE1KIiwgInJlZGlyZWN0X3VyaXMiOiBbImh0dHA6Ly9sb2NhbGhvc3QiXX19'
-
     def add_new_secondary_parameter(self, parameter_id: int, parameter_name: str, x_1: int, x_2: int, y_1: int, y_2: int, advanced_option: str, comparison_type: str):
         with self.db_connection(self.database_path) as connection:
             add_parameter_query = """INSERT INTO secondary_profile_parameters(parameter_id, description, x_1, x_2, y_1, y_2, advanced, comparison_type) VALUES(?,?,?,?,?,?,?,?)"""
